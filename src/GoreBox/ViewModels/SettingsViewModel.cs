@@ -903,9 +903,13 @@ public sealed class SettingsViewModel : ObservableObject
         if (!_dialogs.Confirm("Сбросить настройки", "Вернуть все настройки приложения к значениям по умолчанию?",
                 "Сбросить")) return;
 
+        var installedTag = _settings.Current.InstalledReleaseTag;
+        var installedSha = _settings.Current.InstalledExeSha256;
         var fresh = new AppSettings();
         foreach (var prop in typeof(AppSettings).GetProperties())
             prop.SetValue(_settings.Current, prop.GetValue(fresh));
+        _settings.Current.InstalledReleaseTag = installedTag;
+        _settings.Current.InstalledExeSha256 = installedSha;
         _settings.SaveSoon();
         ThemeService.Apply(_settings.Current.Theme);
         AutostartService.Apply(false, false);

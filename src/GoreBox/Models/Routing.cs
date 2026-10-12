@@ -205,6 +205,12 @@ public sealed class AppSettings
     public bool CheckUpdatesOnStart { get; set; } = true;
     public DateTime? LastUpdateCheck { get; set; }
 
+    /// <summary>Тег релиза с GitHub, установленный в последний раз (или определённый по хэшу exe).</summary>
+    public string? InstalledReleaseTag { get; set; }
+
+    /// <summary>SHA-256 исполняемого файла, для которого запомнен <see cref="InstalledReleaseTag"/>.</summary>
+    public string? InstalledExeSha256 { get; set; }
+
     public double WindowWidth { get; set; } = 1040;
     public double WindowHeight { get; set; } = 720;
     public double? WindowLeft { get; set; }

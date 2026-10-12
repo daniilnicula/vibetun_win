@@ -14,6 +14,25 @@ public static class AppInfo
     /// <summary>Короткая метка кода. Обновлять вместе с изменениями в логике подключения.</summary>
     public const string BuildStamp = "term-round";
 
+    /// <summary>Тег релиза на GitHub (GoreSense/GoreBox), которому соответствует эта сборка по умолчанию.</summary>
+    public const string DefaultReleaseTag = "26.10.11m";
+
+    public static string ReleaseTag
+    {
+        get
+        {
+            var info = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!string.IsNullOrWhiteSpace(info))
+            {
+                var clean = info.Split('+')[0].Trim();
+                if (clean.Length > 0 && clean != Version && clean != "1.0.0")
+                    return clean;
+            }
+            return DefaultReleaseTag;
+        }
+    }
+
     public static string Version =>
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
 

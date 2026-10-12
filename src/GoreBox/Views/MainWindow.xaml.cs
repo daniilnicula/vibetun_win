@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private DialogService? _dialogs;
     private NavSectionMenu<PanelEntry>? _panelMenu;
     private NavSectionMenu<SshEntry>? _sshMenu;
+    private TrayPanelWindow? _trayPanel;
 
     public MainWindow()
     {
@@ -62,6 +63,10 @@ public partial class MainWindow : Window
     {
         _vm = new MainViewModel(new DialogService(this));
         DataContext = _vm;
+
+        // одиночный клик по иконке в трее — мини-панель у иконки (двойной — окно, см. TrayService)
+        _trayPanel = new TrayPanelWindow { DataContext = _vm };
+        _vm.Tray.PanelRequested += (anchor, clickedAt) => Safe(() => _trayPanel?.Toggle(anchor, clickedAt));
 
         // подсветка записей в списках следует за открытой вкладкой
         _vm.PropertyChanged += (_, e) =>
@@ -108,6 +113,7 @@ public partial class MainWindow : Window
     {
         if (_closed) return;
 
+        _trayPanel?.HidePanel();
         if (!IsVisible) Show();
         // возврат из трея — подгружаем страницу выбранной панели обратно
         PanelTab?.Restore();
@@ -643,8 +649,8 @@ public partial class MainWindow : Window
         {
             App.Settings.Current.TrayHintShown = true;
             App.Settings.SaveSoon();
-            _vm?.Tray.ShowHint("GoreBox", "Приложение свёрнуто в трей: клик по иконке открывает окно, " +
-                                              "правая кнопка — «Закрыть».");
+            _vm?.Tray.ShowHint("GoreBox", "Приложение свёрнуто в трей: клик по иконке — быстрая панель, " +
+                                              "двойной клик — окно, правая кнопка — «Закрыть».");
         }
     }
 

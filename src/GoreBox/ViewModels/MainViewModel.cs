@@ -57,6 +57,7 @@ public sealed class MainViewModel : ObservableObject
         Profiles = new ProfilesViewModel(ProfileStore, Latency, _dialogs, Logs);
         Routing = new RoutingViewModel(RouteStore, _dialogs);
         Preferences = new SettingsViewModel(App.Settings, Core, _dialogs);
+        Updates = new UpdatesViewModel(_dialogs);
 
         Profiles.ConnectRequested += profile => _ = ConnectToAsync(profile);
         Profiles.Notify += (text, error) => ShowStatus(text, error);
@@ -66,6 +67,9 @@ public sealed class MainViewModel : ObservableObject
         Preferences.Notify += (text, error) => ShowStatus(text, error);
         Preferences.ThemeChanged += () => Raise(nameof(IsDark));
         Preferences.RestartRequested += () => RestartRequested?.Invoke();
+        Updates.Notify += (text, error) => ShowStatus(text, error);
+        Updates.RestartRequested += () => RestartRequested?.Invoke();
+        Updates.ExitRequested += () => ExitRequested?.Invoke();
 
         // правки стратегий в настройках применяются сразу: движок перезапускаем, если он поднят
         Preferences.DpiSettingsChanged += () => _ = RestartDpiIfRunningAsync();
@@ -116,6 +120,7 @@ public sealed class MainViewModel : ObservableObject
     public ProfilesViewModel Profiles { get; }
     public RoutingViewModel Routing { get; }
     public SettingsViewModel Preferences { get; }
+    public UpdatesViewModel Updates { get; }
 
     public AsyncRelayCommand ToggleProxyCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
@@ -152,6 +157,8 @@ public sealed class MainViewModel : ObservableObject
             if (!SetProperty(ref _activeTab, value)) return;
             App.Settings.Current.LastTab = value;
             App.Settings.SaveSoon();
+            if (string.Equals(value, "updates", StringComparison.Ordinal))
+                _ = Updates.EnsureLoadedAsync();
         }
     }
 
@@ -457,6 +464,8 @@ public sealed class MainViewModel : ObservableObject
 
         if (App.Settings.Current.RememberState && App.Settings.Current.Dpi.Enabled)
             _ = StartDpiAsync(ownSystemProxy: !IsProxyOn);
+
+        _ = Updates.LoadReleasesAsync();
     }
 
     private ProxyProfile? ActiveProfileFromSettings()
@@ -808,6 +817,17 @@ public sealed class MainViewModel : ObservableObject
         Busy = true;
         try
         {
+            // ядро было запущено — для страховки ниже (проверяем порт именно этого профиля)
+            var routeOnStop = Routing.ActiveProfile;
+            var coreWasRunning = IsProxyOn;
+
+            // ВАЖНО: IsProxyOn сбрасываем ДО ApplySystemProxyAsync. Он решает, нужен ли системный прокси:
+            // пока он true, ApplySystemProxyAsync снова включил бы прокси на 127.0.0.1:<порт ядра>,
+            // а ядро через мгновение остановится. Итог — «залипший» прокси на мёртвый порт: браузеры,
+            // Steam и прочие приложения, работающие через системный прокси, теряют интернет, хотя
+            // ICMP (ping 8.8.8.8) и прямые подключения (RDP) продолжают работать.
+            IsProxyOn = false;
+
             // сначала возвращаем прежний системный прокси: интернет работает, даже если ядро не ответит.
             // Если обход DPI включён, системный прокси тут же переходит к нему.
             _dpiOwnsSystemProxy = App.Settings.Current.Dpi.UseSystemProxy && DpiEnabled;
@@ -822,7 +842,15 @@ public sealed class MainViewModel : ObservableObject
                 AppendLog("Ошибка остановки ядра: " + ex.Message);
             }
 
-            IsProxyOn = false;
+            // страховка: если системный прокси всё же указывает на порт нашего ядра (снимок не сохранился,
+            // запись не откатилась, в TUN-режиме остался залипший прокси), отключаем его — ядро уже
+            // остановлено, такой прокси не работает. Проверяется только порт этого профиля.
+            if (coreWasRunning && !DpiEnabled)
+            {
+                var port = routeOnStop.ListenPort;
+                await Task.Run(() => SystemProxy.CleanupStale(new[] { port }));
+            }
+
             _proxyStartedAt = null;
             TrafficText = "—";
             _connectionCount = 0;

@@ -40,6 +40,7 @@ public sealed class SettingsService
     {
         try
         {
+            _saveTimer.Stop();
             Json.Write(AppPaths.SettingsFile, _settings);
         }
         catch { /* ignore */ }

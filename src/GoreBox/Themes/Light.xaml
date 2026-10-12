@@ -31,6 +31,7 @@
     <SolidColorBrush x:Key="SuccessSoft" Color="#E1F5EC" />
     <SolidColorBrush x:Key="Warning" Color="#B57C14" />
     <SolidColorBrush x:Key="WarningSoft" Color="#FBF0D8" />
+    <SolidColorBrush x:Key="RollbackOrange" Color="#E67E22" />
     <SolidColorBrush x:Key="Danger" Color="#D14343" />
     <SolidColorBrush x:Key="DangerSoft" Color="#FBE7E7" />
 

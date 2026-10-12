@@ -55,6 +55,7 @@ public partial class App : Application
         // папка данных выбирается до загрузки настроек: от неё зависят все остальные пути
         StartupNotice = StorageLocation.Initialize();
         AppPaths.EnsureCreated();
+        AppUpdateService.CleanupOldExecutable();
         Settings.Load();
         ThemeService.Apply(Settings.Current.Theme);
         ThemeService.ApplyAccent(Settings.Current.AccentColor);

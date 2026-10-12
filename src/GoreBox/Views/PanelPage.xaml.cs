@@ -1,9 +1,11 @@
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using GoreBox.Models;
+using GoreBox.Services;
 using GoreBox.Utils;
 
 namespace GoreBox.Views;
@@ -19,6 +21,11 @@ public partial class PanelPage : UserControl
     private readonly PanelEntry _entry;
     private WebView2? _browser;
     private bool _busy;
+
+    /// <summary>Логин, отправленный на сайт, и ещё не предложенный к сохранению.</summary>
+    private sealed record PendingLogin(string Host, string User, string Password, DateTime AtUtc);
+    private PendingLogin? _pending;
+    private bool _offerShown;   // запрос «Сохранить пароль» уже показан на этой загрузке страницы
 
     private static Task<CoreWebView2Environment>? _envTask;
 
@@ -82,6 +89,7 @@ public partial class PanelPage : UserControl
             try { File.Delete(MarkerPath); } catch { /* ignore */ }
         }
 
+        PanelPasswords.DeleteAll();   // сохранённые пароли панелей — тоже часть «входов»
         _envTask = null;   // следующий браузер создаст окружение заново
         return deleted;
     }
@@ -101,7 +109,22 @@ public partial class PanelPage : UserControl
             await browser.EnsureCoreWebView2Async(env);
 
             var core = browser.CoreWebView2;
-            core.NavigationStarting += (_, args) => RememberUrl(args.Uri);
+
+            // Пароли ведёт свой менеджер (PanelPasswords), а не встроенный WebView2: его запрос
+            // «Сохранить пароль» в части версий рантайма не появляется для новых логинов.
+            // Встроенное автосохранение выключаем, чтобы не было двух запросов подряд.
+            core.Settings.IsPasswordAutosaveEnabled = false;
+            core.Settings.IsGeneralAutofillEnabled = true;
+
+            // скрипт на каждой загрузке страницы: ловит отправку логина и заполняет поля сохранённым паролем
+            await core.AddScriptToExecuteOnDocumentCreatedAsync(PanelPasswords.Script);
+            core.WebMessageReceived += OnPasswordMessage;
+
+            core.NavigationStarting += (_, args) =>
+            {
+                RememberUrl(args.Uri);
+                _offerShown = false;
+            };
             core.SourceChanged += (_, _) => SyncUrlBox();
 
             var url = Normalize(_entry.Url);
@@ -143,6 +166,63 @@ public partial class PanelPage : UserControl
         BrowserHost.Children.Clear();
         try { browser.Dispose(); }
         catch { /* процесс WebView2 мог уже завершиться */ }
+    }
+
+    /// <summary>Сообщения от скрипта страницы (логин, запрос заполнения, ответ на «Сохранить пароль»).</summary>
+    private void OnPasswordMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            if (sender is not CoreWebView2 core) return;
+            var json = e.TryGetWebMessageAsString();
+            if (string.IsNullOrEmpty(json)) return;
+
+            var host = PanelPasswords.HostOf(e.Source);
+            if (host.Length == 0) return;
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var type = root.TryGetProperty("type", out var t) ? t.GetString() : null;
+
+            switch (type)
+            {
+                case "want":
+                {
+                    var hasPassword = root.TryGetProperty("hasPassword", out var hp) && hp.GetBoolean();
+                    if (hasPassword && PanelPasswords.Find(host) is { } saved)
+                        core.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "fill", user = saved.User, pass = saved.Password }));
+
+                    if (_pending is { } p && p.Host == host && !_offerShown &&
+                        DateTime.UtcNow - p.AtUtc < TimeSpan.FromMinutes(3))
+                    {
+                        _offerShown = true;
+                        core.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "offer", user = p.User }));
+                    }
+                    break;
+                }
+                case "captured":
+                {
+                    var user = root.TryGetProperty("user", out var u) ? u.GetString() ?? "" : "";
+                    var pass = root.TryGetProperty("pass", out var ps) ? ps.GetString() ?? "" : "";
+                    // уже сохранённый точно такой же вход повторно не предлагаем
+                    _pending = pass.Length == 0 || PanelPasswords.Has(host, user, pass)
+                        ? null
+                        : new PendingLogin(host, user, pass, DateTime.UtcNow);
+                    break;
+                }
+                case "save":
+                    if (_pending is { } s && s.Host == host) PanelPasswords.Save(s.Host, s.User, s.Password);
+                    _pending = null;
+                    break;
+                case "dismiss":
+                    _pending = null;
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            App.LogCrash(ex);
+        }
     }
 
     private void OnUrlKeyDown(object sender, KeyEventArgs e)

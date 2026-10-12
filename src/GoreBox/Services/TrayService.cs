@@ -1,14 +1,18 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Threading;
 using GoreBox.Utils;
 using WinForms = System.Windows.Forms;
 
 namespace GoreBox.Services;
 
 /// <summary>
-/// Иконка в системном трее: ЛКМ — открыть окно, ПКМ — меню с единственным пунктом «Закрыть»
-/// (полный выход приложения). После <see cref="Dispose"/> события игнорируются.
+/// Иконка в системном трее:
+/// одиночный ЛКМ — мини-панель у иконки (<see cref="PanelRequested"/>),
+/// двойной ЛКМ — открыть окно приложения (<see cref="OpenRequested"/>),
+/// ПКМ — меню с единственным пунктом «Закрыть» (полный выход приложения).
+/// После <see cref="Dispose"/> события игнорируются.
 /// </summary>
 public sealed class TrayService : IDisposable
 {
@@ -18,8 +22,31 @@ public sealed class TrayService : IDisposable
     private bool _proxyOn;
     private bool _disposed;
 
+    /// <summary>Двойной клик: открыть окно приложения.</summary>
     public event Action? OpenRequested;
+
+    /// <summary>
+    /// Одиночный клик: показать мини-панель. Передаются позиция курсора (экранные пиксели)
+    /// и момент клика — по нему панель отличает клик «закрыть, нажав на иконку» от «открыть».
+    /// </summary>
+    public event Action<System.Drawing.Point, DateTime>? PanelRequested;
+
     public event Action? ExitRequested;
+
+    /// <summary>
+    /// Задержка перед показом мини-панели после одиночного клика, в мс. Меняется здесь.
+    /// Меньше — панель появляется быстрее; но если сделать меньше системного интервала двойного клика,
+    /// при двойном клике панель может мелькнуть перед открытием окна.
+    /// </summary>
+    public const int SingleClickDelayMs = 200;
+
+    /// <summary>Системный интервал двойного клика: второй щелчок в этот промежуток не открывает панель.</summary>
+    private static int SystemDoubleClickMs => WinForms.SystemInformation.DoubleClickTime;
+
+    private readonly DispatcherTimer _singleClickTimer;
+    private System.Drawing.Point _pendingAnchor;
+    private DateTime _pendingClickUtc;
+    private DateTime _lastDoubleClickUtc = DateTime.MinValue;
 
     public TrayService()
     {
@@ -52,14 +79,32 @@ public sealed class TrayService : IDisposable
         menu.Items.Add(closeItem);
 
         _icon.ContextMenuStrip = menu;
+
+        // одиночный клик откладываем на SingleClickDelayMs: если за это время придёт DoubleClick, панели не будет
+        _singleClickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(SingleClickDelayMs) };
+        _singleClickTimer.Tick += (_, _) =>
+        {
+            _singleClickTimer.Stop();
+            if (_disposed) return;
+            PanelRequested?.Invoke(_pendingAnchor, _pendingClickUtc);
+        };
+
         _icon.MouseClick += (_, e) =>
         {
             if (_disposed || e.Button != WinForms.MouseButtons.Left) return;
-            OpenRequested?.Invoke();
+            // второй щелчок двойного клика: окно уже открывается по DoubleClick, панель не нужна
+            if (DateTime.UtcNow - _lastDoubleClickUtc < TimeSpan.FromMilliseconds(SystemDoubleClickMs)) return;
+
+            _pendingAnchor = WinForms.Cursor.Position;
+            _pendingClickUtc = DateTime.UtcNow;
+            _singleClickTimer.Stop();
+            _singleClickTimer.Start();
         };
         _icon.DoubleClick += (_, _) =>
         {
             if (_disposed) return;
+            _lastDoubleClickUtc = DateTime.UtcNow;
+            _singleClickTimer.Stop();
             OpenRequested?.Invoke();
         };
     }
@@ -176,6 +221,7 @@ public sealed class TrayService : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _singleClickTimer.Stop();
         try
         {
             _icon.Visible = false;
