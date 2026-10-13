@@ -28,10 +28,11 @@ public sealed class LatencyService
 
         if (_core is not null && _core.TunActive && _core.LocalListenPort > 0)
         {
+            // SOCKS5 — до 4 с, HTTP CONNECT — до 3 с: при отказе входа не ждём 12 с на профиль
             var viaProxy = await TryViaLocalProxyAsync(node.Server, node.Port,
-                _core.LocalListenAddress, _core.LocalListenPort, TimeSpan.FromSeconds(6), ct);
+                _core.LocalListenAddress, _core.LocalListenPort, TimeSpan.FromSeconds(4), ct);
             if (viaProxy >= 0) return viaProxy;
-            // ядро не ответило на CONNECT — fallback на прямой замер
+            AppLog.Write($"Замер {node.Server}:{node.Port}: вход ядра недоступен — fallback на прямой замер (значение будет занижено TUN)");
         }
 
         var tcp = await TryTcpAsync(node.Server, node.Port, TimeSpan.FromSeconds(4), ct);
@@ -54,7 +55,8 @@ public sealed class LatencyService
     {
         var viaSocks = await TryViaSocks5Async(host, port, listenAddress, listenPort, timeout, ct);
         if (viaSocks >= 0) return viaSocks;
-        return await TryViaHttpConnectAsync(host, port, listenAddress, listenPort, timeout, ct);
+        return await TryViaHttpConnectAsync(host, port, listenAddress, listenPort,
+            TimeSpan.FromSeconds(Math.Min(3, timeout.TotalSeconds)), ct);
     }
 
     private static string LoopbackOf(string listenAddress) =>
@@ -63,6 +65,7 @@ public sealed class LatencyService
     private static async Task<int> TryViaSocks5Async(string host, int port,
         string listenAddress, int listenPort, TimeSpan timeout, CancellationToken ct)
     {
+        var tag = $"Замер {host}:{port} через {LoopbackOf(listenAddress)}:{listenPort} SOCKS5";
         try
         {
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -74,7 +77,11 @@ public sealed class LatencyService
             // greeting: ver 5, один метод — без авторизации
             await socket.SendAsync(new byte[] { 0x05, 0x01, 0x00 }, SocketFlags.None, linked.Token);
             var resp = await RecvExactAsync(socket, 2, linked.Token);
-            if (resp is null || resp[0] != 0x05 || resp[1] != 0x00) return -1;
+            if (resp is null || resp[0] != 0x05 || resp[1] != 0x00)
+            {
+                AppLog.Write(tag + ": вход ядра не принял greeting" + (resp is null ? " (нет ответа)" : $" (ver={resp[0]}, method={resp[1]})"));
+                return -1;
+            }
 
             // CONNECT: доменная форма (ATYP 03) работает и для IP, и для имён
             var hostBytes = Encoding.ASCII.GetBytes(host);
@@ -86,16 +93,34 @@ public sealed class LatencyService
 
             var head = await RecvExactAsync(socket, 4, linked.Token);
             sw.Stop();
-            if (head is null || head[0] != 0x05 || head[1] != 0x00) return -1;   // != 0x00 — ошибка CONNECT
+            if (head is null || head[0] != 0x05)
+            {
+                AppLog.Write(tag + ": нет ответа на CONNECT");
+                return -1;
+            }
+            if (head[1] != 0x00)   // ошибка CONNECT: ядро не смогло достучаться до сервера
+            {
+                AppLog.Write(tag + $": вход отказал rep={head[1]} за {sw.ElapsedMilliseconds} мс — ядро не достучалось до {host}:{port} по своим маршрутам");
+                return -1;
+            }
+            AppLog.Write(tag + $": OK {sw.ElapsedMilliseconds} мс");
             return (int)sw.ElapsedMilliseconds;
         }
-        catch { /* ignore */ }
+        catch (OperationCanceledException)
+        {
+            AppLog.Write(tag + ": таймаут — вход ядра не ответил за " + (int)timeout.TotalSeconds + " с");
+        }
+        catch (Exception e)
+        {
+            AppLog.Write(tag + ": " + e.GetType().Name + " " + e.Message);
+        }
         return -1;
     }
 
     private static async Task<int> TryViaHttpConnectAsync(string host, int port,
         string listenAddress, int listenPort, TimeSpan timeout, CancellationToken ct)
     {
+        var tag = $"Замер {host}:{port} через {LoopbackOf(listenAddress)}:{listenPort} HTTP CONNECT";
         try
         {
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -124,11 +149,29 @@ public sealed class LatencyService
             }
             sw.Stop();
 
-            if (!headersComplete) return -1;
+            if (!headersComplete)
+            {
+                AppLog.Write(tag + ": нет ответа от входа ядра");
+                return -1;
+            }
             var head = Encoding.ASCII.GetString(received.ToArray());
-            return head.Contains(" 200", StringComparison.Ordinal) ? (int)sw.ElapsedMilliseconds : -1;
+            if (head.Contains(" 200", StringComparison.Ordinal))
+            {
+                AppLog.Write(tag + $": OK {sw.ElapsedMilliseconds} мс");
+                return (int)sw.ElapsedMilliseconds;
+            }
+            var statusLine = head.Split('\r')[0];
+            AppLog.Write(tag + $": вход отказал ({statusLine.Trim()}) — ядро не достучалось до {host}:{port}");
+            return -1;
         }
-        catch { /* ignore */ }
+        catch (OperationCanceledException)
+        {
+            AppLog.Write(tag + ": таймаут — вход ядра не ответил за " + (int)timeout.TotalSeconds + " с");
+        }
+        catch (Exception e)
+        {
+            AppLog.Write(tag + ": " + e.GetType().Name + " " + e.Message);
+        }
         return -1;
     }
 
