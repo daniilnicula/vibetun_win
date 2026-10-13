@@ -48,9 +48,9 @@ public sealed class MainViewModel : ObservableObject
 
         ProfileStore = new ProfileStore();
         RouteStore = new RouteStore();
-        Latency = new LatencyService();
         SystemProxy = new SystemProxyService();
         Core = new CoreService();
+        Latency = new LatencyService(Core);
         Tray = new TrayService();
         Logs = new LogFeed();
 
@@ -624,6 +624,9 @@ public sealed class MainViewModel : ObservableObject
             // IsProxyOn выставляем до настройки системного прокси: ApplySystemProxyAsync смотрит на него
             IsProxyOn = true;
             _proxyStartedAt = DateTime.Now;
+            Core.TunActive = route.TunEnabled;
+            Core.LocalListenAddress = route.ListenAddress;
+            Core.LocalListenPort = route.ListenPort;
             if (route.UseSystemProxy) await ApplySystemProxyAsync();
 
             App.Settings.Current.ProxyWasActive = true;
@@ -827,6 +830,7 @@ public sealed class MainViewModel : ObservableObject
             // Steam и прочие приложения, работающие через системный прокси, теряют интернет, хотя
             // ICMP (ping 8.8.8.8) и прямые подключения (RDP) продолжают работать.
             IsProxyOn = false;
+            Core.TunActive = false;   // дальнейшие замеры задержки — снова прямой TCP/ICMP
 
             // сначала возвращаем прежний системный прокси: интернет работает, даже если ядро не ответит.
             // Если обход DPI включён, системный прокси тут же переходит к нему.

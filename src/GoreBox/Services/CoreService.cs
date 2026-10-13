@@ -29,6 +29,16 @@ public sealed partial class CoreService : IDisposable
     public bool IsRunning => State is ConnectionState.Running or ConnectionState.Starting;
     public IReadOnlyList<string> RecentLog => _recentLog;
 
+    /// <summary>
+    /// Параметры локального входа ядра в момент последнего запуска. Нужны LatencyService:
+    /// при активном TUN прямой TCP-коннект до публичного IP перехватывается локальным
+    /// стеком туннеля и «успевает» за ~1 мс (рукопожатие отвечает сам туннель), поэтому
+    /// замер идёт через этот вход: CONNECT до сервера профиля через текущий прокси.
+    /// </summary>
+    public bool TunActive { get; set; }
+    public string LocalListenAddress { get; set; } = "127.0.0.1";
+    public int LocalListenPort { get; set; }
+
     [GeneratedRegex(@"(?<maj>\d+)\.(?<min>\d+)\.(?<pat>\d+)")]
     private static partial Regex VersionRegex();
 

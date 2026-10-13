@@ -7,8 +7,8 @@
         Title="GoreBox"
         Width="1060" Height="740" MinWidth="900" MinHeight="580"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="True"
-        Background="Transparent"
+        WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="False"
+        Background="{DynamicResource WindowBg}"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
 

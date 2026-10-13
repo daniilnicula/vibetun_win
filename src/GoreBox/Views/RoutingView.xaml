@@ -11,7 +11,7 @@
             <TextBlock Text="Маршрутизация" Style="{StaticResource TxtH1}" />
             <TextBlock Text="Входящие подключения, TUN, правила для доменов/IP и приложений. Наборы правил хранятся отдельными файлами."
                        Style="{StaticResource TxtMuted}" Margin="0,3,0,0" />
-            <TextBlock Text="Изменения входа вступают в силу при следующем подключении."
+            <TextBlock Text="Изменения применяются сразу: активное подключение перезапускается автоматически."
                        Style="{StaticResource TxtMuted}" Margin="0,2,0,0" FontStyle="Italic" />
         </StackPanel>
 

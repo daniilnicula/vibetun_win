@@ -479,7 +479,29 @@ public partial class MainWindow : Window
         // если HWND создан до Show (запуск свёрнутым в трей и т.п.), и хук тогда не установится
         if (HwndSource.FromHwnd(new WindowInteropHelper(this).Handle) is HwndSource source)
             source.AddHook(WndProc);
+
+        // Скругление углов теперь делает DWM (Windows 11): окно стало непрозрачным,
+        // чтобы FancyZones мог его прикреплять (layered-окна PowerToys игнорирует).
+        ApplyDwmRoundCorners();
     }
+
+    /// <summary>DWMWA_WINDOW_CORNER_PREFERENCE = ROUND. Работает с Windows 11;
+    /// на Windows 10 вызов просто вернёт ошибку — окно останется квадратным, как раньше.</summary>
+    private void ApplyDwmRoundCorners()
+    {
+        try
+        {
+            const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+            const int DWMWCP_ROUND = 2;
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var pref = DWMWCP_ROUND;
+            DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
+        }
+        catch { /* Windows 10 и старше — без скругления */ }
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {

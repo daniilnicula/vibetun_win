@@ -226,7 +226,9 @@
                             <TextBlock x:Name="ph" Text="{TemplateBinding Tag}" Margin="{TemplateBinding Padding}"
                                        Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center"
                                        Visibility="Collapsed" IsHitTestVisible="False" />
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                            <!-- WPF (.NET Core 3.0+) сам применяет Padding к PART_ContentHost,
+                                 дополнительный Margin здесь давал двойной отступ -->
+                            <ScrollViewer x:Name="PART_ContentHost"
                                           VerticalAlignment="Center" />
                         </Grid>
                     </Border>
@@ -272,7 +274,8 @@
                 <ControlTemplate TargetType="PasswordBox">
                     <Border x:Name="bd" Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="8">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                        <!-- WPF сам применяет Padding к PART_ContentHost, Margin здесь лишний -->
+                        <ScrollViewer x:Name="PART_ContentHost"
                                       VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
