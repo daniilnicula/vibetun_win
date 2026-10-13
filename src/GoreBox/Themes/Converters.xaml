@@ -30,5 +30,6 @@
     <utils:InListToVisConv x:Key="InListVis" />
     <utils:BrushKeyConv x:Key="BrushKey" />
     <utils:InverseBoolConv x:Key="InvBool2" />
+    <utils:MarkdownToBlocksConv x:Key="MdBlocks" />
 
 </ResourceDictionary>

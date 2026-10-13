@@ -151,10 +151,16 @@
                         <TextBlock Text="Что изменилось" Style="{StaticResource TxtCaption}" Margin="0,0,0,8" />
                     </StackPanel>
 
-                    <!-- описание с GitHub -->
+                    <!-- описание с GitHub (markdown → блоки) -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <TextBlock Text="{Binding DisplayedRelease.DescriptionText}" Style="{StaticResource Txt}"
-                                   TextWrapping="Wrap" LineHeight="21" Margin="0,0,6,8" />
+                        <ItemsControl ItemsSource="{Binding DisplayedRelease.DescriptionText, Converter={StaticResource MdBlocks}}"
+                                      Margin="0,0,6,8">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
                     </ScrollViewer>
 
                     <!-- нижняя панель: прогресс-бар скачивания и кнопка «Обновить» / «Откатить» -->
