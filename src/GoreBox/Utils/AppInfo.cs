@@ -15,7 +15,7 @@ public static class AppInfo
     public const string BuildStamp = "term-round";
 
     /// <summary>Тег релиза на GitHub (GoreSense/GoreBox), которому соответствует эта сборка по умолчанию.</summary>
-    public const string DefaultReleaseTag = "26.10.13";
+    public const string DefaultReleaseTag = "26.10.13f";
 
     public static string ReleaseTag
     {
