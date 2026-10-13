@@ -9,8 +9,6 @@
 
         <StackPanel Grid.Row="0" HorizontalAlignment="Center">
             <TextBlock Text="Настройки" Style="{StaticResource TxtH1}" HorizontalAlignment="Center" />
-            <TextBlock Text="Тема, автозапуск, место хранения данных и ядро sing-box."
-                       Style="{StaticResource TxtMuted}" Margin="0,3,0,0" HorizontalAlignment="Center" />
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto">
