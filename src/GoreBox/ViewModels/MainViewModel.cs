@@ -459,7 +459,7 @@ public sealed class MainViewModel : ObservableObject
         if (App.Settings.Current.RememberState && App.Settings.Current.ProxyWasActive && _activeProfile is not null)
         {
             ShowStatus("Восстановление подключения…", false);
-            await StartProxyAsync();
+            await StartProxyAsync(autoRestore: true);
         }
 
         if (App.Settings.Current.RememberState && App.Settings.Current.Dpi.Enabled)
@@ -532,7 +532,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private async Task StartProxyAsync()
+    private async Task StartProxyAsync(bool autoRestore = false)
     {
         if (Busy) return;
         if (_activeProfile is null)
@@ -558,6 +558,13 @@ public sealed class MainViewModel : ObservableObject
 
         if (route.TunEnabled && !AdminHelper.IsElevated)
         {
+            // Автовосстановление при старте не дёргает пользователя модальным диалогом:
+            // сообщаем в статус, а права запрашиваем только при ручном подключении.
+            if (autoRestore)
+            {
+                ShowStatus("Подключение не восстановлено: для TUN-режима нужны права администратора — нажмите «Подключить»", true);
+                return;
+            }
             var agree = _dialogs.ConfirmElevate("Требуются права администратора",
                 "Для TUN-режима и маршрутизации приложений нужно перезапустить приложение с правами администратора. " +
                 "Перезапустить сейчас?");
