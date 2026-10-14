@@ -2,15 +2,31 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:v="clr-namespace:GoreBox.Views"
+             xmlns:ctl="clr-namespace:GoreBox.Views.Controls"
              x:Name="Root">
-    <!-- активный профиль подсвечивается акцентом — как активная вкладка слева -->
+    <!-- активный профиль — тонкая рамка Accent вокруг строки; при смене профиля рамка переезжает
+         от прежней строки к новой (ProfilesView.xaml.cs). Наведение мышью и выбор кликом строку не подсвечивают (ПКМ выделяет строку для меню). -->
     <UserControl.Resources>
         <Style x:Key="ProfileItem" TargetType="ListBoxItem" BasedOn="{StaticResource PlainItem}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsActive}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-                </DataTrigger>
-            </Style.Triggers>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="hl" CornerRadius="8" BorderBrush="{DynamicResource Accent}" BorderThickness="1.5" Opacity="0">
+                                <Border.RenderTransform>
+                                    <TranslateTransform />
+                                </Border.RenderTransform>
+                            </Border>
+                            <ContentPresenter />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                <Setter TargetName="hl" Property="Opacity" Value="1" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
     <Grid Margin="18,14,18,0">
@@ -266,9 +282,21 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBox x:Name="LogBox" Grid.Row="1" Margin="8,0,8,8" Style="{StaticResource InputBoxMono}"
-                             IsReadOnly="True" Text="{Binding Log.Text, Mode=OneWay}"
-                             Loaded="OnLogBoxLoaded" TextChanged="OnLogBoxTextChanged" />
+                    <!-- строки журнала: ключевые данные цветом акцента; новая строка выезжает слева и проявляется -->
+                    <ScrollViewer x:Name="LogScroll" Grid.Row="1" Margin="8,0,8,8" Padding="6,4"
+                                  Background="Transparent" Focusable="False"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Log.Lines}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="Transparent" Loaded="OnLogLineLoaded">
+                                        <ctl:LogLineText Segments="{Binding Segments}" Style="{StaticResource TxtMono}"
+                                                         TextWrapping="NoWrap" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </Grid>
             </Border>
         </Grid>

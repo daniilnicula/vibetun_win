@@ -15,6 +15,8 @@ public sealed class ProfilesViewModel : ObservableObject
     private readonly IDialogService _dialogs;
     private string _searchText = "";
     private ProfileItemVm? _selected;
+    private readonly SemaphoreSlim _pingGate = new(8);
+    private readonly Dictionary<string, Task> _pendingPings = new();
 
     public ProfilesViewModel(ProfileStore store, LatencyService latency, IDialogService dialogs, LogFeed log)
     {
@@ -83,6 +85,7 @@ public sealed class ProfilesViewModel : ObservableObject
     public bool IsEmpty => Items.Count == 0;
 
     public event Action<ProxyProfile>? ConnectRequested;
+    public event Action<ProxyProfile, int>? PingUpdated;
     public event Action<string, bool>? Notify;   // (текст, ошибка?)
 
     public RelayCommand EditCommand { get; }
@@ -250,18 +253,49 @@ public sealed class ProfilesViewModel : ObservableObject
     }
 
     // -------------------------------------------------------------------- пинг
+    // Все вызовы начинаются на UI-потоке: обновление списка, сохранение и событие
+    // выполняются вместе. Повторный запрос того же профиля ждёт уже идущий замер.
     public async Task PingAsync(ProfileItemVm? item)
     {
         if (item is null) return;
-        if (item.IsPinging) return;
+        if (_pendingPings.TryGetValue(item.Id, out var pending))
+        {
+            await pending;
+            return;
+        }
 
+        var task = MeasureAndPublishPingAsync(item);
+        _pendingPings[item.Id] = task;
+        try
+        {
+            await task;
+        }
+        finally
+        {
+            _pendingPings.Remove(item.Id);
+        }
+    }
+
+    private async Task MeasureAndPublishPingAsync(ProfileItemVm item)
+    {
         item.IsPinging = true;
         try
         {
-            var ms = await _latency.MeasureAsync(item.Profile);
-            item.PingMs = ms;
-            item.Profile.LastPingMs = ms;
-            _store.Save(item.Profile);
+            await _pingGate.WaitAsync();
+            try
+            {
+                var ms = await _latency.MeasureAsync(item.Profile);
+                // Удалённый во время замера профиль не должен появиться на диске снова.
+                if (!Items.Contains(item)) return;
+                item.PingMs = ms;
+                item.Profile.LastPingMs = ms;
+                PingUpdated?.Invoke(item.Profile, ms);
+                _store.Save(item.Profile);
+            }
+            finally
+            {
+                _pingGate.Release();
+            }
         }
         finally
         {
@@ -271,30 +305,11 @@ public sealed class ProfilesViewModel : ObservableObject
 
     public async Task PingAllAsync()
     {
-        var targets = Items.Where(i => !i.IsPinging).ToList();
+        var targets = Items.ToList();
         if (targets.Count == 0) return;
 
-        foreach (var item in targets) item.IsPinging = true;
-        try
-        {
-            await Parallel.ForEachAsync(targets, new ParallelOptions { MaxDegreeOfParallelism = 8 },
-                async (item, ct) =>
-                {
-                    var ms = await _latency.MeasureAsync(item.Profile, ct);
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        item.PingMs = ms;
-                        item.Profile.LastPingMs = ms;
-                    });
-                });
-
-            foreach (var item in targets) _store.Save(item.Profile);
-            Notify?.Invoke("Замер задержки завершён", false);
-        }
-        finally
-        {
-            foreach (var item in targets) item.IsPinging = false;
-        }
+        await Task.WhenAll(targets.Select(item => PingAsync(item)));
+        Notify?.Invoke("Замер задержки завершён", false);
     }
 
     // ------------------------------------------------------------------- прочее
@@ -327,11 +342,17 @@ public sealed class ProfilesViewModel : ObservableObject
         }
     }
 
+    /// <summary>Активный профиль сменился (старый id, новый id) — список анимирует подсветку.</summary>
+    public event Action<string?, string?>? ActiveChanged;
+
     /// <summary>Пометить активный профиль в списке.</summary>
     public void SetActive(string? profileId)
     {
+        var previous = Items.FirstOrDefault(i => i.IsActive)?.Id;
         foreach (var item in Items)
             item.IsActive = item.Id == profileId;
+        if (!string.Equals(previous, profileId, StringComparison.Ordinal))
+            ActiveChanged?.Invoke(previous, profileId);
     }
 
     public ProfileItemVm? Find(string id) => Items.FirstOrDefault(i => i.Id == id);

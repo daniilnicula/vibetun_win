@@ -30,6 +30,12 @@ public sealed class DialogService : IDialogService
         return window.ShowDialog() == true ? window.Value : null;
     }
 
+    public (string Name, string Address)? EditDnsServer(string title, string okText, string name = "", string address = "")
+    {
+        var window = new DnsServerWindow(title, okText, name, address) { Owner = _owner };
+        return window.ShowDialog() == true ? (window.ServerName, window.Address) : null;
+    }
+
     public bool Confirm(string title, string text, string okText = "Удалить", bool danger = true)
     {
         var window = new ConfirmWindow(title, text, okText, danger, okOnly: false) { Owner = _owner };

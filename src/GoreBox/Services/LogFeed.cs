@@ -1,11 +1,14 @@
+using System.Collections.ObjectModel;
 using System.Windows.Threading;
 using GoreBox.ViewModels;
 
 namespace GoreBox.Services;
 
 /// <summary>
-/// Журнал для панели «Логи» на вкладке «Профили»: хранит последние строки и отдаёт их одним текстом.
-/// Строки можно добавлять из любого потока; текст обновляется примерно раз в 150 мс, только на UI-потоке.
+/// Журнал для панели «Логи» на вкладке «Профили»: последние строки, каждая — отдельным элементом списка.
+/// Одинаковые строки подряд сворачиваются в одну с счётчиком «×N». Новые строки появляются анимацией
+/// (см. <see cref="LogLine.IsFresh"/>).
+/// Строки можно добавлять из любого потока; список обновляется примерно раз в 150 мс, только на UI-потоке.
 /// Создавать нужно на UI-потоке (здесь создаётся таймер диспетчера).
 /// </summary>
 public sealed class LogFeed : ObservableObject
@@ -13,10 +16,8 @@ public sealed class LogFeed : ObservableObject
     public const int MaxLines = 1000;
 
     private readonly object _gate = new();
-    private readonly List<string> _lines = new();
+    private readonly List<(DateTime Time, string Text)> _pending = new();
     private readonly DispatcherTimer _timer;
-    private bool _dirty;
-    private string _text = "";
 
     public LogFeed()
     {
@@ -25,51 +26,99 @@ public sealed class LogFeed : ObservableObject
         _timer.Start();
     }
 
-    /// <summary>Весь текст журнала, новые строки внизу.</summary>
-    public string Text
-    {
-        get => _text;
-        private set => SetProperty(ref _text, value);
-    }
+    /// <summary>Строки журнала по порядку, новые внизу. Меняется только на UI-потоке.</summary>
+    public ObservableCollection<LogLine> Lines { get; } = new();
+
+    /// <summary>Строки изменились (UI-поток): панель может прокрутить вниз.</summary>
+    public event Action? Updated;
 
     public void Add(string line)
     {
         if (string.IsNullOrWhiteSpace(line)) return;
 
-        var stamped = $"[{DateTime.Now:HH:mm:ss}] {line.TrimEnd()}";
-        lock (_gate)
-        {
-            _lines.Add(stamped);
-            if (_lines.Count > MaxLines) _lines.RemoveRange(0, _lines.Count - MaxLines);
-            _dirty = true;
-        }
+        var item = (DateTime.Now, line.TrimEnd());
+        lock (_gate) _pending.Add(item);
     }
 
     public void Clear()
     {
-        lock (_gate)
-        {
-            _lines.Clear();
-            _dirty = true;
-        }
-        Flush();
+        lock (_gate) _pending.Clear();
+        Lines.Clear();
+        Updated?.Invoke();
     }
 
-    /// <summary>Текст журнала целиком — для кнопки «Копировать».</summary>
+    /// <summary>Текст журнала целиком, одна строка на запись (с повторами «×N») — для кнопки «Копировать».</summary>
     public string Snapshot()
     {
-        lock (_gate) return string.Join(Environment.NewLine, _lines);
+        Flush();
+        return string.Join(Environment.NewLine, Lines.Select(line => line.Plain));
     }
 
     private void Flush()
     {
-        string text;
+        List<(DateTime Time, string Text)> batch;
         lock (_gate)
         {
-            if (!_dirty) return;
-            _dirty = false;
-            text = string.Join(Environment.NewLine, _lines);
+            if (_pending.Count == 0) return;
+            batch = new List<(DateTime Time, string Text)>(_pending);
+            _pending.Clear();
         }
-        Text = text;
+
+        foreach (var (time, text) in batch) Append(time, text);
+        Updated?.Invoke();
     }
+
+    private void Append(DateTime time, string text)
+    {
+        var key = LogFormat.DedupKey(text);
+        if (Lines.Count > 0 && Lines[^1].Key == key)
+        {
+            Lines[^1].Repeat++;
+            return;
+        }
+
+        Lines.Add(new LogLine(time, text) { IsFresh = true });
+        while (Lines.Count > MaxLines) Lines.RemoveAt(0);
+    }
+}
+
+/// <summary>Одна строка журнала: время, текст и число повторов подряд.</summary>
+public sealed class LogLine : ObservableObject
+{
+    private int _repeat = 1;
+
+    public LogLine(DateTime time, string text)
+    {
+        Time = time;
+        Text = text;
+        Key = LogFormat.DedupKey(text);
+    }
+
+    public DateTime Time { get; }
+
+    public string Text { get; }
+
+    /// <summary>Ключ для склейки повторов (без номера соединения).</summary>
+    public string Key { get; }
+
+    /// <summary>Сколько раз строка подряд повторилась; 1 — без повторов.</summary>
+    public int Repeat
+    {
+        get => _repeat;
+        set
+        {
+            if (SetProperty(ref _repeat, value)) Raise(nameof(Segments));
+        }
+    }
+
+    /// <summary>Строка только что добавлена: при появлении в панели она выезжает слева. Сбрасывается после анимации.</summary>
+    public bool IsFresh { get; set; }
+
+    /// <summary>Цветные фрагменты для отображения.</summary>
+    public IReadOnlyList<LogSegment> Segments => LogFormat.Segments(Time, Text, Repeat);
+
+    /// <summary>Строка одним текстом, как в буфере обмена.</summary>
+    public string Plain => Repeat > 1
+        ? $"[{Time:HH:mm:ss}] {Text} ×{Repeat}"
+        : $"[{Time:HH:mm:ss}] {Text}";
 }

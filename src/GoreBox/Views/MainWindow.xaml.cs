@@ -10,11 +10,13 @@ using GoreBox.Models;
 using GoreBox.Services;
 using GoreBox.Utils;
 using GoreBox.ViewModels;
+using GoreBox.Views.Controls;
 
 namespace GoreBox.Views;
 
 public partial class MainWindow : Window
 {
+    private readonly bool _useSystemCorners = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000);
     private MainViewModel? _vm;
     private bool _reallyExit;
     private bool _closed;
@@ -22,10 +24,20 @@ public partial class MainWindow : Window
     private NavSectionMenu<PanelEntry>? _panelMenu;
     private NavSectionMenu<SshEntry>? _sshMenu;
     private TrayPanelWindow? _trayPanel;
+    private SlideMarker? _navMarker;
 
     public MainWindow()
     {
         InitializeComponent();
+        // AllowsTransparency нельзя менять после создания HWND.
+        // Windows 11: обычное окно с системными углами; Windows 10: layered-окно
+        // с прозрачным фоном и обрезкой содержимого по скруглённому Border.
+        if (!_useSystemCorners)
+        {
+            AllowsTransparency = true;
+            Background = Brushes.Transparent;
+        }
+        UpdateRootChrome();
         PreviewKeyDown += OnPreviewKeyDown;
         ApplyNavOrder(App.Settings.Current.NavOrder);
         // страховка для «Развернуть»: после изменения состояния окна дожимаем его до рабочей
@@ -49,14 +61,43 @@ public partial class MainWindow : Window
         // раскрытые списки остаются раскрытыми и после перезапуска
         if (App.Settings.Current.NavPanelsExpanded)
         {
-            PanelMenu.Visibility = Visibility.Visible;
+            PanelMenuBox.Visibility = Visibility.Visible;
             PanelChevronRot.Angle = 180;
         }
         if (App.Settings.Current.NavSshExpanded)
         {
-            SshMenu.Visibility = Visibility.Visible;
+            SshMenuBox.Visibility = Visibility.Visible;
             SshChevronRot.Angle = 180;
         }
+
+        // страницы листаются в сторону пункта: вниз — если пункт ниже прежнего в списке навигации
+        MainPages.PositionOf = NavPositionOf;
+
+        // подсветка выбранной вкладки переезжает между пунктами; разделы «Панели»/«SSH» сами не подсвечиваются
+        _navMarker = new SlideMarker(NavHost, NavMarker, ActiveNavItem, _ => "AccentSoft");
+        NavList.SelectionChanged += (_, _) => _navMarker?.Sync(!_navDragging);
+        NavList.LayoutUpdated += (_, _) => _navMarker?.Sync(false);
+        Motion.AttachHoverPress(PanelHeader);
+        Motion.AttachHoverPress(SshHeader);
+    }
+
+    /// <summary>Место пункта навигации по его вкладке (с учётом порядка, заданного пользователем); −1 — нет такого.</summary>
+    private int NavPositionOf(string? tag)
+    {
+        var index = 0;
+        foreach (var item in NavList.Items.OfType<ListBoxItem>())
+        {
+            if (item.Tag as string == tag) return index;
+            index++;
+        }
+        return -1;
+    }
+
+    /// <summary>Пункт, который подсвечивается: выбранная вкладка, но не сами разделы «Панели»/«SSH».</summary>
+    private FrameworkElement? ActiveNavItem()
+    {
+        if (NavList.SelectedItem is not ListBoxItem { Tag: string tag } item) return null;
+        return tag is "panel" or "ssh" ? null : item;
     }
 
     public async Task InitializeAsync()
@@ -155,14 +196,31 @@ public partial class MainWindow : Window
     private Point _navPressPoint;
     private bool _navDragging;
 
-    /// <summary>Восстановить сохранённый порядок вкладок. Неизвестные ключи пропускаем.</summary>
+    /// <summary>
+    /// Восстановить сохранённый порядок вкладок. Неизвестные ключи пропускаем, а вкладки, которых
+    /// в сохранённом порядке ещё нет (появились в новой версии, например «DNS»), ставим сразу за той,
+    /// что идёт перед ними в разметке, — а не в самый низ, под «Панели» и «SSH».
+    /// </summary>
     private void ApplyNavOrder(IEnumerable<string>? order)
     {
         if (order is null) return;
 
+        var markup = NavList.Items.OfType<ListBoxItem>()
+            .Select(i => i.Tag as string ?? "")
+            .Where(t => t.Length > 0)
+            .ToList();
+        var keys = order.Where(markup.Contains).Distinct(StringComparer.Ordinal).ToList();
+        if (keys.Count == 0) return;
+        for (var i = 0; i < markup.Count; i++)
+        {
+            if (keys.Contains(markup[i])) continue;
+            var anchor = i > 0 ? keys.IndexOf(markup[i - 1]) : -1;
+            keys.Insert(anchor + 1, markup[i]);
+        }
+
         var applied = new HashSet<string>(StringComparer.Ordinal);
         var position = 0;
-        foreach (var key in order)
+        foreach (var key in keys)
         {
             if (!applied.Add(key)) continue;
             var item = NavList.Items.OfType<ListBoxItem>()
@@ -360,13 +418,19 @@ public partial class MainWindow : Window
         SyncAccentFlyout();
     }
 
-    /// <summary>Скруглённые углы окна: прозрачное окно + Border (CornerRadius=12),
-    /// содержимое обрезаем геометрией, иначе углы будут квадратными. В развёрнутом
-    /// состоянии скругление снимается — окно занимает всю рабочую область.</summary>
+    /// <summary>На Windows 10 обрезаем содержимое по Border; на Windows 11 углами
+    /// управляет DWM. В развёрнутом состоянии ручное скругление снимается.</summary>
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs e) => UpdateRootChrome();
 
     private void UpdateRootChrome()
     {
+        if (_useSystemCorners)
+        {
+            RootBorder.CornerRadius = new CornerRadius(0);
+            RootBorder.Clip = null;
+            return;
+        }
+
         var radius = WindowState == WindowState.Maximized ? 0 : 12;
         RootBorder.CornerRadius = new CornerRadius(radius);
         if (RootBorder.ActualWidth <= 0 || RootBorder.ActualHeight <= 0) return;
@@ -377,21 +441,42 @@ public partial class MainWindow : Window
     // ------------------------------------------------------------- списки «Панели»/«SSH»
 
     private void OnPanelHeaderClick(object sender, MouseButtonEventArgs e)
-        => ToggleNavSection(PanelMenu, PanelChevronRot,
+        => ToggleNavSection(PanelMenuBox, PanelChevronRot, !App.Settings.Current.NavPanelsExpanded,
             expanded => App.Settings.Current.NavPanelsExpanded = expanded);
 
     private void OnSshHeaderClick(object sender, MouseButtonEventArgs e)
-        => ToggleNavSection(SshMenu, SshChevronRot,
+        => ToggleNavSection(SshMenuBox, SshChevronRot, !App.Settings.Current.NavSshExpanded,
             expanded => App.Settings.Current.NavSshExpanded = expanded);
 
-    /// <summary>Раскрыть/свернуть выпадающий список раздела навигации и запомнить состояние.</summary>
-    private static void ToggleNavSection(Panel menu, RotateTransform chevron, Action<bool> persist)
+    /// <summary>
+    /// Раскрыть/свернуть выпадающий список раздела навигации: высота списка и шеврон анимируются,
+    /// состояние запоминается. Список обрезается по своей высоте (ClipToBounds у обёртки).
+    /// </summary>
+    private static void ToggleNavSection(FrameworkElement section, RotateTransform chevron, bool expand,
+        Action<bool> persist)
     {
-        var expanded = menu.Visibility != Visibility.Visible;
-        menu.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
-        chevron.Angle = expanded ? 180 : 0;
-        persist(expanded);
+        persist(expand);
         App.Settings.SaveSoon();
+        Motion.Run(chevron, RotateTransform.AngleProperty, chevron.Angle, expand ? 180 : 0, Motion.Normal);
+
+        if (expand)
+        {
+            // высоту замеряем без фиксированной высоты, затем раскрываем от нуля до неё
+            section.Visibility = Visibility.Visible;
+            section.Height = double.NaN;
+            section.Measure(new Size(Math.Max(section.ActualWidth, 200), double.PositiveInfinity));
+            Motion.Run(section, FrameworkElement.HeightProperty, 0, section.DesiredSize.Height, Motion.Normal,
+                EasingMode.EaseInOut, () => section.Height = double.NaN);
+        }
+        else
+        {
+            Motion.Run(section, FrameworkElement.HeightProperty, section.ActualHeight, 0, Motion.Normal,
+                EasingMode.EaseInOut, () =>
+                {
+                    section.Visibility = Visibility.Collapsed;
+                    section.Height = double.NaN;
+                });
+        }
     }
 
     /// <summary>Клик по панели в списке: показать её браузер и перейти на вкладку «Панели».</summary>
@@ -480,13 +565,12 @@ public partial class MainWindow : Window
         if (HwndSource.FromHwnd(new WindowInteropHelper(this).Handle) is HwndSource source)
             source.AddHook(WndProc);
 
-        // Скругление углов теперь делает DWM (Windows 11): окно стало непрозрачным,
-        // чтобы FancyZones мог его прикреплять (layered-окна PowerToys игнорирует).
-        ApplyDwmRoundCorners();
+        // На Windows 11 не используем layered-окно: DWM скругляет его сам,
+        // при этом сохраняется совместимость с FancyZones.
+        if (_useSystemCorners) ApplyDwmRoundCorners();
     }
 
-    /// <summary>DWMWA_WINDOW_CORNER_PREFERENCE = ROUND. Работает с Windows 11;
-    /// на Windows 10 вызов просто вернёт ошибку — окно останется квадратным, как раньше.</summary>
+    /// <summary>DWMWA_WINDOW_CORNER_PREFERENCE = ROUND (только Windows 11).</summary>
     private void ApplyDwmRoundCorners()
     {
         try
@@ -497,7 +581,7 @@ public partial class MainWindow : Window
             var pref = DWMWCP_ROUND;
             DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
         }
-        catch { /* Windows 10 и старше — без скругления */ }
+        catch { /* DWM недоступен — оставляем системное оформление */ }
     }
 
     [DllImport("dwmapi.dll")]

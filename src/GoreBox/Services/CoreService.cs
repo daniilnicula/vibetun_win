@@ -30,11 +30,12 @@ public sealed partial class CoreService : IDisposable
     public IReadOnlyList<string> RecentLog => _recentLog;
 
     /// <summary>
-    /// Параметры локального входа ядра в момент последнего запуска. Нужны LatencyService:
+    /// Профиль и параметры локального входа ядра в момент последнего запуска. Нужны LatencyService:
     /// при активном TUN прямой TCP-коннект до публичного IP перехватывается локальным
     /// стеком туннеля и «успевает» за ~1 мс (рукопожатие отвечает сам туннель), поэтому
-    /// замер идёт через этот вход: CONNECT до сервера профиля через текущий прокси.
+    /// замер идёт через этот вход: CONNECT и HTTP-запрос к тестовому хосту через текущий прокси.
     /// </summary>
+    public string? ConnectedProfileId { get; set; }
     public bool TunActive { get; set; }
     public string LocalListenAddress { get; set; } = "127.0.0.1";
     public int LocalListenPort { get; set; }
@@ -1009,11 +1010,12 @@ public sealed partial class CoreService : IDisposable
         }
     }
 
-    public async Task<int> MeasureDelayAsync(string proxyTag = "proxy", int timeoutMs = 6000)
+    public async Task<int> MeasureDelayAsync(string proxyTag = "proxy", int timeoutMs = 6000,
+        CancellationToken ct = default)
     {
         if (State != ConnectionState.Running || _clashPort == 0) return -1;
         using var api = new ClashApiClient();
-        return await api.MeasureDelayAsync(_clashPort, proxyTag, timeoutMs);
+        return await api.MeasureDelayAsync(_clashPort, proxyTag, timeoutMs, ct);
     }
 
     /// <summary>
@@ -1047,12 +1049,15 @@ public sealed partial class CoreService : IDisposable
     private void AppendLog(string? line)
     {
         if (string.IsNullOrWhiteSpace(line)) return;
+        // короткая форма строки ядра (без дублирующего времени, INFO и ANSI-кодов) — одна на панель, файл и диагностику
+        var shortLine = LogFormat.Shorten(line);
+        if (shortLine.Length == 0) return;
         lock (_sync)
         {
-            _recentLog.Add(line);
+            _recentLog.Add(shortLine);
             if (_recentLog.Count > 500) _recentLog.RemoveRange(0, 200);
         }
-        LogReceived?.Invoke(line);
+        LogReceived?.Invoke(shortLine);
     }
 
     public string RecentLogText()

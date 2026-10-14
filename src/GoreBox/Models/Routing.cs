@@ -137,7 +137,10 @@ public sealed class RouteProfile
     public bool TunStrictRoute { get; set; }
     public bool SniffTraffic { get; set; } = true;
 
-    public string DnsMode { get; set; } = "system";    // system | proxy | custom
+    // system | proxy | profile | custom. Теперь DNS выбирается в разделе «DNS» (AppSettings.Dns):
+    // перед сборкой конфига поля заполняются оттуда (DnsViewModel.ApplyTo), а из файла читаются
+    // только один раз — чтобы перенести прежний выбор в новый раздел.
+    public string DnsMode { get; set; } = "system";
     public string DnsServer { get; set; } = "1.1.1.1";
 
     /// <summary>Id набора правил (<see cref="RouteSet"/>), который применяется в этом профиле.</summary>
@@ -181,6 +184,9 @@ public sealed class AppSettings
 
     /// <summary>Помнить состояние: при старте поднимать тот же профиль и то же состояние тумблера.</summary>
     public bool RememberState { get; set; } = true;
+
+    /// <summary>Множитель скорости анимаций интерфейса: от 0.3 (медленнее) до 2 (быстрее), шаг 0.1.</summary>
+    public double AnimationSpeed { get; set; } = 1.0;
 
     public string? ActiveProfileId { get; set; }
     public string? ActiveRouteProfileId { get; set; }
@@ -238,7 +244,19 @@ public sealed class AppSettings
 
     private DpiBypassSettings? _dpi;
 
-    /// <summary>Порядок вкладок в левом меню (ключи: profiles, routing, settings, panel, ssh).</summary>
+    /// <summary>
+    /// Раздел «DNS»: выбранный DNS и список провайдеров/своих серверов. Экземпляр есть всегда
+    /// (в старом settings.json блока нет) — перенос прежнего выбора см. <see cref="DnsSettings.Initialized"/>.
+    /// </summary>
+    public DnsSettings Dns
+    {
+        get => _dns ??= new DnsSettings();
+        set => _dns = value ?? new DnsSettings();
+    }
+
+    private DnsSettings? _dns;
+
+    /// <summary>Порядок вкладок в левом меню (ключи: profiles, routing, dns, settings, updates, panel, ssh).</summary>
     public List<string> NavOrder { get; set; } = new();
 
     /// <summary>Высота панели логов на вкладке «Профили» в пикселях.</summary>

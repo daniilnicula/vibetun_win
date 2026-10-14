@@ -8,13 +8,10 @@ using GoreBox.Models;
 namespace GoreBox.Services;
 
 /// <summary>
-/// Измерение задержки до сервера профиля.
-/// Без TUN: TCP-коннект, при неудаче — ICMP.
-/// При активном TUN прямой TCP-коннект бесполезен: локальный стек туннеля отвечает
-/// на рукопожатие сам за ~1 мс, не доходя до сервера. Замер идёт через локальный вход
-/// ядра: SOCKS5/HTTP CONNECT к тестовому HTTP-хосту и реальный GET-запрос через поднятый
-/// VPN — время до получения ответа. (Ответ на сам CONNECT мерить нельзя: sing-box
-/// подтверждает его мгновенно, при открытии локального QUIC-стрима, — получается 1 мс.)
+/// Общий замер для списка профилей и карточки подключения. Для подключённого профиля
+/// точный режим использует Clash API; при TUN — реальный HTTP-запрос через локальный вход.
+/// Остальные профили проверяются по своему адресу (при TUN только ICMP, поскольку
+/// TCP-рукопожатие может мгновенно подтверждаться локальным стеком туннеля).
 /// </summary>
 public sealed class LatencyService
 {
@@ -31,14 +28,23 @@ public sealed class LatencyService
         var node = profile.Node;
         if (string.IsNullOrWhiteSpace(node.Server) || node.Port <= 0) return -1;
 
-        if (_core is not null && _core.TunActive && _core.LocalListenPort > 0)
+        var running = _core?.State == ConnectionState.Running;
+        var connected = running && _core!.ConnectedProfileId == profile.Id;
+        if (connected && App.Settings.Current.PreciseLatencyTest)
         {
-            // замер идёт через тестовый HTTP-хост, а не до сервера профиля: серверы
-            // hysteria/tuic/amnezia принимают UDP-протоколы и не отвечают по TCP
-            var viaProxy = await TryViaLocalProxyAsync(
+            var precise = await _core!.MeasureDelayAsync(ct: ct);
+            if (precise >= 0) return precise;
+        }
+
+        if (running && _core!.TunActive)
+        {
+            // Нельзя выдавать задержку активного туннеля за пинг всех профилей.
+            if (!connected) return await TryIcmpAsync(node.Server, ct);
+            if (_core.LocalListenPort <= 0) return -1;
+
+            // После неудачи НЕ откатываемся на TCP: TUN вернёт ложные 0–1 мс.
+            return await TryViaLocalProxyAsync(
                 _core.LocalListenAddress, _core.LocalListenPort, TimeSpan.FromSeconds(6), ct);
-            if (viaProxy >= 0) return viaProxy;
-            AppLog.Write($"Замер: вход ядра не ответил — fallback на прямой замер (значение будет занижено TUN)");
         }
 
         var tcp = await TryTcpAsync(node.Server, node.Port, TimeSpan.FromSeconds(4), ct);

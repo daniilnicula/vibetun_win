@@ -13,6 +13,12 @@ public interface IDialogService
 
     string? PromptText(string title, string caption, string initial = "");
 
+    /// <summary>
+    /// Окно «Свой DNS»: IP-адрес и название (добавление и правка). Адрес уже проверен и приведён
+    /// к виду для конфига; null — если пользователь отменил.
+    /// </summary>
+    (string Name, string Address)? EditDnsServer(string title, string okText, string name = "", string address = "");
+
     bool Confirm(string title, string text, string okText = "Удалить", bool danger = true);
 
     void Info(string title, string text);

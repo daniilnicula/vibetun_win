@@ -56,14 +56,23 @@ public sealed class MainViewModel : ObservableObject
 
         Profiles = new ProfilesViewModel(ProfileStore, Latency, _dialogs, Logs);
         Routing = new RoutingViewModel(RouteStore, _dialogs);
+        // пинг DNS при активном TUN бессмыслен: ядро перехватывает DNS-запросы (hijack-dns)
+        Dns = new DnsViewModel(_dialogs, () => Core.TunActive);
         Preferences = new SettingsViewModel(App.Settings, Core, _dialogs);
         Updates = new UpdatesViewModel(_dialogs);
 
         Profiles.ConnectRequested += profile => _ = ConnectToAsync(profile);
         Profiles.Notify += (text, error) => ShowStatus(text, error);
+        Profiles.PingUpdated += (profile, ms) =>
+        {
+            // Включая ошибки (-1): карточка и строка всегда показывают один результат.
+            if (_activeProfile?.Id == profile.Id) ActivePing = ms;
+        };
         Routing.Notify += (text, error) => ShowStatus(text, error);
         Routing.SettingsChanged += () => { /* маршрутизация перечитывается при следующем запуске */ };
         Routing.RulesPersisted += () => _ = ReapplyRoutingAsync();
+        Dns.Notify += (text, error) => ShowStatus(text, error);
+        Dns.DnsChanged += what => _ = ReapplyDnsAsync(what);
         Preferences.Notify += (text, error) => ShowStatus(text, error);
         Preferences.ThemeChanged += () => Raise(nameof(IsDark));
         Preferences.RestartRequested += () => RestartRequested?.Invoke();
@@ -71,8 +80,17 @@ public sealed class MainViewModel : ObservableObject
         Updates.RestartRequested += () => RestartRequested?.Invoke();
         Updates.ExitRequested += () => ExitRequested?.Invoke();
 
-        // правки стратегий в настройках применяются сразу: движок перезапускаем, если он поднят
+        // правки стратегий в настройках и DNS обхода в разделе «DNS» применяются сразу:
+        // движок перезапускаем, если он поднят
         Preferences.DpiSettingsChanged += () => _ = RestartDpiIfRunningAsync();
+        Dns.DpiDnsChanged += () => _ = RestartDpiIfRunningAsync();
+
+        // «Сбросить настройки» заменил весь settings.json — раздел «DNS» перечитывает свой блок;
+        // если DNS ядра от этого поменялся, а прокси поднят, переподключаемся, как при выборе в разделе
+        Preferences.SettingsReset += () =>
+        {
+            if (Dns.ReloadAfterReset() && IsProxyOn) _ = ReapplyDnsAsync("DNS: " + Dns.SelectionText);
+        };
 
         _dpi.Logged += line => AppendLog("DPI: " + line);
 
@@ -99,6 +117,7 @@ public sealed class MainViewModel : ObservableObject
         RestartElevatedCommand = new RelayCommand(_ => RestartElevated());
         TelegramProxyCommand = new RelayCommand(_ => OpenTelegramProxy(), _ => ActiveProfile?.IsTelegramOnly == true);
         ShowLogCommand = new RelayCommand(_ => _dialogs.ShowCoreLog(Core.RecentLogText()));
+        OpenDnsCommand = new RelayCommand(_ => ActiveTab = "dns");
         CopyDiagnosticsCommand = new RelayCommand(_ => CopyDiagnostics());
 
         _statsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -119,6 +138,10 @@ public sealed class MainViewModel : ObservableObject
 
     public ProfilesViewModel Profiles { get; }
     public RoutingViewModel Routing { get; }
+
+    /// <summary>Раздел «DNS»: выбранный DNS ядра, провайдеры и свои серверы.</summary>
+    public DnsViewModel Dns { get; }
+
     public SettingsViewModel Preferences { get; }
     public UpdatesViewModel Updates { get; }
 
@@ -140,6 +163,9 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ShowLogCommand { get; }
     public RelayCommand CopyDiagnosticsCommand { get; }
 
+    /// <summary>Открыть раздел «DNS» (ссылка на вкладке «Маршрутизация», где DNS был раньше).</summary>
+    public RelayCommand OpenDnsCommand { get; }
+
     public event Action? ShowWindowRequested;
     public event Action? ExitRequested;
 
@@ -159,6 +185,8 @@ public sealed class MainViewModel : ObservableObject
             App.Settings.SaveSoon();
             if (string.Equals(value, "updates", StringComparison.Ordinal))
                 _ = Updates.EnsureLoadedAsync();
+            if (string.Equals(value, "dns", StringComparison.Ordinal))
+                Dns.OnOpened();
         }
     }
 
@@ -419,6 +447,8 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(ConnectionTabIsDpi));
 
         Routing.Load();
+        // DNS раньше жил в профиле маршрутизации: при первом запуске выбор переносится оттуда
+        Dns.Load(Routing.ActiveProfile);
         Profiles.Load();
         SystemProxy.CleanupStale(Routing.Profiles.Select(p => p.ListenPort));
         Preferences.RefreshCoreInfo();
@@ -510,9 +540,45 @@ public sealed class MainViewModel : ObservableObject
 
     private CancellationTokenSource? _routingReapplyCts;
 
+    /// <summary>
+    /// В разделе «DNS» поменялся основной DNS или DNS домена/приложения (выбор уже сохранён). Если прокси
+    /// поднят — переподключаем ядро, чтобы запросы сразу пошли через новый DNS; иначе он применится
+    /// при следующем подключении. <paramref name="what"/> — что поменялось, для строки состояния.
+    /// </summary>
+    private async Task ReapplyDnsAsync(string what)
+    {
+        if (!IsProxyOn || _activeProfile is null)
+        {
+            ShowStatus($"{what} — применится при подключении", false);
+            return;
+        }
+
+        // дребезг: несколько выборов подряд — одно переподключение, по последнему
+        _dnsReapplyCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _dnsReapplyCts = cts;
+        try
+        {
+            await Task.Delay(350, cts.Token);
+
+            // идёт подключение или отключение — дожидаемся его, иначе новый DNS не применится
+            for (var waited = 0; Busy && waited < 30_000; waited += 200)
+                await Task.Delay(200, cts.Token);
+            if (!IsProxyOn || _activeProfile is null || Busy) return;
+
+            ShowStatus($"{what} — переподключение…", false);
+            await StopProxyAsync();
+            await StartProxyAsync();
+        }
+        catch (OperationCanceledException) { /* выбрали другой DNS — переподключимся по нему */ }
+    }
+
+    private CancellationTokenSource? _dnsReapplyCts;
+
     private async Task ConnectToAsync(ProxyProfile profile)
     {
         _activeProfile = profile;
+        ActivePing = profile.LastPingMs;
         Profiles.SetActive(profile.Id);
         Raise(nameof(ActiveProfileName));
         Raise(nameof(ActiveProfileSubtitle));
@@ -590,8 +656,11 @@ public sealed class MainViewModel : ObservableObject
             Routing.Persist();
 
             var clashPort = FindFreePort();
-            var build = SingBoxConfigBuilder.Build(_activeProfile, route, Routing.ActiveSet,
-                App.Settings.Current, Core.Info, clashPort, Path.Combine(AppPaths.LogsDir, "core.log"));
+            // DNS выбирается в разделе «DNS»: сборщик получает копию профиля входа с ним,
+            // а также домены и приложения со своим DNS
+            var build = SingBoxConfigBuilder.Build(_activeProfile, Dns.ApplyTo(route), Routing.ActiveSet,
+                App.Settings.Current, Core.Info, clashPort, Path.Combine(AppPaths.LogsDir, "core.log"),
+                Dns.AppRoutes(), Dns.DomainRoutes());
 
             foreach (var warning in build.Warnings) AppendLog("Конфиг: " + warning);
 
@@ -631,6 +700,7 @@ public sealed class MainViewModel : ObservableObject
             // IsProxyOn выставляем до настройки системного прокси: ApplySystemProxyAsync смотрит на него
             IsProxyOn = true;
             _proxyStartedAt = DateTime.Now;
+            Core.ConnectedProfileId = _activeProfile.Id;
             Core.TunActive = route.TunEnabled;
             Core.LocalListenAddress = route.ListenAddress;
             Core.LocalListenPort = route.ListenPort;
@@ -837,6 +907,7 @@ public sealed class MainViewModel : ObservableObject
             // Steam и прочие приложения, работающие через системный прокси, теряют интернет, хотя
             // ICMP (ping 8.8.8.8) и прямые подключения (RDP) продолжают работать.
             IsProxyOn = false;
+            Core.ConnectedProfileId = null;
             Core.TunActive = false;   // дальнейшие замеры задержки — снова прямой TCP/ICMP
 
             // сначала возвращаем прежний системный прокси: интернет работает, даже если ядро не ответит.
@@ -997,8 +1068,7 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
-            if (_activeProfile is not null)
-                ActivePing = await Latency.MeasureAsync(_activeProfile);
+            await RefreshActivePingAsync();
 
             ReportDeadTunnel();
         }
@@ -1078,26 +1148,11 @@ public sealed class MainViewModel : ObservableObject
         ShowStatus(message, true);
     }
 
-    private async Task RefreshActivePingAsync()
+    private Task RefreshActivePingAsync()
     {
-        if (App.Settings.Current.PreciseLatencyTest && Core.State == ConnectionState.Running)
-        {
-            var ms = await Core.MeasureDelayAsync();
-            if (ms > 0)
-            {
-                ActivePing = ms;
-                if (_activeProfile is not null)
-                {
-                    _activeProfile.LastPingMs = ms;
-                    ProfileStore.Save(_activeProfile);
-                    Profiles.Find(_activeProfile.Id)?.SetPingSafe(ms);
-                }
-                return;
-            }
-        }
-
-        if (_activeProfile is not null)
-            ActivePing = await Latency.MeasureAsync(_activeProfile);
+        // Один замер, одно сохранение и одно событие для обоих мест отображения.
+        var profile = _activeProfile;
+        return Profiles.PingAsync(profile is null ? null : Profiles.Find(profile.Id));
     }
 
     private async Task TestActivePingAsync()
@@ -1108,9 +1163,6 @@ public sealed class MainViewModel : ObservableObject
         {
             ShowStatus("Проверка задержки…", false);
             await RefreshActivePingAsync();
-            var item = Profiles.Find(_activeProfile.Id);
-            if (item is not null && !item.IsPinging)
-                await Profiles.PingAsync(item);
             ShowStatus(ActivePing < 0 ? "Сервер не ответил" : "Задержка: " + ActivePingText, ActivePing < 0);
         }
         finally
@@ -1515,6 +1567,7 @@ public sealed class MainViewModel : ObservableObject
             $"Ядро: {Core.Info.VersionShort}{Environment.NewLine}Путь: {Core.Info.Path}{Environment.NewLine}" +
             $"Профиль: {ActiveProfileName}{Environment.NewLine}Состояние: {StateText}{Environment.NewLine}" +
             $"TUN: {Routing.ActiveProfile.TunEnabled}{Environment.NewLine}" +
+            $"DNS: {Dns.SelectionText}{Dns.RulesSummaryText}{Environment.NewLine}" +
             $"Админ: {AdminHelper.IsElevated}{Environment.NewLine}" +
             new string('-', 40) + Environment.NewLine + Core.RecentLogText();
         try
@@ -1639,14 +1692,5 @@ public sealed class MainViewModel : ObservableObject
         Routing.Persist();
 
         Tray.Dispose();
-    }
-}
-
-internal static class ProfileItemExtensions
-{
-    public static void SetPingSafe(this ProfileItemVm? item, int ms)
-    {
-        if (item is null) return;
-        item.PingMs = ms;
     }
 }

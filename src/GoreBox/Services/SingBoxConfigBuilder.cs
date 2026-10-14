@@ -32,6 +32,10 @@ public static class SingBoxConfigBuilder
     private const string InboundTag = "proxy-in";
     private const string TunTag = "tun-in";
 
+    /// <param name="appDns">Приложения со своим DNS (раздел «DNS» → «Приложения»): их DNS-запросы
+    /// и прямые подключения идут через свой DNS вместо основного.</param>
+    /// <param name="domainDns">Домены со своим DNS (раздел «DNS» → «Домены»), в порядке списка: DNS-запросы
+    /// к ним и прямые подключения к ним идут через свой DNS. Записи доменов важнее записей приложений.</param>
     public static ConfigBuildResult Build(
         ProxyProfile profile,
         RouteProfile route,
@@ -39,12 +43,19 @@ public static class SingBoxConfigBuilder
         AppSettings settings,
         CoreInfo core,
         int clashApiPort,
-        string logFile)
+        string logFile,
+        IReadOnlyList<AppDnsRoute>? appDns = null,
+        IReadOnlyList<DomainDnsRoute>? domainDns = null)
     {
         var result = new ConfigBuildResult { ClashApiPort = clashApiPort };
         _ = result;
         var modern = core.SupportsModernRules;
         var modernDns = core.VersionMajor > 1 || core.VersionMinor >= 12 || !core.Exists;
+        var allowProcessPath = !core.Exists || core.VersionMinor >= 12;
+
+        // До sing-box 1.14 кэш DNS общий для всех серверов: ответ основного DNS достался бы и
+        // домену или приложению со своим DNS. С 1.14 у каждого сервера свой кэш, а поле устарело.
+        var independentCache = core.Exists && core.VersionMajor == 1 && core.VersionMinor < 14;
 
         _ = logFile; // логи ядра перехватываются процессом и дублируются в файл самим приложением
 
@@ -66,7 +77,8 @@ public static class SingBoxConfigBuilder
         };
 
         // ---------------------------------------------------------------- DNS
-        var dns = BuildDns(route, profile, modernDns, out var resolverTag, out var profileDnsInTunnel);
+        var dns = BuildDns(route, profile, modernDns, appDns, domainDns, allowProcessPath, independentCache,
+            out var resolverTag, out var profileDnsInTunnel, out var dnsRuleGroups);
         root["dns"] = dns;
 
         // ----------------------------------------------------------- inbounds
@@ -165,13 +177,15 @@ public static class SingBoxConfigBuilder
         if (endpoints.Count > 0) root["endpoints"] = endpoints;
 
         // --------------------------------------------------------------- route
-        var allowProcessPath = !core.Exists || core.VersionMinor >= 12;
         var tunnelCidrs = IsTunnelProfile(profile)
             ? TunnelOnlyCidrs(profile, profileDnsInTunnel)
             : new List<string>();
 
+        // свой DNS доменов и приложений для прямых подключений: в sing-box >= 1.12 они резолвятся мимо
+        // DNS-правил (route.default_domain_resolver), поэтому нужны правила resolve — см. AddDnsResolve
         root["route"] = BuildRoute(route, routeSet, modern, allowProcessPath,
-            modernDns ? resolverTag : null, tunnelCidrs);
+            modernDns ? resolverTag : null, tunnelCidrs,
+            modern && modernDns ? dnsRuleGroups : null);
 
         // -------------------------------------------------------- experimental
         var experimental = new JsonObject
@@ -198,155 +212,388 @@ public static class SingBoxConfigBuilder
     }
 
     // ------------------------------------------------------------------- DNS
+    private const string LocalDnsTag = "dns-local";
+
+    /// <summary>Вид правила своего DNS: домены (у приложений вид — process_path или process_name).</summary>
+    private const string DomainRuleKind = "domain";
+
+    /// <summary>
+    /// Правило своего DNS: домены или приложения с одним и тем же сервером. <paramref name="Kind"/> —
+    /// «domain» (в <paramref name="Match"/> поля доменов: domain_suffix, domain_regex…), «process_path» или
+    /// «process_name» (в <paramref name="Match"/> — один этот список).
+    /// </summary>
+    private sealed record DnsRuleGroup(string Kind, string Tag, JsonObject Match);
+
+    /// <summary>
+    /// Блок dns: основной DNS (final) и свой DNS доменов и приложений — серверы и DNS-правила.
+    /// Правила — в порядке приоритета (<paramref name="ruleGroups"/>): сначала домены (точные раньше
+    /// общих, см. <see cref="DomainGroups"/>), потом приложения — по пути, затем по имени. Действует
+    /// первое подходящее правило, так что запись домена важнее записи приложения.
+    /// </summary>
     private static JsonNode BuildDns(RouteProfile route, ProxyProfile profile, bool modernDns,
-        out string resolverTag, out bool tunnelledProfileDns)
+        IReadOnlyList<AppDnsRoute>? appDns, IReadOnlyList<DomainDnsRoute>? domainDns,
+        bool allowProcessPath, bool independentCache,
+        out string resolverTag, out bool tunnelledProfileDns, out List<DnsRuleGroup> ruleGroups)
+    {
+        var profileDns = ProfileDnsServers(profile);
+        var tunnelProfile = IsTunnelProfile(profile);
+
+        var servers = new JsonArray();
+        var tagByServer = new Dictionary<string, string>(StringComparer.Ordinal);
+        var serverNumbers = new Dictionary<string, int>(StringComparer.Ordinal);
+        var usesTunnelledProfileDns = false;
+
+        // Тег сервера под выбор DNS. Одинаковый сервер попадает в конфиг один раз, даже если его выбрали
+        // и основным, и у доменов или приложений. Основной DNS получает прежние теги (dns-remote,
+        // dns-custom, dns-direct), новый сервер приложения — dns-app-N, домена — dns-domain-N.
+        string Use(string mode, string? server, string? numberedPrefix)
+        {
+            var spec = DnsServerFor(mode, server, route.TunEnabled, profileDns, tunnelProfile, modernDns);
+            if (spec is null) return LocalDnsTag;
+
+            var (node, tunnelled) = spec.Value;
+            var key = ServerKey(node);
+            if (tagByServer.TryGetValue(key, out var existing)) return existing;
+
+            if (numberedPrefix is not null)
+            {
+                var number = serverNumbers.TryGetValue(numberedPrefix, out var last) ? last + 1 : 1;
+                serverNumbers[numberedPrefix] = number;
+                node["tag"] = numberedPrefix + number;
+            }
+            var tag = node["tag"]!.GetValue<string>();
+            tagByServer[key] = tag;
+            servers.Add(node);
+            usesTunnelledProfileDns |= tunnelled;
+            return tag;
+        }
+
+        resolverTag = Use(route.DnsMode, route.DnsServer, null);
+
+        // приложения с одним и тем же DNS — одна группа
+        var appGroups = new List<(string Tag, List<string> Names, List<string> Paths)>();
+        foreach (var app in appDns ?? Array.Empty<AppDnsRoute>())
+        {
+            var name = string.IsNullOrWhiteSpace(app.ProcessName) ? "" : NormalizeProcessName(app.ProcessName);
+            var path = allowProcessPath ? app.Path?.Trim() ?? "" : "";
+            if (name.Length == 0 && path.Length == 0) continue;
+
+            var tag = Use(app.DnsMode, app.DnsServer, "dns-app-");
+            var index = appGroups.FindIndex(g => g.Tag == tag);
+            if (index < 0)
+            {
+                appGroups.Add((tag, new List<string>(), new List<string>()));
+                index = appGroups.Count - 1;
+            }
+            var group = appGroups[index];
+            if (name.Length > 0 && !group.Names.Contains(name, StringComparer.OrdinalIgnoreCase)) group.Names.Add(name);
+            if (path.Length > 0 && !group.Paths.Contains(path, StringComparer.OrdinalIgnoreCase)) group.Paths.Add(path);
+        }
+
+        // правила в порядке приоритета: домены, приложения по пути (точнее: у двух программ бывает одно
+        // имя процесса), приложения по имени (путь меняется при обновлении программы, имя — нет)
+        var groups = DomainGroups(domainDns, (mode, server) => Use(mode, server, "dns-domain-"));
+        foreach (var app in appGroups.Where(g => g.Paths.Count > 0))
+            groups.Add(new DnsRuleGroup("process_path", app.Tag, new JsonObject { ["process_path"] = ToJsonArray(app.Paths) }));
+        foreach (var app in appGroups.Where(g => g.Names.Count > 0))
+            groups.Add(new DnsRuleGroup("process_name", app.Tag, new JsonObject { ["process_name"] = ToJsonArray(app.Names) }));
+
+        // Правила в конце списка, которые ведут на основной DNS, ничего не меняют: туда и так придёт всё,
+        // что не подошло выше. В середине такое правило нужно — оно перехватывает запрос у правил ниже
+        // (например, music.youtube.com — основной, а youtube.com — свой DNS).
+        while (groups.Count > 0 && groups[^1].Tag == resolverTag) groups.RemoveAt(groups.Count - 1);
+        ruleGroups = groups;
+
+        servers.Add(modernDns
+            ? new JsonObject { ["type"] = "local", ["tag"] = LocalDnsTag }
+            : new JsonObject { ["tag"] = LocalDnsTag, ["address"] = "local" });   // без detour: см. DnsServerFor
+
+        tunnelledProfileDns = usesTunnelledProfileDns;
+        var dns = new JsonObject
+        {
+            ["servers"] = servers,
+            ["final"] = resolverTag,
+            ["strategy"] = "prefer_ipv4"
+        };
+
+        if (groups.Count > 0)
+        {
+            dns["rules"] = DnsRules(groups, modernDns ? null : resolverTag);
+            if (independentCache) dns["independent_cache"] = true;
+        }
+
+        return dns;
+    }
+
+    /// <summary>
+    /// Домены со своим DNS — правила в порядке приоритета. Если домен подходит под несколько записей,
+    /// действует более точная: домены раньше regex, среди доменов длинные раньше коротких
+    /// (music.youtube.com раньше youtube.com, youtube.com раньше .com); при равенстве — та, что выше в
+    /// списке. Записи с ошибкой (IP, неверный regex) в конфиг не попадают. Соседние записи с одним и
+    /// тем же DNS — одно правило: поля доменов внутри правила sing-box объединяет по ИЛИ.
+    /// </summary>
+    private static List<DnsRuleGroup> DomainGroups(IReadOnlyList<DomainDnsRoute>? domains, Func<string, string?, string> use)
+    {
+        var items = new List<(int Order, string Field, string Value, string Tag)>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var order = 0;
+        foreach (var domain in domains ?? Array.Empty<DomainDnsRoute>())
+        {
+            order++;
+            if (!DnsPattern.TryParse(domain.Pattern, out var parsed, out _)) continue;
+            if (!seen.Add(parsed.Key)) continue;   // та же запись выше в списке уже решила
+            items.Add((order, parsed.Field, parsed.Value, use(domain.DnsMode, domain.DnsServer)));
+        }
+
+        static bool IsDomain(string field) => field is "domain" or "domain_suffix";
+
+        var groups = new List<DnsRuleGroup>();
+        foreach (var item in items
+                     .OrderBy(x => IsDomain(x.Field) ? 0 : 1)
+                     .ThenByDescending(x => IsDomain(x.Field) ? DomainLabels(x.Value) : 0)
+                     .ThenBy(x => x.Order))
+        {
+            if (groups.Count == 0 || groups[^1].Tag != item.Tag)
+                groups.Add(new DnsRuleGroup(DomainRuleKind, item.Tag, new JsonObject()));
+
+            var match = groups[^1].Match;
+            if (match[item.Field] is not JsonArray values)
+            {
+                values = new JsonArray();
+                match[item.Field] = values;
+            }
+            values.Add(item.Value);
+        }
+        return groups;
+    }
+
+    /// <summary>Сколько частей в имени: «music.youtube.com» — 3, «ru» — 1.</summary>
+    private static int DomainLabels(string domain) =>
+        domain.Split('.', StringSplitOptions.RemoveEmptyEntries).Length;
+
+    /// <summary>
+    /// Сервер под выбор DNS — основной, домена или приложения (<paramref name="mode"/> как у
+    /// <see cref="RouteProfile.DnsMode"/>). null — системный резолвер: он есть в конфиге всегда (dns-local).
+    /// </summary>
+    private static (JsonObject Node, bool TunnelledProfileDns)? DnsServerFor(string mode, string? server,
+        bool tunEnabled, List<string> profileDns, bool tunnelProfile, bool modernDns)
     {
         // DNS из конфига WireGuard/AmneziaWG (Dns = 10.8.0.1, ...) — это то, чем пользуется официальный
         // клиент Amnezia: запросы идут через туннель. Если режим «системный», для таких профилей
         // берём DNS профиля через туннель (иначе запросы уходят провайдеру: утечка + медленно).
         // Такие адреса существуют только внутри туннеля — см. TunnelOnlyCidrs().
-        var profileDns = ProfileDnsServers(profile);
-        tunnelledProfileDns = profileDns.Count > 0 && route.DnsMode is "system" or "profile";
+        var tunnelledProfileDns = profileDns.Count > 0 && mode is "system" or "profile";
 
         // Для профилей WireGuard/AmneziaWG «системный» DNS — это DNS провайдера мимо туннеля:
         // утечка, а в сетях с DPI ещё и неработающая резолвиция. Если своего DNS в .conf нет,
         // берём защищённый DNS через туннель.
-        var tunnelDnsFallback = IsTunnelProfile(profile) && !tunnelledProfileDns &&
-                                route.DnsMode is "system" or "profile";
+        var tunnelDnsFallback = tunnelProfile && !tunnelledProfileDns && mode is "system" or "profile";
 
-        var useProxyDns = route.DnsMode == "proxy" || tunnelledProfileDns || tunnelDnsFallback;
-        var custom = !tunnelledProfileDns && route.DnsMode == "custom" && !string.IsNullOrWhiteSpace(route.DnsServer);
-        var remoteServer = custom ? route.DnsServer! : "1.1.1.1";
-        var tunnelDnsServer = tunnelledProfileDns ? profileDns[0] : "1.1.1.1";
+        var useProxyDns = mode == "proxy" || tunnelledProfileDns || tunnelDnsFallback;
+        var custom = !tunnelledProfileDns && mode == "custom" && !string.IsNullOrWhiteSpace(server);
 
-        if (modernDns)
+        if (useProxyDns)
         {
-            var servers = new JsonArray();
-
-            if (useProxyDns)
+            // DNS профиля — обычный UDP:53 внутри туннеля (как в клиенте Amnezia),
+            // иначе защищённый DNS по TLS
+            if (!modernDns)
             {
-                // DNS профиля — обычный UDP:53 внутри туннеля (как в клиенте Amnezia),
-                // иначе защищённый DNS по TLS
-                servers.Add(tunnelledProfileDns
-                    ? new JsonObject
-                    {
-                        ["type"] = "udp",
-                        ["tag"] = "dns-remote",
-                        ["server"] = tunnelDnsServer,
-                        ["detour"] = ProxyTag
-                    }
-                    : new JsonObject
-                    {
-                        ["type"] = "tls",
-                        ["tag"] = "dns-remote",
-                        ["server"] = "1.1.1.1",
-                        ["detour"] = ProxyTag
-                    });
-                resolverTag = "dns-remote";
-            }
-            else if (custom)
-            {
-                var type = remoteServer.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? "https"
-                    : remoteServer.StartsWith("tls://", StringComparison.OrdinalIgnoreCase) ? "tls"
-                    : remoteServer.StartsWith("quic://", StringComparison.OrdinalIgnoreCase) ? "quic"
-                    : remoteServer.StartsWith("h3://", StringComparison.OrdinalIgnoreCase) ? "h3"
-                    : "udp";
-
-                var server = remoteServer;
-                foreach (var prefix in new[] { "https://", "tls://", "quic://", "h3://", "udp://" })
-                    if (server.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) { server = server[prefix.Length..]; break; }
-
-                // detour не задаём: в новом формате DNS-серверов (sing-box >= 1.12) сервер без detour
-                // сам диалится напрямую. Явный detour на «пустой» direct-outbound ядро считает
-                // ошибкой конфигурации («detour to an empty direct outbound makes no sense»).
-                var node = new JsonObject
+                return (new JsonObject
                 {
-                    ["type"] = type,
-                    ["tag"] = "dns-custom",
-                    ["server"] = server
-                };
-                if (type == "https") node["path"] = "/dns-query";
-                servers.Add(node);
-                resolverTag = "dns-custom";
+                    ["tag"] = "dns-remote",
+                    ["address"] = tunnelledProfileDns ? "udp://" + profileDns[0] : "tls://1.1.1.1",
+                    ["detour"] = ProxyTag
+                }, tunnelledProfileDns);
             }
-            else if (route.TunEnabled)
-            {
-                // под TUN системный резолвер уводит запросы в туннель — используем внешний напрямую.
-                // detour не задаём: в новом формате DNS-серверов (sing-box >= 1.12) сервер без detour
-                // диалится напрямую сам (route.auto_detect_interface выводит его на физический
-                // интерфейс в обход TUN). Явный detour на «пустой» direct-outbound — fatальная
-                // ошибка ядра («detour to an empty direct outbound makes no sense»), из-за которой
-                // ядро падало при старте TUN.
-                servers.Add(new JsonObject
+
+            return (tunnelledProfileDns
+                ? new JsonObject
+                {
+                    ["type"] = "udp",
+                    ["tag"] = "dns-remote",
+                    ["server"] = profileDns[0],
+                    ["detour"] = ProxyTag
+                }
+                : new JsonObject
+                {
+                    ["type"] = "tls",
+                    ["tag"] = "dns-remote",
+                    ["server"] = "1.1.1.1",
+                    ["detour"] = ProxyTag
+                }, tunnelledProfileDns);
+        }
+
+        if (custom)
+            return (modernDns ? CustomDnsServer(server!) : LegacyCustomDnsServer(server!), false);
+
+        if (tunEnabled)
+        {
+            // под TUN системный резолвер уводит запросы в туннель — используем внешний напрямую.
+            // detour не задаём: в новом формате DNS-серверов (sing-box >= 1.12) сервер без detour
+            // диалится напрямую сам (route.auto_detect_interface выводит его на физический
+            // интерфейс в обход TUN). Явный detour на «пустой» direct-outbound — fatальная
+            // ошибка ядра («detour to an empty direct outbound makes no sense»), из-за которой
+            // ядро падало при старте TUN. В старом формате — так же, см. LegacyCustomDnsServer.
+            return (modernDns
+                ? new JsonObject
                 {
                     ["type"] = "udp",
                     ["tag"] = "dns-direct",
                     ["server"] = "1.1.1.1"
-                });
-                resolverTag = "dns-direct";
-            }
-            else
-            {
-                resolverTag = "dns-local";
-            }
-
-            servers.Add(new JsonObject { ["type"] = "local", ["tag"] = "dns-local" });
-
-            return new JsonObject
-            {
-                ["servers"] = servers,
-                ["final"] = resolverTag,
-                ["strategy"] = "prefer_ipv4"
-            };
+                }
+                : new JsonObject
+                {
+                    ["tag"] = "dns-direct",
+                    ["address"] = "udp://1.1.1.1"
+                }, false);
         }
 
-        // legacy-формат DNS (sing-box <= 1.11)
-        var legacyServers = new JsonArray();
-        if (useProxyDns)
-        {
-            legacyServers.Add(new JsonObject
-            {
-                ["tag"] = "dns-remote",
-                ["address"] = tunnelledProfileDns ? "udp://" + tunnelDnsServer : "tls://1.1.1.1",
-                ["detour"] = ProxyTag
-            });
-            resolverTag = "dns-remote";
-        }
-        else if (custom)
-        {
-            legacyServers.Add(new JsonObject
-            {
-                ["tag"] = "dns-custom",
-                ["address"] = remoteServer.Contains("://") ? remoteServer : "udp://" + remoteServer
-                // detour не задаём: сервер без detour в любом формате DNS диалится напрямую.
-                // Явный detour на «пустой» direct-outbound свежие ядра (sing-box >= 1.12 и форки
-                // вроде sing-box-extended) отвергают: «detour to an empty direct outbound makes
-                // no sense» — ядро падает на старте.
-            });
-            resolverTag = "dns-custom";
-        }
-        else if (route.TunEnabled)
-        {
-            legacyServers.Add(new JsonObject
-            {
-                ["tag"] = "dns-direct",
-                ["address"] = "udp://1.1.1.1"
-                // detour не задаём — см. комментарий у dns-custom выше
-            });
-            resolverTag = "dns-direct";
-        }
-        else
-        {
-            resolverTag = "dns-local";
-        }
+        return null;
+    }
 
-        legacyServers.Add(new JsonObject { ["tag"] = "dns-local", ["address"] = "local" });   // без detour: см. выше
-        return new JsonObject
+    /// <summary>Свой DNS в новом формате (sing-box ≥ 1.12): хост, порт и путь — отдельными полями.</summary>
+    private static JsonObject CustomDnsServer(string address)
+    {
+        var spec = ParseCustomDns(address);
+
+        // detour не задаём: в новом формате DNS-серверов (sing-box >= 1.12) сервер без detour
+        // сам диалится напрямую. Явный detour на «пустой» direct-outbound ядро считает
+        // ошибкой конфигурации («detour to an empty direct outbound makes no sense»).
+        var node = new JsonObject
         {
-            ["servers"] = legacyServers,
-            ["final"] = resolverTag,
-            ["strategy"] = "prefer_ipv4"
+            ["type"] = spec.Type,
+            ["tag"] = "dns-custom",
+            ["server"] = spec.Host
         };
+        if (spec.Port > 0) node["server_port"] = spec.Port;
+        if (spec.Type == "https") node["path"] = spec.Path ?? "/dns-query";
+        else if (spec.Type == "h3" && spec.Path is not null) node["path"] = spec.Path;
+        // сервер задан именем (tls://dns.example): своё имя он резолвить не может —
+        // адрес узнаём системным резолвером
+        if (!spec.HostIsIp) node["domain_resolver"] = LocalDnsTag;
+        return node;
+    }
+
+    /// <summary>Свой DNS в старом формате (sing-box ≤ 1.11): адрес целиком.</summary>
+    private static JsonObject LegacyCustomDnsServer(string address)
+    {
+        var node = new JsonObject
+        {
+            ["tag"] = "dns-custom",
+            ["address"] = LegacyCustomDnsAddress(address)
+            // detour не задаём: сервер без detour в любом формате DNS диалится напрямую.
+            // Явный detour на «пустой» direct-outbound свежие ядра (sing-box >= 1.12 и форки
+            // вроде sing-box-extended) отвергают: «detour to an empty direct outbound makes
+            // no sense» — ядро падает на старте.
+        };
+        // сервер задан именем — его адрес узнаёт системный резолвер (в старом формате это address_resolver)
+        if (!ParseCustomDns(address).HostIsIp) node["address_resolver"] = LocalDnsTag;
+        return node;
+    }
+
+    /// <summary>Сервер без тега: по этой строке одинаковые серверы узнаются и не дублируются.</summary>
+    private static string ServerKey(JsonObject node)
+    {
+        var copy = (JsonObject)node.DeepClone();
+        copy.Remove("tag");
+        return copy.ToJsonString();
+    }
+
+    /// <summary>
+    /// DNS-правила своего DNS в порядке приоритета (см. <see cref="BuildDns"/>). В старом формате DNS
+    /// (sing-box ≤ 1.11) первым идёт правило «адрес сервера прокси — основным DNS»: ядро узнаёт этот адрес
+    /// в контексте подключения, и без такого правила его искал бы DNS домена или приложения. В новом
+    /// формате адрес сервера узнаёт route.default_domain_resolver — мимо правил.
+    /// </summary>
+    private static JsonArray DnsRules(IReadOnlyList<DnsRuleGroup> groups, string? legacyProxyResolver)
+    {
+        var rules = new JsonArray();
+        if (legacyProxyResolver is not null)
+            rules.Add(new JsonObject { ["outbound"] = new JsonArray(ProxyTag), ["server"] = legacyProxyResolver });
+
+        foreach (var group in groups)
+        {
+            var rule = (JsonObject)group.Match.DeepClone();
+            rule["server"] = group.Tag;
+            rules.Add(rule);
+        }
+        return rules;
+    }
+
+    private static JsonArray ToJsonArray(IEnumerable<string> values)
+    {
+        var array = new JsonArray();
+        foreach (var value in values) array.Add(value);
+        return array;
+    }
+
+    /// <summary>Свой DNS-сервер, разобранный на части для нового формата DNS (sing-box ≥ 1.12).</summary>
+    /// <param name="Port">0 — порт по умолчанию для типа (53, 853, 443).</param>
+    /// <param name="Path">Путь DoH, если указан в адресе.</param>
+    private sealed record CustomDns(string Type, string Host, int Port, string? Path, bool HostIsIp);
+
+    /// <summary>
+    /// Адрес своего DNS из раздела «DNS»: 1.1.1.1, 2606:4700::1111, [2606:4700::1111]:53,
+    /// udp://1.1.1.1:5353, tls://dns.example:853, https://dns.example/dns-query, quic://…, h3://….
+    /// В новом формате ядра хост, порт и путь — отдельные поля: «server» с портом или путём
+    /// внутри ядро не принимает.
+    /// </summary>
+    private static CustomDns ParseCustomDns(string value)
+    {
+        var rest = value.Trim();
+        var type = "udp";
+        foreach (var (prefix, kind) in new[] { ("https://", "https"), ("tls://", "tls"), ("quic://", "quic"), ("h3://", "h3"), ("udp://", "udp") })
+        {
+            if (!rest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+            type = kind;
+            rest = rest[prefix.Length..];
+            break;
+        }
+
+        // путь (DoH): всё начиная с первого «/»
+        string? path = null;
+        var slash = rest.IndexOf('/');
+        if (slash >= 0)
+        {
+            if (slash < rest.Length - 1) path = rest[slash..];
+            rest = rest[..slash];
+        }
+
+        var host = rest;
+        var port = 0;
+        if (host.StartsWith('['))
+        {
+            // [IPv6] или [IPv6]:порт
+            var close = host.IndexOf(']');
+            if (close > 0)
+            {
+                var tail = host[(close + 1)..];
+                if (tail.StartsWith(':') && int.TryParse(tail[1..], out var bracketPort) && bracketPort is > 0 and < 65536)
+                    port = bracketPort;
+                host = host[1..close];
+            }
+        }
+        else if (host.Count(c => c == ':') == 1)
+        {
+            // имя:порт или IPv4:порт (у IPv6 без скобок двоеточий больше одного)
+            var colon = host.IndexOf(':');
+            if (int.TryParse(host[(colon + 1)..], out var hostPort) && hostPort is > 0 and < 65536)
+            {
+                port = hostPort;
+                host = host[..colon];
+            }
+        }
+
+        return new CustomDns(type, host, port, path, IPAddress.TryParse(host, out _));
+    }
+
+    /// <summary>Старый формат DNS (sing-box ≤ 1.11) понимает адрес целиком; голому IPv6 нужны скобки.</summary>
+    private static string LegacyCustomDnsAddress(string value)
+    {
+        var text = value.Trim();
+        if (text.Contains("://")) return text;
+        if (!text.StartsWith('[') && text.Count(c => c == ':') > 1) return "udp://[" + text + "]";
+        return "udp://" + text;
     }
 
     // ---------------------------------------------------------------- outbound
@@ -985,7 +1232,7 @@ public static class SingBoxConfigBuilder
 
     // ------------------------------------------------------------------- route
     private static JsonNode BuildRoute(RouteProfile route, RouteSet? set, bool modern, bool allowProcessPath,
-        string? domainResolver, List<string>? tunnelCidrs = null)
+        string? domainResolver, List<string>? tunnelCidrs = null, IReadOnlyList<DnsRuleGroup>? dnsGroups = null)
     {
         var rules = new JsonArray();
 
@@ -1035,6 +1282,9 @@ public static class SingBoxConfigBuilder
                 rules.Add(Action(modern, app.Action, new JsonObject { ["process_path"] = new JsonArray(path) }));
         }
 
+        if (dnsGroups is { Count: > 0 })
+            AddDnsResolve(rules, dnsGroups, domainResolver ?? "");
+
         var routeNode = new JsonObject
         {
             ["rules"] = rules,
@@ -1047,6 +1297,172 @@ public static class SingBoxConfigBuilder
             routeNode["default_domain_resolver"] = domainResolver;
 
         return routeNode;
+    }
+
+    /// <summary>
+    /// Свой DNS доменов и приложений для прямых подключений (sing-box ≥ 1.12). Прямое подключение узнаёт
+    /// адрес домена у route.default_domain_resolver — мимо DNS-правил. Поэтому перед каждым правилом
+    /// «напрямую» для каждого правила своего DNS — в порядке приоритета, как DNS-правила, — ставим пару
+    /// с условиями правила и записи: resolve через DNS записи и то же «напрямую». Подключение, подошедшее
+    /// под запись, узнаёт адрес один раз — у её DNS — и сразу уходит напрямую: до записей ниже и до самого
+    /// правила оно не доходит. Записи с основным DNS resolve не нужен — только «напрямую»: адрес узнает
+    /// <paramref name="defaultResolver"/>, а записи ниже подключение уже не перехватят. Через прокси домен,
+    /// как и раньше, узнаёт сервер прокси — свой DNS действует там же, где основной.
+    /// </summary>
+    private static void AddDnsResolve(JsonArray rules, IReadOnlyList<DnsRuleGroup> groups, string defaultResolver)
+    {
+        var original = rules.ToList();
+        rules.Clear();
+        foreach (var node in original)
+        {
+            if (node is JsonObject rule && IsDirectDomainRule(rule))
+            {
+                var ruleConditions = (JsonObject)rule.DeepClone();
+                ruleConditions.Remove("action");
+                ruleConditions.Remove("outbound");
+                var ruleKey = ruleConditions.ToJsonString();
+
+                foreach (var group in groups)
+                {
+                    var conditions = CopyConditions(rule, group);
+                    if (conditions is null) continue;
+
+                    if (group.Tag != defaultResolver)
+                    {
+                        var resolve = (JsonObject)conditions.DeepClone();
+                        resolve["action"] = "resolve";
+                        resolve["server"] = group.Tag;
+                        rules.Add(resolve);
+                    }
+
+                    // запись покрывает правило целиком (то же приложение, тот же домен): дальше по списку
+                    // подключение не пойдёт — «напрямую» после resolve и есть само правило
+                    if (conditions.ToJsonString() == ruleKey) break;
+
+                    conditions["action"] = rule["action"]!.DeepClone();
+                    conditions["outbound"] = rule["outbound"]!.DeepClone();
+                    rules.Add(conditions);
+                }
+            }
+            rules.Add(node);
+        }
+    }
+
+    /// <summary>
+    /// Условия правила «напрямую», суженные до записи своего DNS (без действия). null — под правило и
+    /// запись разом не подходит ничего (правило приложения про другой процесс, суффиксы не пересекаются).
+    /// </summary>
+    private static JsonObject? CopyConditions(JsonObject rule, DnsRuleGroup group)
+    {
+        var conditions = (JsonObject)rule.DeepClone();
+        conditions.Remove("action");
+        conditions.Remove("outbound");
+
+        if (group.Kind != DomainRuleKind)
+        {
+            var processes = MatchingProcesses(rule, group.Kind, Strings(group.Match[group.Kind]));
+            if (processes.Count == 0) return null;
+            conditions[group.Kind] = ToJsonArray(processes);
+            return conditions;
+        }
+
+        if (OnlySuffixes(conditions) && OnlySuffixes(group.Match))
+        {
+            // и в правиле, и в записи — только суффиксы доменов: общее у них считается точно
+            // («ru» и «music.yandex.ru» → «music.yandex.ru»), а без общего пара не нужна вовсе
+            var common = CommonSuffixes(Strings(conditions["domain_suffix"]), Strings(group.Match["domain_suffix"]));
+            if (common.Count == 0) return null;
+            conditions["domain_suffix"] = ToJsonArray(common);
+            return conditions;
+        }
+
+        if (HasDestinationFields(conditions))
+        {
+            // поля адреса назначения (домены, IP) sing-box объединяет по ИЛИ — «домен из правила
+            // И домен записи» получается только логическим правилом
+            return new JsonObject
+            {
+                ["type"] = "logical",
+                ["mode"] = "and",
+                ["rules"] = new JsonArray(conditions, group.Match.DeepClone())
+            };
+        }
+
+        // правило по приложению: домены записи — просто ещё одно условие (по И)
+        foreach (var (key, value) in group.Match) conditions[key] = value?.DeepClone();
+        return conditions;
+    }
+
+    /// <summary>Поля адреса назначения: внутри правила sing-box объединяет их по ИЛИ.</summary>
+    private static readonly string[] DestinationFields =
+        { "domain", "domain_suffix", "domain_keyword", "domain_regex", "geosite", "geoip", "ip_cidr", "ip_is_private", "rule_set" };
+
+    private static bool HasDestinationFields(JsonObject rule) => DestinationFields.Any(rule.ContainsKey);
+
+    /// <summary>Из полей адреса назначения есть только domain_suffix.</summary>
+    private static bool OnlySuffixes(JsonObject rule) =>
+        rule.ContainsKey("domain_suffix") && DestinationFields.Where(f => f != "domain_suffix").All(f => !rule.ContainsKey(f));
+
+    /// <summary>
+    /// Домены, которые подходят под оба списка суффиксов: из каждой пары, где один суффикс — часть
+    /// другого, остаётся более точный («ru» и «yandex.ru» → «yandex.ru»).
+    /// </summary>
+    private static List<string> CommonSuffixes(List<string> first, List<string> second)
+    {
+        var result = new List<string>();
+        foreach (var a in first)
+        foreach (var b in second)
+        {
+            var common = string.Equals(a, b, StringComparison.OrdinalIgnoreCase) ? a
+                : b.EndsWith("." + a, StringComparison.OrdinalIgnoreCase) ? b
+                : a.EndsWith("." + b, StringComparison.OrdinalIgnoreCase) ? a
+                : null;
+            if (common is not null && !result.Contains(common, StringComparer.OrdinalIgnoreCase)) result.Add(common);
+        }
+        return result;
+    }
+
+    private static List<string> Strings(JsonNode? node) =>
+        node is JsonArray list ? list.Select(v => v?.GetValue<string>() ?? "").Where(v => v.Length > 0).ToList() : new List<string>();
+
+    /// <summary>Правило «напрямую», под которое попадают домены: по домену или по приложению, а не по IP.</summary>
+    private static bool IsDirectDomainRule(JsonObject rule)
+    {
+        if (rule["action"] is not JsonValue action || !action.TryGetValue<string>(out var actionName) || actionName != "route")
+            return false;
+        if (rule["outbound"] is not JsonValue outbound || !outbound.TryGetValue<string>(out var tag) || tag != DirectTag)
+            return false;
+        return rule.ContainsKey("domain") || rule.ContainsKey("domain_suffix") || rule.ContainsKey("domain_keyword") ||
+               rule.ContainsKey("domain_regex") || rule.ContainsKey("process_name") || rule.ContainsKey("process_path");
+    }
+
+    /// <summary>
+    /// Процессы группы (<paramref name="key"/> — process_name или process_path), которые могут попасть
+    /// под правило. У правила приложения остаются только совпадающие с ним: поля одного правила
+    /// sing-box объединяет по И, и копия с чужим процессом не сработала бы никогда.
+    /// </summary>
+    private static List<string> MatchingProcesses(JsonObject rule, string key, List<string> processes)
+    {
+        var result = processes.ToList();
+        if (result.Count == 0) return result;
+
+        if (rule["process_name"] is JsonArray ruleNames)
+        {
+            var names = ruleNames.Select(n => n?.GetValue<string>() ?? "").ToHashSet(StringComparer.OrdinalIgnoreCase);
+            result = key == "process_name"
+                ? result.Where(names.Contains).ToList()
+                : result.Where(p => names.Contains(Path.GetFileName(p))).ToList();
+        }
+
+        if (rule["process_path"] is JsonArray rulePaths)
+        {
+            var paths = rulePaths.Select(n => n?.GetValue<string>() ?? "").ToList();
+            result = key == "process_path"
+                ? result.Where(p => paths.Contains(p, StringComparer.OrdinalIgnoreCase)).ToList()
+                : result.Where(n => paths.Any(p => string.Equals(Path.GetFileName(p), n, StringComparison.OrdinalIgnoreCase))).ToList();
+        }
+
+        return result;
     }
 
     /// <summary>DNS-серверы, заданные в конфиге профиля (WireGuard/AmneziaWG).</summary>

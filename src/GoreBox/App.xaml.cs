@@ -7,6 +7,7 @@ using GoreBox.Services;
 using GoreBox.Utils;
 using GoreBox.ViewModels;
 using GoreBox.Views;
+using GoreBox.Views.Controls;
 
 namespace GoreBox;
 
@@ -59,6 +60,7 @@ public partial class App : Application
         Settings.Load();
         ThemeService.Apply(Settings.Current.Theme);
         ThemeService.ApplyAccent(Settings.Current.AccentColor);
+        Motion.SetSpeed(Settings.Current.AnimationSpeed);
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += (_, args) => WriteCrashLog(args.ExceptionObject as Exception);

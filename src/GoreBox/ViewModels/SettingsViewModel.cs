@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using GoreBox.Models;
 using GoreBox.Services;
 using GoreBox.Utils;
+using GoreBox.Views.Controls;
 
 namespace GoreBox.ViewModels;
 
@@ -39,6 +41,12 @@ public sealed class SettingsViewModel : ObservableObject
     /// если обход сейчас включён — иначе правки вступят в силу при следующем включении.
     /// </summary>
     public event Action? DpiSettingsChanged;
+
+    /// <summary>
+    /// «Сбросить настройки» заменил весь settings.json значениями по умолчанию. MainViewModel
+    /// перечитывает раздел «DNS»: его выбор и DNS обхода тоже живут в settings.json.
+    /// </summary>
+    public event Action? SettingsReset;
 
     public AsyncRelayCommand InstallCoreCommand { get; }
 
@@ -79,6 +87,26 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     public string ThemeLabel => IsDark ? "Тёмная" : "Светлая";
+
+    // ------------------------------------------------------------------ анимации
+    /// <summary>Множитель скорости анимаций: 0.3 — медленнее, 2 — быстрее.</summary>
+    public double AnimationSpeed
+    {
+        get => _settings.Current.AnimationSpeed;
+        set
+        {
+            var speed = Math.Round(Math.Clamp(value, Motion.MinSpeed, Motion.MaxSpeed), 1);
+            if (Math.Abs(_settings.Current.AnimationSpeed - speed) < 0.001) return;
+            _settings.Current.AnimationSpeed = speed;
+            _settings.SaveSoon();
+            Motion.SetSpeed(speed);
+            Raise();
+            Raise(nameof(AnimationSpeedLabel));
+        }
+    }
+
+    public string AnimationSpeedLabel =>
+        AnimationSpeed.ToString("0.0", CultureInfo.InvariantCulture) + "×";
 
     // ---------------------------------------------------------------- поведение
     public bool RunAtStartup
@@ -312,37 +340,7 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Откуда брать адреса сайтов: системный DNS или DoH.</summary>
-    public DohMode DpiDoh
-    {
-        get => _settings.Current.Dpi.Doh;
-        set
-        {
-            if (_settings.Current.Dpi.Doh == value) return;
-            _settings.Current.Dpi.Doh = value;
-            _settings.SaveSoon();
-            Raise();
-            Raise(nameof(DpiDohIsCustom));
-            DpiSettingsChanged?.Invoke();
-        }
-    }
-
-    /// <summary>Показывать поле своего URL DoH.</summary>
-    public bool DpiDohIsCustom => _settings.Current.Dpi.Doh == DohMode.Custom;
-
-    /// <summary>Свой URL DoH.</summary>
-    public string DpiDohUrl
-    {
-        get => _settings.Current.Dpi.DohUrl;
-        set
-        {
-            if (_settings.Current.Dpi.DohUrl == value) return;
-            _settings.Current.Dpi.DohUrl = value.Trim();
-            _settings.SaveSoon();
-            Raise();
-            DpiSettingsChanged?.Invoke();
-        }
-    }
+    // откуда обход берёт адреса сайтов (системный DNS или DoH) — теперь в разделе «DNS»: DnsViewModel.DpiDoh
 
     /// <summary>Прописывать обход в системный прокси Windows, пока он включён.</summary>
     public bool DpiUseSystemProxy
@@ -376,9 +374,6 @@ public sealed class SettingsViewModel : ObservableObject
         Raise(nameof(DpiMultisplit));
         Raise(nameof(DpiMultisplitSize));
         Raise(nameof(DpiUseSystemProxy));
-        Raise(nameof(DpiDoh));
-        Raise(nameof(DpiDohIsCustom));
-        Raise(nameof(DpiDohUrl));
         Raise(nameof(DpiExitDirect));
         Raise(nameof(DpiExitProxy));
     }
@@ -913,10 +908,12 @@ public sealed class SettingsViewModel : ObservableObject
         _settings.SaveSoon();
         ThemeService.Apply(_settings.Current.Theme);
         AutostartService.Apply(false, false);
+        Motion.SetSpeed(_settings.Current.AnimationSpeed);
         Notify?.Invoke("Настройки сброшены", false);
         ThemeChanged?.Invoke();
         RefreshCoreInfo();
         Raise(nameof(IsDark));
         Raise(nameof(ThemeLabel));
+        SettingsReset?.Invoke();
     }
 }

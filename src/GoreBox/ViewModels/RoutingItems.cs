@@ -381,29 +381,7 @@ public sealed class RouteProfileItemVm : ObservableObject
         }
     }
 
-    public string DnsMode
-    {
-        get => _model.DnsMode;
-        set
-        {
-            if (_model.DnsMode == value) return;
-            _model.DnsMode = value;
-            Raise();
-            Changed?.Invoke();
-        }
-    }
-
-    public string DnsServer
-    {
-        get => _model.DnsServer;
-        set
-        {
-            if (_model.DnsServer == value) return;
-            _model.DnsServer = value;
-            Raise();
-            Changed?.Invoke();
-        }
-    }
+    // DNS здесь больше не редактируется: он в разделе «DNS» (DnsViewModel)
 
     public string? RouteSetId
     {

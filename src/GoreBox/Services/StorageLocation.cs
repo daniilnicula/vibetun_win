@@ -94,6 +94,22 @@ public static class StorageLocation
             AppPaths.SetDataRoot(effective);
             Config = config;
 
+            // Данные могли остаться в папке data рядом с прежним exe (например, сборка теперь идёт из другой папки).
+            // Если в текущей папке данных пусто, берём их из найденной папки data; существующие файлы не трогаем.
+            if (!HasData(effective))
+            {
+                foreach (var source in ExeAncestorDataDirs(effective))
+                {
+                    if (!HasData(source)) continue;
+                    var found = CopyMissing(source, effective);
+                    if (found > 0)
+                    {
+                        notice = Join(notice, $"Данные найдены в «{source}» и скопированы в «{effective}» (файлов: {found}).");
+                        break;
+                    }
+                }
+            }
+
             if (config.PendingMigrationFrom.Count > 0)
             {
                 // переносим только если в новой папке данных ещё ничего нет: существующие файлы не трогаем
@@ -158,6 +174,18 @@ public static class StorageLocation
         foreach (var dir in new[] { roaming, LocalDataDir })
         {
             if (Directory.Exists(dir)) yield return dir;
+        }
+    }
+
+    /// <summary>Папки data по дереву вверх от exe (до 6 уровней), кроме exclude: там мог остаться прежний набор данных.</summary>
+    private static IEnumerable<string> ExeAncestorDataDirs(string exclude)
+    {
+        var start = Path.GetDirectoryName(AppPaths.ExecutablePath) ?? AppContext.BaseDirectory;
+        DirectoryInfo? dir = new DirectoryInfo(start);
+        for (var level = 0; dir is not null && level < 6; level++, dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, DataFolderName);
+            if (!SamePath(candidate, exclude) && Directory.Exists(candidate)) yield return candidate;
         }
     }
 
