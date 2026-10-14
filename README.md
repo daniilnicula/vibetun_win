@@ -1,4 +1,4 @@
-# GoreBox
+# VibeTun
 
 proxy/VPN-клиент на C# (.NET 8, WPF): обвязка над ядром **nekobox_core**
 (sing-box из исходников nekoray, vendored в `core/`).
@@ -29,10 +29,10 @@ proxy/VPN-клиент на C# (.NET 8, WPF): обвязка над ядром *
 
 `nekobox_core` — один бинарник с двумя режимами (см. `core/README.md`):
 
-1. **gRPC (основной для GoreBox):** `sing-box.exe nekobox --token T --port P` поднимает
+1. **gRPC (основной для VibeTun):** `sing-box.exe nekobox --token T --port P` поднимает
    libcore-сервис на 127.0.0.1; приложение шлёт `Start` (конфиг-JSON), `Stop`, `Test`,
    `QueryStats` с заголовком `nekoray_auth` (ровно одно значение). Клиент —
-   `src/GoreBox/Services/NekoCoreRpcClient.cs`, протокол — `src/GoreBox/Protos/libcore.proto`
+   `src/VibeTun/Services/NekoCoreRpcClient.cs`, протокол — `src/VibeTun/Protos/libcore.proto`
    (зеркало `core/nekoray/go/grpc_server/gen/libcore.proto`; генерация стабов — Grpc.Tools).
 2. **Fallback `run -c`:** если ядро без баннера `NekoBox:` (скачанный релиз, форк) или
    gRPC-путь по любой причине не поднялся, `CoreService.StartAsync` автоматически запускает
@@ -43,8 +43,8 @@ proxy/VPN-клиент на C# (.NET 8, WPF): обвязка над ядром *
 
 ## Хранение данных
 Профили, наборы правил, настройки, ядро, логи и профиль браузера «Панели» лежат в одной папке.
-По умолчанию это папка `data` рядом с `GoreBox.exe`. Место выбирается в «Настройках» → «Данные приложения»:
-«В локальной папке» (`%LocalAppData%\GoreBox`), «Рядом с исполняемым файлом» или «Указать своё место».
-Выбор запоминается в `%LocalAppData%\GoreBox\location.json` и вступает в силу после перезапуска.
+По умолчанию это папка `data` рядом с `VibeTun.exe`. Место выбирается в «Настройках» → «Данные приложения»:
+«В локальной папке» (`%LocalAppData%\VibeTun`), «Рядом с исполняемым файлом» или «Указать своё место».
+Выбор запоминается в `%LocalAppData%\VibeTun\location.json` и вступает в силу после перезапуска.
 Если в новой папке данных ещё нет, данные из прежней копируются при запуске; существующие файлы не перезаписываются.
 Если папка рядом с exe недоступна для записи (например, в `Program Files`), используется локальная папка и приложение об этом сообщает.

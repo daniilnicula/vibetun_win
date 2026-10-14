@@ -1,4 +1,4 @@
-# Сборка ядра GoreBox (nekobox_core) → dist\win-x64\sing-box.exe
+# Сборка ядра VibeTun (nekobox_core) → dist\win-x64\sing-box.exe
 #
 # Зеркало libs/build_go.sh из MatsuriDayo/nekoray: CGO off, теги сборки nekobox,
 # версия прокидывается в banner (libneko/neko_common.Version_neko).
@@ -7,11 +7,11 @@
 # Использование (из корня репозитория):
 #   powershell -ExecutionPolicy Bypass -File scripts\build-core.ps1
 #   powershell -ExecutionPolicy Bypass -File scripts\build-core.ps1 -Install
-# -Install дополнительно кладёт бинарник в %LocalAppData%\GoreBox\core\sing-box.exe,
+# -Install дополнительно кладёт бинарник в %LocalAppData%\VibeTun\core\sing-box.exe,
 # откуда приложение подхватывает его при первом запуске.
 
 param(
-    [string]$Version = "GoreBox-1.2.0",
+    [string]$Version = "VibeTun-1.2.0",
     [switch]$Install
 )
 
@@ -39,7 +39,7 @@ finally {
 Write-Host "Готово: $out"
 
 if ($Install) {
-    $coreDir = Join-Path $env:LOCALAPPDATA "GoreBox\core"
+    $coreDir = Join-Path $env:LOCALAPPDATA "VibeTun\core"
     New-Item -ItemType Directory -Force -Path $coreDir | Out-Null
     Copy-Item -Force $out (Join-Path $coreDir "sing-box.exe")
     Write-Host "Установлено: $coreDir\sing-box.exe"

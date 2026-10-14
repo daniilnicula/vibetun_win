@@ -6,7 +6,7 @@
 ## Сборка
 
 ```powershell
-dotnet build GoreBox.sln -c Release
+dotnet build VibeTun.sln -c Release
 ```
 
 ## Окно

@@ -102,7 +102,7 @@ def main():
 
     final = base.resize((FINAL, FINAL), Image.LANCZOS)
 
-    out = "src/GoreBox/Assets/app.ico"
+    out = "src/VibeTun/Assets/app.ico"
     final.save(out, format="ICO", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     print("saved", out)
 

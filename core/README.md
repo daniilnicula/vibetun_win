@@ -1,6 +1,6 @@
-# GoreBox — ядро (vendored)
+# VibeTun — ядро (vendored)
 
-Go-исходники ядра GoreBox: nekobox_core из архивного [MatsuriDayo/nekoray](https://github.com/MatsuriDayo/nekoray)
+Go-исходники ядра VibeTun: nekobox_core из архивного [MatsuriDayo/nekoray](https://github.com/MatsuriDayo/nekoray)
 плюс его зависимости, зафиксированные через `replace` в go.mod. Всё лежит в дереве репозитория —
 сборка ядра не требует клонирования внешних репозиториев, только Go 1.22+.
 
@@ -9,7 +9,7 @@ Go-исходники ядра GoreBox: nekobox_core из архивного [Ma
 | Каталог | Происхождение | Коммит |
 |---|---|---|
 | `nekoray/go/cmd/nekobox_core` | MatsuriDayo/nekoray, точка входа ядра | `main` (архив) |
-| `nekoray/go/cmd/updater` | то же (в сборку GoreBox не входит) | `main` |
+| `nekoray/go/cmd/updater` | то же (в сборку VibeTun не входит) | `main` |
 | `nekoray/go/grpc_server` | gRPC-сервис libcore.proto (Start/Stop/Test/QueryStats) | `main` |
 | `nekoray/LICENSE` | GPLv3 — см. «Лицензии» | — |
 | `sing-box` | MatsuriDayo/sing-box (форк с boxapi/nekoutils) | `06557f6cef23160668122a17a818b378b5a216b5` |
@@ -31,7 +31,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build-core.ps1 -Install
 
 ```
 CGO_ENABLED=0 go build -v -o sing-box.exe -trimpath ^
-  -ldflags "-w -s -X github.com/matsuridayo/libneko/neko_common.Version_neko=GoreBox-1.2.0" ^
+  -ldflags "-w -s -X github.com/matsuridayo/libneko/neko_common.Version_neko=VibeTun-1.2.0" ^
   -tags "with_clash_api,with_gvisor,with_quic,with_wireguard,with_utls,with_ech"
 ```
 
@@ -44,21 +44,21 @@ CGO_ENABLED=0 go build -v -o sing-box.exe -trimpath ^
 `nekobox_core` — обычный sing-box с одной добавкой (см. `go/cmd/nekobox_core/main.go`):
 
 * `sing-box.exe run -c config.json -D dir` — стандартный режим, как у официального sing-box;
-  его используют все «чужие» ядра (скачанные релизы, форки) и fallback GoreBox.
+  его используют все «чужие» ядра (скачанные релизы, форки) и fallback VibeTun.
 * `sing-box.exe nekobox --token T --port P` — gRPC-режим: слушает 127.0.0.1:P и принимает
   конфиг и команды (Start/Stop/Test/QueryStats) по `libcore.proto`; каждый запрос должен нести
   ровно одно значение заголовка `nekoray_auth` со значением T (см. `grpc_server/auth`).
-  Так работает GoreBox со своей сборкой ядра (см. `src/GoreBox/Services/NekoCoreRpcClient.cs`).
+  Так работает VibeTun со своей сборкой ядра (см. `src/VibeTun/Services/NekoCoreRpcClient.cs`).
 
 Другие подкоманды (`version`, `check`, …) уходят в boxmain как обычно — все пробные проверки
 ядра в приложении работают с любым бинарником.
 
-RPC-метод `Update` ходит в релизы MatsuriDayo/nekoray — GoreBox его **не вызывает**; обновление
-ядра у GoreBox своё (Настройки → Ядро).
+RPC-метод `Update` ходит в релизы MatsuriDayo/nekoray — VibeTun его **не вызывает**; обновление
+ядра у VibeTun своё (Настройки → Ядро).
 
 ## Лицензии
 
-* `nekoray/` — GPLv3 (`nekoray/LICENSE`). Производный код, включая gRPC-обвязку GoreBox,
+* `nekoray/` — GPLv3 (`nekoray/LICENSE`). Производный код, включая gRPC-обвязку VibeTun,
   распространяется на условиях GPLv3.
 * `sing-box/`, `sing-quic/` — GPLv3 (LICENSE в каталогах).
 * `libneko/` — **LICENSE-файла нет**: автор не разместил явную лицензию (только README).

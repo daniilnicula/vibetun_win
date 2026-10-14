@@ -1,0 +1,20 @@
+<Window x:Class="VibeTun.Views.TrayPanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="clr-namespace:VibeTun.Views"
+        Title="VibeTun"
+        Width="300" SizeToContent="Height"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
+        Background="Transparent" ShowInTaskbar="False" Topmost="True"
+        WindowStartupLocation="Manual"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
+
+    <!-- мини-панель у иконки в трее: одиночный клик по иконке открывает, клик вне окна — закрывает.
+         Содержимое — та же карточка, что и в сайдбаре главного окна (ConnectionCard). -->
+    <v:ConnectionCard Margin="10">
+        <v:ConnectionCard.Effect>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.3" Color="Black" />
+        </v:ConnectionCard.Effect>
+    </v:ConnectionCard>
+</Window>

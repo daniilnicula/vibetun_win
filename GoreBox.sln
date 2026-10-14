@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GoreBox", "src\GoreBox\GoreBox.csproj", "{6DC020CF-8301-4BC2-A9BB-16ED4DF2C72E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VibeTun", "src\VibeTun\VibeTun.csproj", "{6DC020CF-8301-4BC2-A9BB-16ED4DF2C72E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
