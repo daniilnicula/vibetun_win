@@ -42,7 +42,7 @@ public static class DnsPing
     public static async Task<DnsPingResult> MeasureAsync(string address, CancellationToken ct = default)
     {
         if (!DnsAddress.TryParseEndpoint(address, out var scheme, out var host, out var port))
-            return DnsPingResult.Fail("не удалось разобрать адрес");
+            return DnsPingResult.Fail(L.T("S0333"));
 
         try
         {
@@ -53,13 +53,13 @@ public static class DnsPing
                 {
                     var tcpPort = port > 0 ? port : scheme == "tls" ? 853 : 443;
                     var ms = await LatencyService.TryTcpAsync(host, tcpPort, TcpTimeout, ct).ConfigureAwait(false);
-                    return ms >= 0 ? new DnsPingResult(ms, "") : DnsPingResult.Fail($"нет TCP-подключения к порту {tcpPort}");
+                    return ms >= 0 ? new DnsPingResult(ms, "") : DnsPingResult.Fail(L.F("S0334", tcpPort));
                 }
                 case "quic":
                 case "h3":
                 {
                     var ms = await LatencyService.TryIcmpAsync(host, ct).ConfigureAwait(false);
-                    return ms >= 0 ? new DnsPingResult(ms, "") : DnsPingResult.Fail("сервер не ответил на ping (ICMP)");
+                    return ms >= 0 ? new DnsPingResult(ms, "") : DnsPingResult.Fail(L.T("S0335"));
                 }
                 default:
                     return await QueryAsync(host, port > 0 ? port : 53, ct).ConfigureAwait(false);
@@ -82,7 +82,7 @@ public static class DnsPing
             // udp://dns.example — адрес сервера узнаём системным резолвером, как и ядро
             var resolved = await System.Net.Dns.GetHostAddressesAsync(host, ct).ConfigureAwait(false);
             ip = resolved.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) ?? resolved.FirstOrDefault();
-            if (ip is null) return DnsPingResult.Fail("не удалось узнать адрес " + host);
+            if (ip is null) return DnsPingResult.Fail(L.T("S0336") + host);
         }
 
         var endpoint = new IPEndPoint(ip, port);
@@ -130,27 +130,27 @@ public static class DnsPing
                 return rcode switch
                 {
                     0 or 3 => (ms, "", false),                                   // NOERROR, NXDOMAIN — сервер работает
-                    5 => (-1, "сервер отклонил запрос (REFUSED)", true),
-                    2 => (-1, "сервер не смог ответить (SERVFAIL)", false),
-                    _ => (-1, $"ответ с ошибкой (RCODE {rcode})", false)
+                    5 => (-1, L.T("S0337"), true),
+                    2 => (-1, L.T("S0338"), false),
+                    _ => (-1, L.F("S0339", rcode), false)
                 };
             }
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             var seconds = AttemptTimeout.TotalSeconds.ToString("0.#", CultureInfo.InvariantCulture);
-            return (-1, $"нет ответа за {seconds} с", false);
+            return (-1, L.F("S0340", seconds), false);
         }
         catch (SocketException ex) when (ex.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionRefused)
         {
-            return (-1, $"порт {endpoint.Port} закрыт: сервер не принимает обычный DNS", true);
+            return (-1, L.F("S0341", endpoint.Port), true);
         }
         catch (SocketException ex) when (ex.SocketErrorCode is SocketError.NetworkUnreachable or SocketError.HostUnreachable
                                              or SocketError.AddressNotAvailable or SocketError.AddressFamilyNotSupported)
         {
             return endpoint.AddressFamily == AddressFamily.InterNetworkV6
-                ? (-1, "нет маршрута до сервера: IPv6 недоступен", true)
-                : (-1, "нет маршрута до сервера", true);
+                ? (-1, L.T("S0342"), true)
+                : (-1, L.T("S0343"), true);
         }
     }
 

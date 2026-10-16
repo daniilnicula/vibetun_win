@@ -87,7 +87,7 @@ public sealed class RouteStore
 
     public RouteSet Import(string path)
     {
-        var set = Json.Read<RouteSet>(path) ?? throw new InvalidOperationException("Файл не является набором правил");
+        var set = Json.Read<RouteSet>(path) ?? throw new InvalidOperationException(L.T("S0506"));
         set.Id = Guid.NewGuid().ToString("N");
         set.BuiltIn = false;
         set.FileName = "";
@@ -117,7 +117,7 @@ public sealed class RouteStore
             {
                 new()
                 {
-                    Name = "По умолчанию",
+                    Name = L.T("S0147"),
                     ListenAddress = "127.0.0.1",
                     ListenPort = 2080,
                     Mode = ListenMode.Mixed,
@@ -175,7 +175,7 @@ public sealed class RouteStore
         {
             Name = SetAllProxy,
             BuiltIn = true,
-            Description = "Никаких исключений: весь трафик идёт через выбранный профиль.",
+            Description = L.T("S0507"),
             Rules = new List<RouteRule>()
         },
 
@@ -183,11 +183,11 @@ public sealed class RouteStore
         {
             Name = SetBypassRu,
             BuiltIn = true,
-            Description = "Российские сервисы и локальные адреса — напрямую, всё остальное через прокси.",
+            Description = L.T("S0508"),
             Rules = new List<RouteRule>
             {
-                R(@"\.ru$", RouteAction.Direct, MatchKind.Regex, "Все зоны .ru"),
-                R(@"\.рф$", RouteAction.Direct, MatchKind.Regex, "Все зоны .рф"),
+                R(@"\.ru$", RouteAction.Direct, MatchKind.Regex, L.T("S0509")),
+                R(@"\.рф$", RouteAction.Direct, MatchKind.Regex, L.T("S0510")),
                 R("vk.com", RouteAction.Direct), R("vkvideo.ru", RouteAction.Direct),
                 R("ok.ru", RouteAction.Direct), R("mail.ru", RouteAction.Direct),
                 R("dzen.ru", RouteAction.Direct), R("yandex.ru", RouteAction.Direct, MatchKind.Keyword),
@@ -200,7 +200,7 @@ public sealed class RouteStore
                 R("kinopoisk.ru", RouteAction.Direct), R("2gis.ru", RouteAction.Direct),
                 R("ria.ru", RouteAction.Direct), R("rbc.ru", RouteAction.Direct),
                 R("lenta.ru", RouteAction.Direct), R("habr.com", RouteAction.Direct),
-                R("steampowered.com", RouteAction.Direct, MatchKind.Keyword, "Игры обычно быстрее напрямую"),
+                R("steampowered.com", RouteAction.Direct, MatchKind.Keyword, L.T("S0511")),
                 R("mail.ru", RouteAction.Direct),
                 R(@"\.su$", RouteAction.Direct, MatchKind.Regex)
             }
@@ -210,7 +210,7 @@ public sealed class RouteStore
         {
             Name = SetBlockedOnly,
             BuiltIn = true,
-            Description = "Через прокси только список сервисов, остальное напрямую.",
+            Description = L.T("S0512"),
             Rules = new List<RouteRule>
             {
                 R("youtube.com", RouteAction.Proxy), R("youtu.be", RouteAction.Proxy),
@@ -250,12 +250,12 @@ public sealed class RouteStore
         {
             Name = SetAdBlock,
             BuiltIn = true,
-            Description = "Блокировка рекламных и трекинговых доменов (можно совмещать с другими наборами).",
+            Description = L.T("S0513"),
             Rules = new List<RouteRule>
             {
                 R(@"^(.+\.)?(doubleclick|googleadservices|googlesyndication|google-analytics|adservice)\.(net|com|google\.com)$", RouteAction.Block, MatchKind.Regex, "Google Ads"),
                 R(@"^(.+\.)?(adnxs|adsrvr|advertising|adform|criteo|taboola|outbrain|rubiconproject|pubmatic|smartadserver|yieldmo)\.", RouteAction.Block, MatchKind.Regex),
-                R(@"^(.+\.)?(an|ads|ad|banners)\.yandex\.(ru|net|com)$", RouteAction.Block, MatchKind.Regex, "Яндекс.Реклама"),
+                R(@"^(.+\.)?(an|ads|ad|banners)\.yandex\.(ru|net|com)$", RouteAction.Block, MatchKind.Regex, L.T("S0514")),
                 R(@"^(.+\.)?(mc\.yandex\.ru|ads\.vk\.com|ad\.mail\.ru|top-fwz1\.mail\.ru|r\.mail\.ru)$", RouteAction.Block, MatchKind.Regex),
                 R(@"^(.+\.)?(sentry\.io|tracker|tracking|metrics|analytics|telemetry)\.", RouteAction.Block, MatchKind.Regex)
             }

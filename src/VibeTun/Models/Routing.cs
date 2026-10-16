@@ -40,9 +40,9 @@ public sealed class RouteRule
     [JsonIgnore]
     public string KindLabel => Kind switch
     {
-        MatchKind.Domain => "домен",
-        MatchKind.Ip => "IP / подсеть",
-        MatchKind.Keyword => "ключ",
+        MatchKind.Domain => L.T("S0270"),
+        MatchKind.Ip => L.T("S0271"),
+        MatchKind.Keyword => L.T("S0272"),
         MatchKind.Regex => "regex",
         _ => "—"
     };
@@ -104,7 +104,7 @@ public sealed class AppRule
 public sealed class RouteSet
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Name { get; set; } = "Новый набор";
+    public string Name { get; set; } = L.T("S0273");
     public string? Description { get; set; }
     public bool BuiltIn { get; set; }
     public List<RouteRule> Rules { get; set; } = new();
@@ -116,14 +116,14 @@ public sealed class RouteSet
     public string FileName { get; set; } = "";
 
     [JsonIgnore]
-    public string RulesSummary => $"{Rules.Count} правил · {Apps.Count} приложений";
+    public string RulesSummary => L.F("S0274", Rules.Count, Apps.Count);
 }
 
 /// <summary>Профиль маршрутизации: локальный вход, системный прокси, TUN, набор правил.</summary>
 public sealed class RouteProfile
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Name { get; set; } = "По умолчанию";
+    public string Name { get; set; } = L.T("S0147");
 
     public string ListenAddress { get; set; } = "127.0.0.1";
     public int ListenPort { get; set; } = 2080;
@@ -165,6 +165,10 @@ public sealed class RouteProfile
 /// <summary>Настройки приложения.</summary>
 public sealed class AppSettings
 {
+    public string Language { get; set; } = "ru";
+
+    public int LogLimit { get; set; } = 100;
+
     public ThemeMode Theme { get; set; } = ThemeMode.Dark;
 
     /// <summary>Акцентный цвет интерфейса в формате #AARRGGBB; null — цвет темы по умолчанию.</summary>
@@ -173,6 +177,7 @@ public sealed class AppSettings
     /// <summary>Панели (браузеры) и SSH-подключения (терминалы) из выпадающих списков навигации.</summary>
     public List<PanelEntry> Panels { get; set; } = new();
     public List<SshEntry> SshItems { get; set; } = new();
+    public List<SshKnownHostKey> SshHostKeys { get; set; } = new();
 
     /// <summary>Какая панель / какое SSH-подключение открыто сейчас.</summary>
     public string? SelectedPanelId { get; set; }
@@ -256,7 +261,19 @@ public sealed class AppSettings
 
     private DnsSettings? _dns;
 
-    /// <summary>Порядок вкладок в левом меню (ключи: profiles, routing, dns, settings, updates, panel, ssh).</summary>
+    /// <summary>
+    /// Раздел «DPI»: сервисы со своим профилем обхода и сами профили настроек. Экземпляр есть всегда
+    /// (в старом settings.json блока нет) — встроенные профили добавляет <c>DpiServiceCatalog.EnsureSeeded</c>.
+    /// </summary>
+    public DpiServices DpiServices
+    {
+        get => _dpiServices ??= new DpiServices();
+        set => _dpiServices = value ?? new DpiServices();
+    }
+
+    private DpiServices? _dpiServices;
+
+    /// <summary>Порядок вкладок в левом меню (ключи: profiles, routing, dns, dpi, settings, updates, panel, ssh).</summary>
     public List<string> NavOrder { get; set; } = new();
 
     /// <summary>Высота панели логов на вкладке «Профили» в пикселях.</summary>
@@ -327,7 +344,7 @@ public sealed class CoreInfo
     public string? EndpointError { get; set; }
 
     [JsonIgnore]
-    public string VersionShort => string.IsNullOrWhiteSpace(Version) ? "не найдено" : Version;
+    public string VersionShort => string.IsNullOrWhiteSpace(Version) ? L.T("S0275") : Version;
 
     /// <summary>Короткое имя версии без префикса «sing-box version».</summary>
     [JsonIgnore]

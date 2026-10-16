@@ -140,7 +140,7 @@ public static class SingBoxConfigBuilder
             if (raw is null)
             {
                 if (warn is not null) result.Warnings.Add(warn);
-                throw new NotSupportedException(warn ?? "Не удалось получить outbound из JSON-профиля");
+                throw new NotSupportedException(warn ?? L.T("S0515"));
             }
             raw["tag"] = ProxyTag;
             outbounds.Add(raw);
@@ -160,8 +160,8 @@ public static class SingBoxConfigBuilder
 
                 case ProtocolIds.MtProto:
                     throw new NotSupportedException(
-                        "MTProto — прокси для Telegram. Ядро sing-box его не поддерживает: используйте «Открыть в Telegram», " +
-                        "чтобы применить прокси в самом клиенте Telegram.");
+                        L.T("S0516") +
+                        L.T("S0517"));
 
                 default:
                     outbounds.Add(BuildOutbound(profile));
@@ -710,15 +710,15 @@ public static class SingBoxConfigBuilder
                 break;
 
             case ProtocolIds.ShadowsocksR:
-                throw new NotSupportedException("SSR (ShadowsocksR) не поддерживается ядром sing-box. Используйте Shadowsocks или другой протокол.");
+                throw new NotSupportedException(L.T("S0518"));
 
             case ProtocolIds.Tunnel:
                 // Сырой JSON обрабатывается в Build() до этого switch'а; сюда попадаем только без него.
                 throw new NotSupportedException(
-                    "Tunnel требует JSON ядра: вставьте конфиг в поле «JSON ядра» внизу редактора профиля.");
+                    L.T("S0519"));
 
             default:
-                throw new NotSupportedException($"Протокол «{profile.Protocol}» не поддерживается ядром");
+                throw new NotSupportedException(L.F("S0520", profile.Protocol));
         }
 
         return o;
@@ -834,11 +834,11 @@ public static class SingBoxConfigBuilder
         var preSharedKey = Text.NormalizeKey(n.WgPresharedKey);
 
         if (string.IsNullOrWhiteSpace(privateKey))
-            error = "Не задан приватный ключ клиента (PrivateKey) — туннель WireGuard не поднимется.";
+            error = L.T("S0521");
         else if (string.IsNullOrWhiteSpace(peerPublicKey))
-            error = "Не задан публичный ключ сервера (PublicKey) — туннель WireGuard не поднимется.";
+            error = L.T("S0522");
         else if (string.IsNullOrWhiteSpace(n.Server))
-            error = "Не задан адрес сервера (Endpoint).";
+            error = L.T("S0523");
 
         // random_trailers/disable_cookies (AWG 3.1) умеют передавать две схемы: отдельный
         // эндпоинт type:"awg" у форка Amnezia (hoaxisr/amnezia-box, только Linux) и плоские поля
@@ -850,7 +850,7 @@ public static class SingBoxConfigBuilder
         var addresses = AddressArray(n);
         if (string.IsNullOrWhiteSpace(n.WgAddress))
             warning = AddWarning(warning,
-                "В профиле нет адреса клиента (Address) — подставлен 10.0.0.2/32. Если сервер выдаёт другой адрес, трафик не пойдёт.");
+                L.T("S0524"));
 
         var allowedIps = AllowedIpsArray(n);
 
@@ -885,8 +885,8 @@ public static class SingBoxConfigBuilder
             if (meaningful && !reservedEmitted)
             {
                 warning = AddWarning(warning,
-                    "Ядро не передаёт reserved-байты WireGuard (" + n.WgReserved!.Trim() +
-                    ") — значение проигнорировано. Если сервер их требует, трафик не пойдёт.");
+                    L.T("S0525") + n.WgReserved!.Trim() +
+                    L.T("S0526"));
             }
         }
 
@@ -907,14 +907,14 @@ public static class SingBoxConfigBuilder
             // Подключаться бессмысленно: сервер с обфускацией обычный WireGuard-хендшейк не примет,
             // поэтому вместо «подключено, но ничего не грузит» честно останавливаем запуск.
             var reason = !modern
-                ? "Ядро старше 1.11 не умеет WireGuard-эндпоинты и не поддерживает обфускацию AmneziaWG."
+                ? L.T("S0527")
                 : core.EndpointError is { Length: > 0 } endpointError
-                    ? "Ядро не смогло собрать эндпоинт WireGuard: " + endpointError
-                    : "Текущее ядро (официальный sing-box) не поддерживает обфускацию AmneziaWG: " +
-                      "параметры Jc/Jmin/Jmax, S1–S4, H1–H4, I1–I5 будут отброшены, и сервер не примет хендшейк.";
+                    ? L.T("S0528") + endpointError
+                    : L.T("S0529") +
+                      L.T("S0530");
 
             error = error is null
-                ? reason + " Нужна расширенная сборка ядра — Настройки → Ядро → «Расширенная (AmneziaWG)»."
+                ? reason + L.T("S0531")
                 : error + " " + reason;
             return (node, warning, error);
         }
@@ -952,8 +952,8 @@ public static class SingBoxConfigBuilder
         if (missing.Count > 0)
         {
             warning = AddWarning(warning,
-                "В профиле нет параметров AmneziaWG: " + string.Join(", ", missing) +
-                ". Если сервер их использует, хендшейк не пройдёт — сверьтесь с .conf из панели.");
+                L.T("S0532") + string.Join(", ", missing) +
+                L.T("S0533"));
         }
 
         // AmneziaWG 3.1: random_trailers и disable_cookies. Библиотека wireguard-go внутри
@@ -977,24 +977,24 @@ public static class SingBoxConfigBuilder
             else if (n.AwgRandomTrailers)
             {
                 warning = AddWarning(warning,
-                    "На сервере включены случайные трейлеры AmneziaWG 3.1 (RandomTrailers), а это ядро " +
-                    "передать их не умеет: без них ответы на хендшейк отбрасываются как пакеты неизвестного " +
-                    "типа, и трафик не пойдёт. Установите ядро с AWG 3.1 — Настройки → Ядро → «Расширенная " +
-                    $"(AmneziaWG)» → «Скачать» (github.com/{CoreInstaller.AwgRepo}), — либо выключите " +
-                    "RandomTrailers на сервере (в панели/3x-ui) и пересохраните профиль.");
+                    L.T("S0534") +
+                    L.T("S0535") +
+                    L.T("S0536") +
+                    L.F("S0537", CoreInstaller.AwgRepo) +
+                    L.T("S0538"));
             }
             else
             {
                 warning = AddWarning(warning,
-                    "DisableCookies (AmneziaWG 3.1) этим ядром не передаётся. На работу клиента это не " +
-                    "влияет: флаг отключает ответы cookie на стороне сервера.");
+                    L.T("S0539") +
+                    L.T("S0540"));
             }
         }
 
         if (amnezia.Count == 0)
         {
-            error = "Профиль помечен как AmneziaWG, но параметров обфускации в нём нет: " +
-                    "подключиться к AWG-серверу без Jc/S1–S4/H1–H4 нельзя. Вставьте исходный .conf в редакторе профиля.";
+            error = L.T("S0541") +
+                    L.T("S0542");
             return (node, warning, error);
         }
 
@@ -1072,7 +1072,7 @@ public static class SingBoxConfigBuilder
     {
         if (string.IsNullOrWhiteSpace(n.WgAddress))
             warning = AddWarning(warning,
-                "В профиле нет адреса клиента (Address) — подставлен 10.0.0.2/32. Если сервер выдаёт другой адрес, трафик не пойдёт.");
+                L.T("S0524"));
 
         var peer = new JsonObject
         {
@@ -1134,13 +1134,13 @@ public static class SingBoxConfigBuilder
         var missing = n.MissingAwgParams;
         if (missing.Count > 0)
             warning = AddWarning(warning,
-                "В профиле нет параметров AmneziaWG: " + string.Join(", ", missing) +
-                ". Если сервер их использует, хендшейк не пройдёт — сверьтесь с .conf из панели.");
+                L.T("S0532") + string.Join(", ", missing) +
+                L.T("S0533"));
 
         if (HasReservedBytes(n))
             warning = AddWarning(warning,
-                "Ядро не передаёт reserved-байты WireGuard (" + n.WgReserved!.Trim() +
-                ") — значение проигнорировано. Если сервер их требует, трафик не пойдёт.");
+                L.T("S0525") + n.WgReserved!.Trim() +
+                L.T("S0526"));
 
         return (node, warning, error);
     }
@@ -1154,9 +1154,9 @@ public static class SingBoxConfigBuilder
         foreach (var (name, value) in new[] { ("S1", n.AwgS1), ("S2", n.AwgS2), ("S3", n.AwgS3), ("S4", n.AwgS4) })
         {
             if (value is null || value.Value < 12)
-                return $"С параметром HeaderProtectionKey значение {name} должно быть не меньше 12, а в профиле " +
-                       (value is null ? "оно не задано" : "оно " + value.Value) +
-                       ". Ядро не запустит туннель — сверьтесь с .conf из панели.";
+                return L.F("S0543", name) +
+                       (value is null ? L.T("S0544") : L.T("S0545") + value.Value) +
+                       L.T("S0546");
         }
 
         return null;
@@ -1695,7 +1695,7 @@ public static class SingBoxConfigBuilder
         try
         {
             var node = JsonNode.Parse(rawJson);
-            if (node is not JsonObject obj) { warning = "JSON-профиль должен быть объектом"; return null; }
+            if (node is not JsonObject obj) { warning = L.T("S0547"); return null; }
 
             if (obj["outbounds"] is JsonArray outbounds)
             {
@@ -1715,12 +1715,12 @@ public static class SingBoxConfigBuilder
 
             if (obj["type"] is not null) return (JsonObject)obj.DeepClone();
 
-            warning = "В JSON-конфиге не найден outbound для прокси";
+            warning = L.T("S0548");
             return null;
         }
         catch (Exception ex)
         {
-            warning = "Ошибка разбора JSON: " + ex.Message;
+            warning = L.T("S0549") + ex.Message;
             return null;
         }
     }

@@ -1,6 +1,40 @@
+using System.Collections.Generic;
 using VibeTun.Models;
 
 namespace VibeTun.Services;
+
+public enum SubscriptionImportAction
+{
+    Cancel,
+    AddSubscription,
+    AddProfiles,
+    AddProfilesToGroup
+}
+
+public sealed record SubscriptionGroupOption(string Id, string Name);
+
+public sealed record SubscriptionImportChoice(
+    SubscriptionImportAction Action,
+    string? GroupId = null,
+    string? NewGroupName = null);
+
+/// <summary>
+/// Что показать в окне сервиса раздела «DPI»: сам сервис (копия — правки не применяются, пока
+/// не нажали «Сохранить»), признак «новый» и копии профилей настроек обхода.
+/// </summary>
+public sealed record DpiServiceEditRequest(
+    DpiService Service,
+    bool IsNew,
+    IReadOnlyList<DpiStrategyProfile> Profiles);
+
+/// <summary>
+/// Чем закончилось окно сервиса: итоговый сервис, список профилей и признак «нажали Выбрать DNS»
+/// (тогда раздел уводит пользователя в «DNS» и после выбора возвращает его в «DPI»).
+/// </summary>
+public sealed record DpiServiceEditResult(
+    DpiService Service,
+    List<DpiStrategyProfile> Profiles,
+    bool PickDns = false);
 
 /// <summary>Диалоги приложения (реализуются во view-слое).</summary>
 public interface IDialogService
@@ -19,7 +53,18 @@ public interface IDialogService
     /// </summary>
     (string Name, string Address)? EditDnsServer(string title, string okText, string name = "", string address = "");
 
-    bool Confirm(string title, string text, string okText = "Удалить", bool danger = true);
+    /// <summary>
+    /// Окно сервиса раздела «DPI»: домен, приёмы обхода и профили настроек, кнопки «Тест»,
+    /// «Подобрать», «Отмена» и «Сохранить». null — если пользователь закрыл окно без сохранения.
+    /// </summary>
+    DpiServiceEditResult? EditDpiService(DpiServiceEditRequest request);
+
+    bool Confirm(string title, string text, string? okText = null, bool danger = true);
+
+    ProfileGroupDeleteChoice ChooseProfileGroupDeletion(string groupName, int profileCount);
+
+    SubscriptionImportChoice ChooseSubscriptionImport(
+        string subscriptionName, int profileCount, IReadOnlyList<SubscriptionGroupOption> groups);
 
     void Info(string title, string text);
 

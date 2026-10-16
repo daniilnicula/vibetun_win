@@ -13,14 +13,32 @@ namespace VibeTun.Services;
 /// </summary>
 public sealed class LogFeed : ObservableObject
 {
-    public const int MaxLines = 1000;
+    private int _maxLines;
+
+    public int MaxLines
+    {
+        get => _maxLines;
+        set
+        {
+            if (_maxLines == Math.Max(1, value)) return;
+            _maxLines = Math.Max(1, value);
+            Trim();
+            Updated?.Invoke();
+        }
+    }
+
+    private void Trim()
+    {
+        while (Lines.Count > _maxLines) Lines.RemoveAt(0);
+    }
 
     private readonly object _gate = new();
     private readonly List<(DateTime Time, string Text)> _pending = new();
     private readonly DispatcherTimer _timer;
 
-    public LogFeed()
+    public LogFeed(int maxLines = 100)
     {
+        _maxLines = Math.Max(1, maxLines);
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(150) };
         _timer.Tick += (_, _) => Flush();
         _timer.Start();
@@ -78,7 +96,7 @@ public sealed class LogFeed : ObservableObject
         }
 
         Lines.Add(new LogLine(time, text) { IsFresh = true });
-        while (Lines.Count > MaxLines) Lines.RemoveAt(0);
+        Trim();
     }
 }
 

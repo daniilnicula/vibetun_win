@@ -385,7 +385,7 @@ public static class AppUpdateService
     /// <summary>Аккуратное форматирование Markdown-описания релиза с GitHub для чтения в карточке.</summary>
     public static string FormatReleaseNotes(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return "Описание изменений отсутствует.";
+        if (string.IsNullOrWhiteSpace(raw)) return L.T("S0276");
 
         var normalized = raw.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
         var lines = normalized.Split('\n');
@@ -409,7 +409,7 @@ public static class AppUpdateService
         }
 
         var result = sb.ToString().Trim();
-        return result.Length == 0 ? "Описание изменений отсутствует." : result;
+        return result.Length == 0 ? L.T("S0276") : result;
     }
 
     /// <summary>
@@ -422,7 +422,7 @@ public static class AppUpdateService
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(release.DownloadUrl))
-            throw new InvalidOperationException("Для выбранного релиза не найдена ссылка на скачивание.");
+            throw new InvalidOperationException(L.T("S0277"));
 
         var workDir = GetStagingDirectory();
         Directory.CreateDirectory(workDir);
@@ -489,7 +489,7 @@ public static class AppUpdateService
             }
 
             if (!downloaded)
-                throw lastError ?? new IOException("Не удалось скачать файл обновления.");
+                throw lastError ?? new IOException(L.T("S0278"));
 
             string finalExePath;
             if (isZip)
@@ -505,7 +505,7 @@ public static class AppUpdateService
                             .FirstOrDefault(f => !Path.GetFileName(f).Contains("sing-box", StringComparison.OrdinalIgnoreCase));
 
                     if (foundExe is null)
-                        throw new InvalidOperationException("В скачанном архиве не найден файл VibeTun.exe.");
+                        throw new InvalidOperationException(L.T("S0279"));
 
                     finalExePath = Path.Combine(workDir, $"VibeTun-update-{id}.exe");
                     File.Move(foundExe, finalExePath, overwrite: true);
@@ -536,13 +536,13 @@ public static class AppUpdateService
     {
         var info = new FileInfo(exePath);
         if (!info.Exists || info.Length < 1024 * 100)
-            throw new InvalidDataException("Скачанный файл повреждён или имеет слишком малый размер.");
+            throw new InvalidDataException(L.T("S0280"));
 
         using var fs = new FileStream(exePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         var b0 = fs.ReadByte();
         var b1 = fs.ReadByte();
         if (b0 != 'M' || b1 != 'Z')
-            throw new InvalidDataException("Скачанный файл не является исполняемым файлом Windows (.exe).");
+            throw new InvalidDataException(L.T("S0281"));
 
         fs.Position = 0;
         var hash = SHA256.HashData(fs);
@@ -551,7 +551,7 @@ public static class AppUpdateService
         if (!string.IsNullOrWhiteSpace(expectedSha256) &&
             !string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidDataException("Контрольная сумма SHA-256 скачанного файла не совпала с релизом на GitHub.");
+            throw new InvalidDataException(L.T("S0282"));
         }
     }
 
@@ -568,7 +568,7 @@ public static class AppUpdateService
     {
         var currentExe = AppPaths.ExecutablePath;
         if (string.IsNullOrWhiteSpace(currentExe))
-            throw new InvalidOperationException("Не удалось определить путь к текущему исполняемому файлу.");
+            throw new InvalidOperationException(L.T("S0283"));
 
         // Сохраняем сведения об установленном релизе и текущие настройки приложения в текущей папке данных,
         // чтобы после перезапуска все настройки, профили, маршруты, панели и SSH остались на месте

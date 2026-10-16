@@ -1,0 +1,5102 @@
+{
+  "S0000": {
+    "ru": "Проверить задержку",
+    "en": "Test latency"
+  },
+  "S0001": {
+    "ru": "Открыть в Telegram",
+    "en": "Open in Telegram"
+  },
+  "S0002": {
+    "ru": "Трафик",
+    "en": "Traffic"
+  },
+  "S0003": {
+    "ru": "Сессия",
+    "en": "Session"
+  },
+  "S0004": {
+    "ru": "DPI тест",
+    "en": "DPI test"
+  },
+  "S0005": {
+    "ru": "Проверяет подключение к сервисам, которые блокируются DPI",
+    "en": "Tests connections to services blocked by DPI"
+  },
+  "S0006": {
+    "ru": "Диагностика",
+    "en": "Diagnostics"
+  },
+  "S0007": {
+    "ru": "Таблица в журнале: на каком этапе умирает каждый домен (DNS, TCP, TLS, HTTP) — напрямую и через обход",
+    "en": "Log table: the stage at which each domain fails (DNS, TCP, TLS, HTTP), directly and through bypass"
+  },
+  "S0008": {
+    "ru": "Порт",
+    "en": "Port"
+  },
+  "S0009": {
+    "ru": "Включённые стратегии обхода (меняются в настройках)",
+    "en": "Enabled bypass strategies (configured in settings)"
+  },
+  "S0010": {
+    "ru": "Выбор приложений",
+    "en": "Select applications"
+  },
+  "S0011": {
+    "ru": "Добавить приложение",
+    "en": "Add application"
+  },
+  "S0012": {
+    "ru": "Выберите запущенные приложения или укажите .exe файлы вручную. Отметьте нужные галочками.",
+    "en": "Select running applications or choose .exe files manually. Check the applications you need."
+  },
+  "S0013": {
+    "ru": "Обновить",
+    "en": "Refresh"
+  },
+  "S0014": {
+    "ru": "Выбрать .exe",
+    "en": "Choose .exe"
+  },
+  "S0015": {
+    "ru": "Отмена",
+    "en": "Cancel"
+  },
+  "S0016": {
+    "ru": "Добавить выбранные",
+    "en": "Add selected"
+  },
+  "S0017": {
+    "ru": "Закрыть",
+    "en": "Close"
+  },
+  "S0018": {
+    "ru": "Скрыть или выйти из приложения?",
+    "en": "Hide or exit the application?"
+  },
+  "S0019": {
+    "ru": "Запомнить мой выбор",
+    "en": "Remember my choice"
+  },
+  "S0020": {
+    "ru": "Скрыть",
+    "en": "Hide"
+  },
+  "S0021": {
+    "ru": "Подтверждение",
+    "en": "Confirmation"
+  },
+  "S0022": {
+    "ru": "Логи",
+    "en": "Logs"
+  },
+  "S0023": {
+    "ru": "Логи ядра",
+    "en": "Core logs"
+  },
+  "S0024": {
+    "ru": "Скопировать",
+    "en": "Copy"
+  },
+  "S0025": {
+    "ru": "Сервер появится в списке DNS — выбрать его можно одним нажатием.",
+    "en": "The server will appear in the DNS list. Select it with one click."
+  },
+  "S0026": {
+    "ru": "IP-адрес",
+    "en": "IP address"
+  },
+  "S0027": {
+    "ru": "Название",
+    "en": "Name"
+  },
+  "S0028": {
+    "ru": "IPv4 или IPv6. Подойдёт и шифрованный DNS: tls://…, https://…, quic://… Без названия в списке будет адрес.",
+    "en": "IPv4 or IPv6. Encrypted DNS is also supported: tls://…, https://…, quic://… If no name is provided, the address is shown."
+  },
+  "S0029": {
+    "ru": "Добавить",
+    "en": "Add"
+  },
+  "S0030": {
+    "ru": "Добавить профили",
+    "en": "Add profiles"
+  },
+  "S0031": {
+    "ru": "Вставьте ссылки (vless://, vmess://, trojan://, ss://, hysteria2://, tuic://, vpn://…), подписку в base64, WireGuard/AmneziaWG (.conf, vpn://, JSON Amnezia) или JSON-конфиг sing-box / Xray. Можно вставлять сразу много строк.",
+    "en": "Paste links (vless://, vmess://, trojan://, ss://, hysteria2://, tuic://, vpn://…), a base64 subscription, WireGuard/AmneziaWG (.conf, vpn://, Amnezia JSON), or a sing-box / Xray JSON configuration. Multiple lines are supported."
+  },
+  "S0032": {
+    "ru": "Вставить из буфера",
+    "en": "Paste from clipboard"
+  },
+  "S0033": {
+    "ru": "Из файла…",
+    "en": "From file…"
+  },
+  "S0034": {
+    "ru": "Очистить",
+    "en": "Clear"
+  },
+  "S0035": {
+    "ru": "Распознанные профили",
+    "en": "Detected profiles"
+  },
+  "S0036": {
+    "ru": "Профиль",
+    "en": "Profile"
+  },
+  "S0037": {
+    "ru": "Профиль подключения",
+    "en": "Connection profile"
+  },
+  "S0038": {
+    "ru": "Протокол",
+    "en": "Protocol"
+  },
+  "S0039": {
+    "ru": "Сервер / адрес",
+    "en": "Server / address"
+  },
+  "S0040": {
+    "ru": "Группа (необязательно)",
+    "en": "Group (optional)"
+  },
+  "S0041": {
+    "ru": "UUID / логин",
+    "en": "UUID / username"
+  },
+  "S0042": {
+    "ru": "Пароль",
+    "en": "Password"
+  },
+  "S0043": {
+    "ru": "Метод шифрования",
+    "en": "Encryption method"
+  },
+  "S0044": {
+    "ru": "Шифрование соединения (TLS)",
+    "en": "Connection encryption (TLS)"
+  },
+  "S0045": {
+    "ru": "SNI / маскировочный домен",
+    "en": "SNI / camouflage domain"
+  },
+  "S0046": {
+    "ru": "ALPN (через запятую)",
+    "en": "ALPN (comma-separated)"
+  },
+  "S0047": {
+    "ru": "Отпечаток (uTLS fingerprint)",
+    "en": "Fingerprint (uTLS fingerprint)"
+  },
+  "S0048": {
+    "ru": "Разрешить недействительный сертификат",
+    "en": "Allow invalid certificate"
+  },
+  "S0049": {
+    "ru": "Транспорт",
+    "en": "Transport"
+  },
+  "S0050": {
+    "ru": "Сеть",
+    "en": "Network"
+  },
+  "S0051": {
+    "ru": "Host / SNI заголовок",
+    "en": "Host / SNI header"
+  },
+  "S0052": {
+    "ru": "Скорость отдачи, Mbps",
+    "en": "Upload speed, Mbps"
+  },
+  "S0053": {
+    "ru": "Скорость загрузки, Mbps",
+    "en": "Download speed, Mbps"
+  },
+  "S0054": {
+    "ru": "Obfs (salamander / тип)",
+    "en": "Obfs (salamander / type)"
+  },
+  "S0055": {
+    "ru": "Obfs-пароль",
+    "en": "Obfs password"
+  },
+  "S0056": {
+    "ru": "Проще всего вставить готовый .conf целиком в поле «Исходный конфиг» ниже — параметры заполнятся автоматически.",
+    "en": "The easiest way is to paste the entire .conf file into “Source configuration” below. Parameters will be filled in automatically."
+  },
+  "S0057": {
+    "ru": "Приватный ключ клиента",
+    "en": "Client private key"
+  },
+  "S0058": {
+    "ru": "Публичный ключ сервера",
+    "en": "Server public key"
+  },
+  "S0059": {
+    "ru": "Preshared key (необязательно)",
+    "en": "Preshared key (optional)"
+  },
+  "S0060": {
+    "ru": "Адрес клиента (Address)",
+    "en": "Client address (Address)"
+  },
+  "S0061": {
+    "ru": "Keepalive (сек)",
+    "en": "Keepalive (seconds)"
+  },
+  "S0062": {
+    "ru": "Обфускация AmneziaWG",
+    "en": "AmneziaWG obfuscation"
+  },
+  "S0063": {
+    "ru": "I1 (маскировка)",
+    "en": "I1 (camouflage)"
+  },
+  "S0064": {
+    "ru": "Поля AmneziaWG 1.5/2.0 (S3/S4, I1–I5, HeaderProtectionKey и интервальные значения) понимает расширенная сборка ядра. RandomTrailers/DisableCookies пока поддерживаются не всеми её версиями — если ядро их не примет, они будут пропущены с предупреждением.",
+    "en": "AmneziaWG 1.5/2.0 fields (S3/S4, I1–I5, HeaderProtectionKey and interval values) require the extended core. Not all versions support RandomTrailers/DisableCookies yet; unsupported fields will be skipped with a warning."
+  },
+  "S0065": {
+    "ru": "MTProto работает только внутри Telegram. После сохранения профиля нажмите «Открыть в Telegram», чтобы применить прокси в клиенте.",
+    "en": "MTProto only works inside Telegram. After saving the profile, click “Open in Telegram” to apply the proxy in the client."
+  },
+  "S0066": {
+    "ru": "Исходная ссылка",
+    "en": "Source link"
+  },
+  "S0067": {
+    "ru": "JSON ядра (для профилей типа «Custom»)",
+    "en": "Core JSON (for “Custom” profiles)"
+  },
+  "S0068": {
+    "ru": "Проверить пинг",
+    "en": "Test ping"
+  },
+  "S0069": {
+    "ru": "Сохранить",
+    "en": "Save"
+  },
+  "S0070": {
+    "ru": "Ввод",
+    "en": "Input"
+  },
+  "S0071": {
+    "ru": "ОК",
+    "en": "OK"
+  },
+  "S0072": {
+    "ru": "Логин и пароль сохраняются за этим SSH-подключением.",
+    "en": "The username and password are saved for this SSH connection."
+  },
+  "S0073": {
+    "ru": "Логин",
+    "en": "Username"
+  },
+  "S0074": {
+    "ru": "Копировать",
+    "en": "Copy"
+  },
+  "S0075": {
+    "ru": "Скопировать логин в буфер",
+    "en": "Copy username to clipboard"
+  },
+  "S0076": {
+    "ru": "Скопировать пароль в буфер",
+    "en": "Copy password to clipboard"
+  },
+  "S0077": {
+    "ru": "Скопировано в буфер обмена",
+    "en": "Copied to clipboard"
+  },
+  "S0078": {
+    "ru": "нет ответа",
+    "en": "no response"
+  },
+  "S0079": {
+    "ru": "измерение…",
+    "en": "measuring…"
+  },
+  "S0080": {
+    "ru": "Использовать этот DNS-сервер",
+    "en": "Use this DNS server"
+  },
+  "S0081": {
+    "ru": "Перетащите, чтобы изменить порядок",
+    "en": "Drag to reorder"
+  },
+  "S0082": {
+    "ru": "Редактировать",
+    "en": "Edit"
+  },
+  "S0083": {
+    "ru": "Удалить",
+    "en": "Delete"
+  },
+  "S0084": {
+    "ru": "Серверы провайдера",
+    "en": "Provider servers"
+  },
+  "S0085": {
+    "ru": "В избранное",
+    "en": "Add to favorites"
+  },
+  "S0086": {
+    "ru": "Адресов серверов пока нет — нажмите «Обновить», чтобы спросить их у провайдера.",
+    "en": "No server addresses yet. Click “Refresh” to request them from the provider."
+  },
+  "S0087": {
+    "ru": "Сайт",
+    "en": "Website"
+  },
+  "S0088": {
+    "ru": "Ещё раз спросить у провайдера адреса его серверов",
+    "en": "Request server addresses from the provider again"
+  },
+  "S0089": {
+    "ru": "DNS не выбран",
+    "en": "No DNS selected"
+  },
+  "S0090": {
+    "ru": "Пока DNS не выбран, работает основной",
+    "en": "The primary DNS is used until a DNS is selected"
+  },
+  "S0091": {
+    "ru": "Выбрать DNS",
+    "en": "Select DNS"
+  },
+  "S0092": {
+    "ru": "Откроются «Основные» — нажмите там на DNS",
+    "en": "“General” will open. Click a DNS there"
+  },
+  "S0093": {
+    "ru": "Изменить",
+    "en": "Change"
+  },
+  "S0094": {
+    "ru": "Выбрать другой DNS в «Основных»",
+    "en": "Select another DNS in “General”"
+  },
+  "S0095": {
+    "ru": "Свой DNS для домена включён",
+    "en": "Custom DNS for this domain is enabled"
+  },
+  "S0096": {
+    "ru": "Запись можно поправить прямо здесь",
+    "en": "You can edit the entry here"
+  },
+  "S0097": {
+    "ru": "Убрать домен",
+    "en": "Remove domain"
+  },
+  "S0098": {
+    "ru": "Свой DNS для приложения включён",
+    "en": "Custom DNS for this application is enabled"
+  },
+  "S0099": {
+    "ru": "Убрать приложение",
+    "en": "Remove application"
+  },
+  "S0100": {
+    "ru": "Основные",
+    "en": "General"
+  },
+  "S0101": {
+    "ru": "Домены",
+    "en": "Domains"
+  },
+  "S0102": {
+    "ru": "Приложения",
+    "en": "Applications"
+  },
+  "S0103": {
+    "ru": "Не менять DNS и вернуться (Esc)",
+    "en": "Keep DNS unchanged and return (Esc)"
+  },
+  "S0104": {
+    "ru": "DNS для всех: через него ядро узнаёт адреса сайтов, если у домена или приложения нет своего. Выбор сохраняется и применяется сразу: активное подключение перезапускается автоматически.",
+    "en": "DNS for all: the core uses it to resolve websites unless a domain or application has its own DNS. Changes are saved and applied immediately; the active connection restarts automatically."
+  },
+  "S0105": {
+    "ru": "Сейчас:",
+    "en": "Current:"
+  },
+  "S0106": {
+    "ru": "Пинг всех DNS-серверов",
+    "en": "Ping all DNS servers"
+  },
+  "S0107": {
+    "ru": "Добавить свой DNS-сервер: IP-адрес и название",
+    "en": "Add a custom DNS server: IP address and name"
+  },
+  "S0108": {
+    "ru": "Добавить свой",
+    "en": "Add custom"
+  },
+  "S0109": {
+    "ru": "Провайдеры и свои DNS",
+    "en": "Providers and custom DNS"
+  },
+  "S0110": {
+    "ru": "порядок меняется перетаскиванием",
+    "en": "Drag to reorder"
+  },
+  "S0111": {
+    "ru": "Обход DPI",
+    "en": "DPI bypass"
+  },
+  "S0112": {
+    "ru": "Откуда брать адреса",
+    "en": "Address resolution"
+  },
+  "S0113": {
+    "ru": "Движок обхода узнаёт адреса сайтов сам, без ядра",
+    "en": "The bypass engine resolves websites itself, without the core"
+  },
+  "S0114": {
+    "ru": "Системный DNS провайдера",
+    "en": "System DNS from ISP"
+  },
+  "S0115": {
+    "ru": "DoH: свой URL",
+    "en": "DoH: custom URL"
+  },
+  "S0116": {
+    "ru": "DoH-сервер с JSON-ответом (application/dns-json), как у Cloudflare и Google",
+    "en": "DoH server with JSON responses (application/dns-json), such as Cloudflare or Google"
+  },
+  "S0117": {
+    "ru": "Провайдерский DNS часто подменяет адреса заблокированных сайтов и отдаёт адрес заглушки. DoH идёт поверх HTTPS: провайдер запроса не видит и подменить ответ не может. Выбор действует, когда обход идёт «Напрямую»; «Через профиль» адреса узнаёт ядро — по DNS, выбранному выше. Совпадают ли адреса от DoH и от системного DNS, видно в «Диагностике» на вкладке «DPI bypass». Если выбран системный DNS, движок обхода всё равно спросит адреса через DoH (Cloudflare) и вернётся к системному, только если DoH не отвечает: иначе подставной адрес делал бы бесполезным любой приём.",
+    "en": "ISP DNS often replaces blocked website addresses with a block page. DoH uses HTTPS, so the ISP cannot see the query or tamper with the response. This applies to “Direct” bypass; in “Via profile” mode, the core resolves addresses using the DNS selected above. Compare DoH and system DNS addresses in “Diagnostics” on the “DPI bypass” tab. If the system DNS is selected, the bypass engine still asks for addresses over DoH (Cloudflare) and falls back to the system one only when DoH does not answer: otherwise a substituted address would make every technique useless."
+  },
+  "S0118": {
+    "ru": "Свой DNS для отдельных сайтов: запросы адресов этих доменов и прямые подключения к ним идут через выбранный DNS вместо основного. Запись — домен (youtube.com, .ru, *.example.org) или regex (youtube, regex:^ads\\.); можно несколько через запятую.",
+    "en": "Custom DNS for specific websites: address queries and direct connections for these domains use the selected DNS instead of the primary one. Enter a domain (youtube.com, .ru, *.example.org) or regex (youtube, regex:^ads\\.). Multiple entries can be separated by commas."
+  },
+  "S0119": {
+    "ru": "Свой DNS для сайта",
+    "en": "Custom DNS for a website"
+  },
+  "S0120": {
+    "ru": "Введите домен выше и нажмите «Добавить». Под записью нажмите «Выбрать DNS» — откроются «Основные»: нажмите там на DNS, и вы вернётесь сюда. Остальные сайты продолжат работать через основной.",
+    "en": "Enter a domain above and click “Add”. Click “Select DNS” under the entry; “General” will open. Select a DNS to return here. Other websites keep using the primary DNS."
+  },
+  "S0121": {
+    "ru": "Если сайт подходит под несколько записей, действует более точная: music.youtube.com важнее youtube.com, домен важнее regex. Записи доменов важнее записей приложений. Свой DNS действует там же, где основной: в запросах адресов через ядро (в TUN-режиме — у всех программ) и в прямых подключениях; через прокси адрес сайта по-прежнему узнаёт сервер прокси.",
+    "en": "If several entries match, the most specific wins: music.youtube.com takes priority over youtube.com, and a domain over a regex. Domain entries take priority over application entries. Custom DNS applies to core address queries (for all programs in TUN mode) and direct connections; proxy servers still resolve addresses for proxied connections."
+  },
+  "S0122": {
+    "ru": "Добавить .exe",
+    "en": "Add .exe"
+  },
+  "S0123": {
+    "ru": "Выбрать .exe файл приложения",
+    "en": "Choose an application's .exe file"
+  },
+  "S0124": {
+    "ru": "Из процессов",
+    "en": "From processes"
+  },
+  "S0125": {
+    "ru": "Выбрать среди запущенных приложений",
+    "en": "Select from running applications"
+  },
+  "S0126": {
+    "ru": "Свой DNS для отдельных программ: их запросы адресов и прямые подключения идут через выбранный DNS вместо основного.",
+    "en": "Custom DNS for specific programs: their address queries and direct connections use the selected DNS instead of the primary one."
+  },
+  "S0127": {
+    "ru": "Свой DNS для приложения",
+    "en": "Custom DNS for an application"
+  },
+  "S0128": {
+    "ru": "Добавьте приложение — «Добавить .exe» или «Из процессов». Под ним нажмите «Выбрать DNS» — откроются «Основные»: нажмите там на DNS, и вы вернётесь сюда. Остальные приложения продолжат работать через основной.",
+    "en": "Add an application using “Add .exe” or “From processes”. Click “Select DNS” below it; “General” will open. Select a DNS to return here. Other applications keep using the primary DNS."
+  },
+  "S0129": {
+    "ru": "DNS приложения заменяет основной там же, где работает основной: в DNS-запросах самого приложения и в его прямых подключениях. В TUN-режиме многие программы спрашивают адреса через службу DNS Windows (svchost.exe) — для них остаётся основной DNS. Если сайт есть во вкладке «Домены», действует его запись.",
+    "en": "Application DNS replaces the primary DNS in the application's own DNS queries and direct connections. In TUN mode, many programs query the Windows DNS service (svchost.exe) and keep using the primary DNS. If a website has an entry in “Domains”, that entry takes priority."
+  },
+  "S0130": {
+    "ru": "Цвет акцента",
+    "en": "Accent color"
+  },
+  "S0131": {
+    "ru": "Свернуть",
+    "en": "Minimize"
+  },
+  "S0132": {
+    "ru": "Развернуть",
+    "en": "Maximize"
+  },
+  "S0133": {
+    "ru": "Закрыть в трей",
+    "en": "Close to tray"
+  },
+  "S0134": {
+    "ru": "Профили",
+    "en": "Profiles"
+  },
+  "S0135": {
+    "ru": "Маршрутизация",
+    "en": "Routing"
+  },
+  "S0136": {
+    "ru": "Настройки",
+    "en": "Settings"
+  },
+  "S0137": {
+    "ru": "Обновление",
+    "en": "Updates"
+  },
+  "S0138": {
+    "ru": "Панели",
+    "en": "Panels"
+  },
+  "S0139": {
+    "ru": "Активный профиль",
+    "en": "Active profile"
+  },
+  "S0140": {
+    "ru": "Ядро sing-box не найдено",
+    "en": "sing-box core not found"
+  },
+  "S0141": {
+    "ru": "Без ядра прокси не запустится. Установите его автоматически или укажите путь вручную.",
+    "en": "The proxy cannot start without the core. Install it automatically or specify its path manually."
+  },
+  "S0142": {
+    "ru": "Установить ядро",
+    "en": "Install core"
+  },
+  "S0143": {
+    "ru": "Устройство",
+    "en": "Device"
+  },
+  "S0144": {
+    "ru": "Светлая",
+    "en": "Light"
+  },
+  "S0145": {
+    "ru": "Тёмная",
+    "en": "Dark"
+  },
+  "S0146": {
+    "ru": "Прозрачность",
+    "en": "Opacity"
+  },
+  "S0147": {
+    "ru": "По умолчанию",
+    "en": "Default"
+  },
+  "S0148": {
+    "ru": "Сохраняется сразу и действует для всех тем.",
+    "en": "Saved immediately and applied to all themes."
+  },
+  "S0149": {
+    "ru": "Открыть адрес и обновить страницу",
+    "en": "Open address and reload page"
+  },
+  "S0150": {
+    "ru": "Панели не созданы. Откройте «Панели» слева и нажмите «+».",
+    "en": "No panels created. Open “Panels” on the left and click “+”."
+  },
+  "S0151": {
+    "ru": "Пинг всех профилей",
+    "en": "Ping all profiles"
+  },
+  "S0152": {
+    "ru": "Импорт из файла",
+    "en": "Import from file"
+  },
+  "S0153": {
+    "ru": "Добавить профиль",
+    "en": "Add profile"
+  },
+  "S0154": {
+    "ru": "Добавить профиль…",
+    "en": "Add profile…"
+  },
+  "S0155": {
+    "ru": "Создать вручную",
+    "en": "Create manually"
+  },
+  "S0156": {
+    "ru": "Custom (JSON ядра)",
+    "en": "Custom (core JSON)"
+  },
+  "S0157": {
+    "ru": "Импорт из файла…",
+    "en": "Import from file…"
+  },
+  "S0158": {
+    "ru": "Подключиться",
+    "en": "Connect"
+  },
+  "S0159": {
+    "ru": "Дублировать",
+    "en": "Duplicate"
+  },
+  "S0160": {
+    "ru": "Скопировать конфиг",
+    "en": "Copy configuration"
+  },
+  "S0161": {
+    "ru": "Входящие подключения, TUN, правила для доменов/IP и приложений. Наборы правил хранятся отдельными файлами.",
+    "en": "Inbound connections, TUN, domain/IP and application rules. Rule sets are stored in separate files."
+  },
+  "S0162": {
+    "ru": "Изменения применяются сразу: активное подключение перезапускается автоматически.",
+    "en": "Changes are applied immediately; the active connection restarts automatically."
+  },
+  "S0163": {
+    "ru": "Профили входа",
+    "en": "Inbound profiles"
+  },
+  "S0164": {
+    "ru": "Новый профиль маршрутизации",
+    "en": "New routing profile"
+  },
+  "S0165": {
+    "ru": "Удалить профиль",
+    "en": "Delete profile"
+  },
+  "S0166": {
+    "ru": "Параметры входа",
+    "en": "Inbound settings"
+  },
+  "S0167": {
+    "ru": "Адрес",
+    "en": "Address"
+  },
+  "S0168": {
+    "ru": "Тип входа",
+    "en": "Inbound type"
+  },
+  "S0169": {
+    "ru": "Системный прокси Windows",
+    "en": "Windows system proxy"
+  },
+  "S0170": {
+    "ru": "TUN-режим (весь трафик)",
+    "en": "TUN mode (all traffic)"
+  },
+  "S0171": {
+    "ru": "Требует прав администратора. Нужен для маршрутизации приложений.",
+    "en": "Requires administrator privileges. Needed for application routing."
+  },
+  "S0172": {
+    "ru": "Стек TUN",
+    "en": "TUN stack"
+  },
+  "S0173": {
+    "ru": "Локальные адреса напрямую",
+    "en": "Route local addresses directly"
+  },
+  "S0174": {
+    "ru": "Определять домены (sniff)",
+    "en": "Detect domains (sniff)"
+  },
+  "S0175": {
+    "ru": "Выбирается в разделе «DNS» слева",
+    "en": "Selected in “DNS” on the left"
+  },
+  "S0176": {
+    "ru": "Открыть",
+    "en": "Open"
+  },
+  "S0177": {
+    "ru": "Новый",
+    "en": "New"
+  },
+  "S0178": {
+    "ru": "Копия",
+    "en": "Copy"
+  },
+  "S0179": {
+    "ru": "Импорт",
+    "en": "Import"
+  },
+  "S0180": {
+    "ru": "Экспорт",
+    "en": "Export"
+  },
+  "S0181": {
+    "ru": "Домены и IP",
+    "en": "Domains and IPs"
+  },
+  "S0182": {
+    "ru": "Тип записи определяется автоматически: домен (youtube.com, .ru), IP/подсеть (1.2.3.4, 10.0.0.0/8) или regex (youtube).",
+    "en": "The entry type is detected automatically: domain (youtube.com, .ru), IP/subnet (1.2.3.4, 10.0.0.0/8), or regex (youtube)."
+  },
+  "S0183": {
+    "ru": "Включить правило",
+    "en": "Enable rule"
+  },
+  "S0184": {
+    "ru": "Тип определяется по содержимому записи",
+    "en": "Type is determined by the entry's contents"
+  },
+  "S0185": {
+    "ru": "Удалить правило",
+    "en": "Delete rule"
+  },
+  "S0186": {
+    "ru": "Правила приложений работают полностью только в TUN-режиме: без него маршрутизация применяется лишь к приложениям, которые используют системный прокси.",
+    "en": "Application rules work fully only in TUN mode. Otherwise, routing only applies to applications using the system proxy."
+  },
+  "S0187": {
+    "ru": "Включить TUN",
+    "en": "Enable TUN"
+  },
+  "S0188": {
+    "ru": "Внешний вид и поведение",
+    "en": "Appearance and behavior"
+  },
+  "S0189": {
+    "ru": "Язык / Language",
+    "en": "Language"
+  },
+  "S0190": {
+    "ru": "Русский",
+    "en": "Русский"
+  },
+  "S0191": {
+    "ru": "Лимит строк логов",
+    "en": "Log line limit"
+  },
+  "S0192": {
+    "ru": "Только в окне приложения. В файл записываются все логи.",
+    "en": "Only in the application window. All logs are written to the file."
+  },
+  "S0193": {
+    "ru": "Запускать при входе в Windows",
+    "en": "Run at Windows startup"
+  },
+  "S0194": {
+    "ru": "Запускать свёрнутым в трей",
+    "en": "Start minimized to tray"
+  },
+  "S0195": {
+    "ru": "Запоминать состояние при выходе",
+    "en": "Remember state on exit"
+  },
+  "S0196": {
+    "ru": "При запуске будет выбран тот же профиль, и прокси включится, если он был активен при закрытии.",
+    "en": "On startup, the same profile will be selected and the proxy enabled if it was active when the application closed."
+  },
+  "S0197": {
+    "ru": "Скорость анимаций",
+    "en": "Animation speed"
+  },
+  "S0198": {
+    "ru": "От 0.3× (медленнее) до 2× (быстрее)",
+    "en": "From 0.3× (slower) to 2× (faster)"
+  },
+  "S0199": {
+    "ru": "Точный замер задержки через ядро",
+    "en": "Precise latency test via core"
+  },
+  "S0200": {
+    "ru": "Использует API ядра для реального времени ответа сервера. Без ядра измеряется TCP/ICMP.",
+    "en": "Uses the core API for actual server response times. Without the core, TCP/ICMP is measured."
+  },
+  "S0201": {
+    "ru": "При закрытии окна",
+    "en": "When closing the window"
+  },
+  "S0202": {
+    "ru": "Спрашивать",
+    "en": "Ask"
+  },
+  "S0203": {
+    "ru": "Сворачивать в трей",
+    "en": "Minimize to tray"
+  },
+  "S0204": {
+    "ru": "Закрывать полностью",
+    "en": "Exit completely"
+  },
+  "S0205": {
+    "ru": "«Спрашивать» — при нажатии на крестик покажет выбор: скрыть в трей или выйти из приложения.",
+    "en": "“Ask” shows a choice when you click the close button: hide to tray or exit the application."
+  },
+  "S0206": {
+    "ru": "Общий набор: применяется ко всем сайтам. Для отдельного сервиса набор можно задать в разделе «DPI» слева — тогда он заменяет общий для своего домена, а остальные сайты продолжают идти по этому. Локальный прокси режет трафик так, что система глубокого анализа не видит имя сайта целиком: разрыв ClientHello по SNI, разбиение записи TLS и фейк-пакет с маленьким TTL. Обход включается кнопкой на карточке подключения слева внизу.",
+    "en": "The common set: it applies to every site. A service in the DPI tab can have a set of its own — it replaces the common one for its domain, while other sites keep using this one. The local proxy splits traffic so deep packet inspection cannot see the entire website name: ClientHello splitting at SNI, TLS record splitting, and a fake packet with a low TTL. Turn the bypass on with the button on the connection card at the bottom left."
+  },
+  "S0207": {
+    "ru": "Разрыв по SNI (посредине имени домена)",
+    "en": "Split at SNI (in the middle of the domain name)"
+  },
+  "S0208": {
+    "ru": "Для обычного HTTP режет запрос перед двоеточием в «Host:» — так DPI не видит адрес в первом пакете.",
+    "en": "For plain HTTP, splits the request before the colon in “Host:” so DPI cannot see the address in the first packet."
+  },
+  "S0209": {
+    "ru": "Разбиение TLS record",
+    "en": "Split TLS record"
+  },
+  "S0210": {
+    "ru": "Тот же разрыв, но с переупаковкой в две записи TLS: помогает, когда DPI собирает запись по длине из заголовка.",
+    "en": "The same split, repackaged as two TLS records. Helps when DPI reassembles records using the header length."
+  },
+  "S0211": {
+    "ru": "Фейк-пакет (TTL)",
+    "en": "Fake packet (TTL)"
+  },
+  "S0212": {
+    "ru": "Тот же ClientHello уходит с отдельного соединения с маленьким TTL: DPI его видит и отрабатывает по нему, а до сайта пакет не доходит. Включайте, если один split не помогает.",
+    "en": "Sends the same ClientHello over a separate connection with a low TTL: DPI processes it, but the packet never reaches the website. Enable if splitting alone does not help."
+  },
+  "S0213": {
+    "ru": "TTL фейка",
+    "en": "Fake TTL"
+  },
+  "S0214": {
+    "ru": "Пауза, мс",
+    "en": "Delay, ms"
+  },
+  "S0215": {
+    "ru": "Дробить по MSS",
+    "en": "Split by MSS"
+  },
+  "S0216": {
+    "ru": "Принудительный TCP_MAXSEG: система сама режет ClientHello на мелкие сегменты, и имя сайта не попадает в первый пакет целиком.",
+    "en": "Enforces TCP_MAXSEG: the system splits ClientHello into small segments so the first packet does not contain the entire website name."
+  },
+  "S0217": {
+    "ru": "Мультисплит (много мелких кусков)",
+    "en": "Multisplit (many small chunks)"
+  },
+  "S0218": {
+    "ru": "ClientHello уходит кусками по несколько байт с паузой, а не двумя частями: срывает DPI, который собирает запись TLS по длине из заголовка. Пауза между кусками — та же, что и для обычного разрыва.",
+    "en": "Sends ClientHello in small chunks with delays instead of two parts, disrupting DPI that reassembles TLS records by header length. Uses the same delay as ordinary splitting."
+  },
+  "S0219": {
+    "ru": "Значение зависит от провайдера, поэтому проще нажать «DPI тест» на вкладке «DPI bypass»: он проверит площадку напрямую и через обход, а если текущий вариант не работает — переберёт комбинации TTL, места разрыва и MSS и применит ту, что открылась.",
+    "en": "The value depends on the ISP. Use “DPI test” on the “DPI bypass” tab: it tests sites directly and through bypass. If current settings fail, it tries TTL, split point and MSS combinations and applies one that works."
+  },
+  "S0220": {
+    "ru": "Системный DNS или DoH — выбирается в разделе «DNS» слева",
+    "en": "System DNS or DoH: select in “DNS” on the left"
+  },
+  "S0221": {
+    "ru": "Куда идти после обхода",
+    "en": "Where to connect after bypass"
+  },
+  "S0222": {
+    "ru": "НАПРЯМУЮ",
+    "en": "DIRECT"
+  },
+  "S0223": {
+    "ru": "ЧЕРЕЗ ПРОФИЛЬ",
+    "en": "VIA PROFILE"
+  },
+  "S0224": {
+    "ru": "«Напрямую» — как zapret: сайты открываются без VPN. «Через профиль» — трафик уходит в локальный вход активного профиля, а десинхронизация отключается (иначе фейк-пакет пошёл бы мимо VPN); если ядро не поднято, движок идёт напрямую.",
+    "en": "“Direct” works like zapret: websites open without a VPN. “Via profile” sends traffic to the active profile's local inbound and disables desynchronization (otherwise fake packets would bypass the VPN). If the core is not running, the engine connects directly."
+  },
+  "S0225": {
+    "ru": "Прописывать в системный прокси Windows",
+    "en": "Set as Windows system proxy"
+  },
+  "S0226": {
+    "ru": "Пока обход включён, системный прокси указывает на него. Если при этом поднять прокси-ядро, системный прокси перейдёт к ядру; когда ядро остановят — вернётся к обходу.",
+    "en": "While bypass is enabled, the system proxy points to it. Starting the proxy core switches the system proxy to the core; stopping it switches back to bypass."
+  },
+  "S0227": {
+    "ru": "Ядро sing-box",
+    "en": "sing-box core"
+  },
+  "S0228": {
+    "ru": "Проверить",
+    "en": "Check"
+  },
+  "S0229": {
+    "ru": "Взять встроенное",
+    "en": "Use bundled core"
+  },
+  "S0230": {
+    "ru": "Обновить с GitHub",
+    "en": "Update from GitHub"
+  },
+  "S0231": {
+    "ru": "Расширенная сборка (AmneziaWG, XHTTP)",
+    "en": "Extended build (AmneziaWG, XHTTP)"
+  },
+  "S0232": {
+    "ru": "Официальный sing-box или расширенная сборка (sing-box-extended). Расширенная нужна для AmneziaWG; обе идут в комплекте и распаковываются автоматически.",
+    "en": "Official sing-box or extended build (sing-box-extended). AmneziaWG requires the extended build. Both are bundled and extracted automatically."
+  },
+  "S0233": {
+    "ru": "Указать файл ядра",
+    "en": "Choose core file"
+  },
+  "S0234": {
+    "ru": "Установить из архива",
+    "en": "Install from archive"
+  },
+  "S0235": {
+    "ru": "Папка ядра",
+    "en": "Core folder"
+  },
+  "S0236": {
+    "ru": "Данные приложения",
+    "en": "Application data"
+  },
+  "S0237": {
+    "ru": "Профили и наборы правил хранятся отдельными json-файлами: профили — profiles\\, правила — routes\\. Файлы наборов можно копировать на другое устройство.",
+    "en": "Profiles and rule sets are stored in separate JSON files: profiles in profiles\\, rules in routes\\. Rule set files can be copied to another device."
+  },
+  "S0238": {
+    "ru": "Место хранения данных",
+    "en": "Data storage location"
+  },
+  "S0239": {
+    "ru": "В локальной папке",
+    "en": "In local folder"
+  },
+  "S0240": {
+    "ru": "Рядом с исполняемым файлом (по умолчанию)",
+    "en": "Next to the executable (default)"
+  },
+  "S0241": {
+    "ru": "Указать своё место",
+    "en": "Custom location"
+  },
+  "S0242": {
+    "ru": "Выбрать…",
+    "en": "Browse…"
+  },
+  "S0243": {
+    "ru": "Перезапустить",
+    "en": "Restart"
+  },
+  "S0244": {
+    "ru": "Открыть папку данных",
+    "en": "Open data folder"
+  },
+  "S0245": {
+    "ru": "Открыть логи",
+    "en": "Open logs"
+  },
+  "S0246": {
+    "ru": "Сбросить настройки",
+    "en": "Reset settings"
+  },
+  "S0247": {
+    "ru": "Сохранённые входы",
+    "en": "Saved sign-ins"
+  },
+  "S0248": {
+    "ru": "Сайты во встроенном браузере панелей запоминают логины в куки-профиле WebView2 (папка data\\webview2). Логин и пароль SSH-подключений хранятся в файле data\\settings.json.",
+    "en": "Websites in the embedded panel browser remember sign-ins in the WebView2 cookie profile (data\\webview2). SSH usernames and passwords are stored in data\\settings.json."
+  },
+  "S0249": {
+    "ru": "Удалить логины и пароли",
+    "en": "Delete usernames and passwords"
+  },
+  "S0250": {
+    "ru": "Удаляет куки-профиль браузера панелей; при следующем открытии сайтов нужно будет войти заново. Если папка занята — очистка выполнится при следующем запуске приложения.",
+    "en": "Deletes the panel browser's cookie profile. You will need to sign in again when reopening websites. If the folder is in use, it will be cleared on the next application startup."
+  },
+  "S0251": {
+    "ru": "Размер текста",
+    "en": "Text size"
+  },
+  "S0252": {
+    "ru": "Отключиться",
+    "en": "Disconnect"
+  },
+  "S0253": {
+    "ru": "Подключения не созданы. Откройте «SSH» слева и нажмите «+».",
+    "en": "No connections created. Open “SSH” on the left and click “+”."
+  },
+  "S0254": {
+    "ru": "Релизы приложения для Windows и история изменений с GitHub.",
+    "en": "Windows application releases and changelog from GitHub."
+  },
+  "S0255": {
+    "ru": "Открыть страницу релизов на GitHub",
+    "en": "Open releases on GitHub"
+  },
+  "S0256": {
+    "ru": "Обновить список релизов с GitHub",
+    "en": "Refresh releases from GitHub"
+  },
+  "S0257": {
+    "ru": "Релизы Windows",
+    "en": "Windows releases"
+  },
+  "S0258": {
+    "ru": "Текущая",
+    "en": "Current"
+  },
+  "S0259": {
+    "ru": "Загрузка релизов с GitHub…",
+    "en": "Loading releases from GitHub…"
+  },
+  "S0260": {
+    "ru": "Релизы не загружены",
+    "en": "Releases not loaded"
+  },
+  "S0261": {
+    "ru": "Повторить",
+    "en": "Retry"
+  },
+  "S0262": {
+    "ru": "Текущая версия",
+    "en": "Current version"
+  },
+  "S0263": {
+    "ru": "Доступно обновление",
+    "en": "Update available"
+  },
+  "S0264": {
+    "ru": "Старая версия",
+    "en": "Older version"
+  },
+  "S0265": {
+    "ru": "Что изменилось",
+    "en": "What's changed"
+  },
+  "S0266": {
+    "ru": "Все профили, маршруты и настройки сохранятся после перезапуска.",
+    "en": "All profiles, routes and settings will be preserved after restarting."
+  },
+  "S0267": {
+    "ru": "Откатить",
+    "en": "Roll back"
+  },
+  "S0268": {
+    "ru": "Произошла непредвиденная ошибка:\n\n",
+    "en": "An unexpected error occurred:\n\n"
+  },
+  "S0269": {
+    "ru": "\n\nПодробности записаны в ",
+    "en": "\n\nDetails have been written to "
+  },
+  "S0270": {
+    "ru": "домен",
+    "en": "domain"
+  },
+  "S0271": {
+    "ru": "IP / подсеть",
+    "en": "IP / subnet"
+  },
+  "S0272": {
+    "ru": "ключ",
+    "en": "keyword"
+  },
+  "S0273": {
+    "ru": "Новый набор",
+    "en": "New set"
+  },
+  "S0274": {
+    "ru": "{0} правил · {1} приложений",
+    "en": "{0} rules · {1} applications"
+  },
+  "S0275": {
+    "ru": "не найдено",
+    "en": "not found"
+  },
+  "S0276": {
+    "ru": "Описание изменений отсутствует.",
+    "en": "No changelog available."
+  },
+  "S0277": {
+    "ru": "Для выбранного релиза не найдена ссылка на скачивание.",
+    "en": "No download link found for the selected release."
+  },
+  "S0278": {
+    "ru": "Не удалось скачать файл обновления.",
+    "en": "Could not download the update file."
+  },
+  "S0279": {
+    "ru": "В скачанном архиве не найден файл VibeTun.exe.",
+    "en": "VibeTun.exe was not found in the downloaded archive."
+  },
+  "S0280": {
+    "ru": "Скачанный файл повреждён или имеет слишком малый размер.",
+    "en": "The downloaded file is corrupt or too small."
+  },
+  "S0281": {
+    "ru": "Скачанный файл не является исполняемым файлом Windows (.exe).",
+    "en": "The downloaded file is not a Windows executable (.exe)."
+  },
+  "S0282": {
+    "ru": "Контрольная сумма SHA-256 скачанного файла не совпала с релизом на GitHub.",
+    "en": "The downloaded file's SHA-256 checksum does not match the GitHub release."
+  },
+  "S0283": {
+    "ru": "Не удалось определить путь к текущему исполняемому файлу.",
+    "en": "Could not determine the current executable's path."
+  },
+  "S0284": {
+    "ru": "Распаковка ядра {0}…",
+    "en": "Extracting core {0}…"
+  },
+  "S0285": {
+    "ru": "В релизе нет файлов",
+    "en": "No assets in release"
+  },
+  "S0286": {
+    "ru": "Не найден архив для Windows в последнем релизе",
+    "en": "No Windows archive found in the latest release"
+  },
+  "S0287": {
+    "ru": "Поиск последней версии на GitHub…",
+    "en": "Looking for the latest version on GitHub…"
+  },
+  "S0288": {
+    "ru": "Скачивание {0}…",
+    "en": "Downloading {0}…"
+  },
+  "S0289": {
+    "ru": "Форк {0} недоступен ({1}), пробую {2}…",
+    "en": "Fork {0} unavailable ({1}), trying {2}…"
+  },
+  "S0290": {
+    "ru": "Распаковка встроенного ядра…",
+    "en": "Extracting bundled core…"
+  },
+  "S0291": {
+    "ru": "Распаковка…",
+    "en": "Extracting…"
+  },
+  "S0292": {
+    "ru": "В архиве не найден исполняемый файл ядра",
+    "en": "Core executable not found in archive"
+  },
+  "S0293": {
+    "ru": "Проверка версии ядра…",
+    "en": "Checking core version…"
+  },
+  "S0294": {
+    "ru": "Скачайте архив ядра с https://github.com/{0}/releases и положите sing-box.exe в {1}, ",
+    "en": "Download the core archive from https://github.com/{0}/releases and place sing-box.exe in {1}, "
+  },
+  "S0295": {
+    "ru": "а для AmneziaWG — с https://github.com/{0}/releases (файл назвать sing-box-extended.exe, ",
+    "en": "for AmneziaWG use https://github.com/{0}/releases (name the file sing-box-extended.exe, "
+  },
+  "S0296": {
+    "ru": "и положить рядом libcronet.dll из того же архива), либо укажите путь к ядру в настройках.",
+    "en": "and put libcronet.dll from the same archive next to it), or specify the core path in settings."
+  },
+  "S0297": {
+    "ru": "Ядро старше 1.11: эндпоинты WireGuard/AmneziaWG не поддерживаются.",
+    "en": "Core is older than 1.11: WireGuard/AmneziaWG endpoints are not supported."
+  },
+  "S0298": {
+    "ru": "Проверка ядра: схема AmneziaWG задана вручную — {0} (awg-schema.txt).",
+    "en": "Core check: AmneziaWG schema set manually to {0} (awg-schema.txt)."
+  },
+  "S0299": {
+    "ru": "Проверка ядра: тестовый эндпоинт WireGuard не собирается — ",
+    "en": "Core check: cannot build test WireGuard endpoint — "
+  },
+  "S0300": {
+    "ru": "Проверка ядра: ни эндпоинт type=\"awg\", ни блок amnezia не поддерживаются ",
+    "en": "Core check: neither the type=\"awg\" endpoint nor the amnezia block is supported "
+  },
+  "S0301": {
+    "ru": "(похоже на официальный sing-box).",
+    "en": "(appears to be official sing-box)."
+  },
+  "S0302": {
+    "ru": "Проверка ядра: не удалось однозначно определить поддержку AmneziaWG — ",
+    "en": "Core check: could not conclusively determine AmneziaWG support — "
+  },
+  "S0303": {
+    "ru": "Проверка ядра: AmneziaWG поддерживается (вложенный блок amnezia).",
+    "en": "Core check: AmneziaWG supported (nested amnezia block)."
+  },
+  "S0304": {
+    "ru": "Проверка ядра: плоская схема AmneziaWG не подтвердилась — ",
+    "en": "Core check: flat AmneziaWG schema not confirmed — "
+  },
+  "S0305": {
+    "ru": "Проверка ядра: плоская схема AmneziaWG (sing-box-lx) с поддержкой AWG 3.1.",
+    "en": "Core check: flat AmneziaWG schema (sing-box-lx) with AWG 3.1 support."
+  },
+  "S0306": {
+    "ru": "Проверка ядра: эндпоинт type=\"awg\" с AmneziaWG 3.1 (random_trailers, disable_cookies).",
+    "en": "Core check: type=\"awg\" endpoint with AmneziaWG 3.1 (random_trailers, disable_cookies)."
+  },
+  "S0307": {
+    "ru": "Проверка ядра: эндпоинт type=\"awg\" есть, но флаги AmneziaWG 3.1 — нет (",
+    "en": "Core check: type=\"awg\" endpoint present, but AmneziaWG 3.1 flags are missing ("
+  },
+  "S0308": {
+    "ru": "Проверка ядра: random_trailers/disable_cookies (AmneziaWG 3.1) не поддерживаются.",
+    "en": "Core check: random_trailers/disable_cookies (AmneziaWG 3.1) not supported."
+  },
+  "S0309": {
+    "ru": "Проверка ядра: AmneziaWG 3.1 (random_trailers) поддерживается.",
+    "en": "Core check: AmneziaWG 3.1 (random_trailers) supported."
+  },
+  "S0310": {
+    "ru": "Проверка ядра: поддержка random_trailers не подтвердилась — ",
+    "en": "Core check: random_trailers support not confirmed — "
+  },
+  "S0311": {
+    "ru": "Ядро не найдено",
+    "en": "Core not found"
+  },
+  "S0312": {
+    "ru": "Не удалось запустить ядро",
+    "en": "Could not start core"
+  },
+  "S0313": {
+    "ru": "Проверка ядра прервана по таймауту",
+    "en": "Core check timed out"
+  },
+  "S0314": {
+    "ru": "Ядро не поднялось — похоже, ресурс ещё освобождается после остановки. ",
+    "en": "Core did not start; a resource may still be releasing after shutdown. "
+  },
+  "S0315": {
+    "ru": "Повтор запуска через {0} с (попытка {1} из {2})…",
+    "en": "Retrying in {0} s (attempt {1} of {2})…"
+  },
+  "S0316": {
+    "ru": "Очистка TUN-адаптера: ",
+    "en": "TUN adapter cleanup: "
+  },
+  "S0317": {
+    "ru": "gRPC-режим ядра недоступен (",
+    "en": "Core gRPC mode unavailable ("
+  },
+  "S0318": {
+    "ru": ") — пробуем обычный запуск.",
+    "en": "); trying normal startup."
+  },
+  "S0319": {
+    "ru": "Ядро неожиданно завершилось (код {0}).",
+    "en": "Core exited unexpectedly (code {0})."
+  },
+  "S0320": {
+    "ru": "Ядро запущено.",
+    "en": "Core started."
+  },
+  "S0321": {
+    "ru": "Ядро запущено (API не ответил, работаем без статистики).",
+    "en": "Core started (API did not respond; statistics unavailable)."
+  },
+  "S0322": {
+    "ru": "gRPC-хост завершился до старта (код {0})",
+    "en": "gRPC host exited before startup (code {0})"
+  },
+  "S0323": {
+    "ru": "gRPC-порт ядра не открылся",
+    "en": "Core gRPC port did not open"
+  },
+  "S0324": {
+    "ru": "ядро отклонило конфиг: ",
+    "en": "core rejected configuration: "
+  },
+  "S0325": {
+    "ru": "Ядро запущено (gRPC nekobox).",
+    "en": "Core started (gRPC nekobox)."
+  },
+  "S0326": {
+    "ru": "Ядро запущено (gRPC nekobox; API не ответил, работаем без статистики).",
+    "en": "Core started (gRPC nekobox; API did not respond; statistics unavailable)."
+  },
+  "S0327": {
+    "ru": "Ошибка остановки ядра: ",
+    "en": "Error stopping core: "
+  },
+  "S0328": {
+    "ru": "Ядро остановлено.",
+    "en": "Core stopped."
+  },
+  "S0329": {
+    "ru": "Не удалось завершить процесс ядра: ",
+    "en": "Could not terminate core process: "
+  },
+  "S0330": {
+    "ru": "Процесс ядра не завершился за ",
+    "en": "Core process did not exit within "
+  },
+  "S0331": {
+    "ru": " с.",
+    "en": " s."
+  },
+  "S0332": {
+    "ru": "Ошибка при остановке ядра: ",
+    "en": "Error while stopping core: "
+  },
+  "S0333": {
+    "ru": "не удалось разобрать адрес",
+    "en": "could not parse address"
+  },
+  "S0334": {
+    "ru": "нет TCP-подключения к порту {0}",
+    "en": "no TCP connection to port {0}"
+  },
+  "S0335": {
+    "ru": "сервер не ответил на ping (ICMP)",
+    "en": "server did not respond to ping (ICMP)"
+  },
+  "S0336": {
+    "ru": "не удалось узнать адрес ",
+    "en": "could not resolve address "
+  },
+  "S0337": {
+    "ru": "сервер отклонил запрос (REFUSED)",
+    "en": "server refused query (REFUSED)"
+  },
+  "S0338": {
+    "ru": "сервер не смог ответить (SERVFAIL)",
+    "en": "server failed to answer (SERVFAIL)"
+  },
+  "S0339": {
+    "ru": "ответ с ошибкой (RCODE {0})",
+    "en": "error response (RCODE {0})"
+  },
+  "S0340": {
+    "ru": "нет ответа за {0} с",
+    "en": "no response within {0} s"
+  },
+  "S0341": {
+    "ru": "порт {0} закрыт: сервер не принимает обычный DNS",
+    "en": "port {0} is closed: server does not accept plain DNS"
+  },
+  "S0342": {
+    "ru": "нет маршрута до сервера: IPv6 недоступен",
+    "en": "no route to server: IPv6 unavailable"
+  },
+  "S0343": {
+    "ru": "нет маршрута до сервера",
+    "en": "no route to server"
+  },
+  "S0344": {
+    "ru": "Выходы RU / EU / US",
+    "en": "RU / EU / US exits"
+  },
+  "S0345": {
+    "ru": "Обход зарубежных геоблокировок: для сайтов из списка проекта отдаёт адрес своего прокси, ",
+    "en": "Bypasses foreign geo-restrictions: returns its proxy address for websites on the project's list, "
+  },
+  "S0346": {
+    "ru": "остальные имена резолвит как обычный DNS. Блокировки внутри страны не обходит. ",
+    "en": "resolves other names like regular DNS. Does not bypass domestic blocking. "
+  },
+  "S0347": {
+    "ru": "RU — DNS в России, прокси через Россию в Европу и США; EU — DNS и прокси в Европе; US — в США.",
+    "en": "RU: DNS in Russia, proxy via Russia to Europe and the US; EU: DNS and proxy in Europe; US: in the US."
+  },
+  "S0348": {
+    "ru": "Игровые платформы и сервисы",
+    "en": "Gaming platforms and services"
+  },
+  "S0349": {
+    "ru": "Smart DNS: Xbox Live, игры, AI-сервисы и Spotify идут через шлюз сервиса, остальные сайты — напрямую.",
+    "en": "Smart DNS: Xbox Live, games, AI services and Spotify use the service gateway; other websites connect directly."
+  },
+  "S0350": {
+    "ru": "Доступ к поддерживаемым сервисам",
+    "en": "Access to supported services"
+  },
+  "S0351": {
+    "ru": "Smart DNS: открывает AI-сервисы с ограничением по региону, заодно блокирует рекламу, трекеры и фишинг.",
+    "en": "Smart DNS: unlocks region-restricted AI services and blocks ads, trackers and phishing."
+  },
+  "S0352": {
+    "ru": "Защита от вредоносных доменов",
+    "en": "Malicious domain protection"
+  },
+  "S0353": {
+    "ru": "Реклама и трекеры",
+    "en": "Ads and trackers"
+  },
+  "S0354": {
+    "ru": "Стандартный",
+    "en": "Standard"
+  },
+  "S0355": {
+    "ru": "Семейный",
+    "en": "Family"
+  },
+  "S0356": {
+    "ru": "Без фильтров",
+    "en": "Unfiltered"
+  },
+  "S0357": {
+    "ru": "Универсальный DNS",
+    "en": "General-purpose DNS"
+  },
+  "S0358": {
+    "ru": "Без вредоносных",
+    "en": "No malicious domains"
+  },
+  "S0359": {
+    "ru": "Европейская инфраструктура",
+    "en": "European infrastructure"
+  },
+  "S0360": {
+    "ru": "Защитный",
+    "en": "Protective"
+  },
+  "S0361": {
+    "ru": "Защитный + дети",
+    "en": "Protective + children"
+  },
+  "S0362": {
+    "ru": "Защитный + без рекламы",
+    "en": "Protective + ad-free"
+  },
+  "S0363": {
+    "ru": "Защитный + дети + без рекламы",
+    "en": "Protective + children + ad-free"
+  },
+  "S0364": {
+    "ru": "Фильтрация и варианты без фильтров",
+    "en": "Filtered and unfiltered options"
+  },
+  "S0365": {
+    "ru": "Обычный",
+    "en": "Regular"
+  },
+  "S0366": {
+    "ru": "Детский",
+    "en": "Children"
+  },
+  "S0367": {
+    "ru": "Строгий",
+    "en": "Strict"
+  },
+  "S0368": {
+    "ru": "Защита и семейные фильтры",
+    "en": "Security and family filters"
+  },
+  "S0369": {
+    "ru": "Без 18+",
+    "en": "No adult content"
+  },
+  "S0370": {
+    "ru": "Базовый, безопасный и семейный режимы",
+    "en": "Basic, safe and family modes"
+  },
+  "S0371": {
+    "ru": "Базовый",
+    "en": "Basic"
+  },
+  "S0372": {
+    "ru": "Безопасный",
+    "en": "Safe"
+  },
+  "S0373": {
+    "ru": "Универсальный резолвер",
+    "en": "General-purpose resolver"
+  },
+  "S0374": {
+    "ru": "Публичный DNS и FamilyShield",
+    "en": "Public DNS and FamilyShield"
+  },
+  "S0375": {
+    "ru": "Публичный",
+    "en": "Public"
+  },
+  "S0376": {
+    "ru": "Персональные политики",
+    "en": "Personal policies"
+  },
+  "S0377": {
+    "ru": "Фильтры и политики аккаунта NextDNS действуют для обычного DNS, только если в кабинете NextDNS ",
+    "en": "NextDNS account filters and policies apply to plain DNS only if your IP is linked in the NextDNS dashboard "
+  },
+  "S0378": {
+    "ru": "привязан ваш IP (Linked IP); без этого — DNS без фильтрации.",
+    "en": "(Linked IP); otherwise DNS is unfiltered."
+  },
+  "S0379": {
+    "ru": "Настраиваемые фильтры",
+    "en": "Customizable filters"
+  },
+  "S0380": {
+    "ru": "Без рекламы и трекеров",
+    "en": "No ads or trackers"
+  },
+  "S0381": {
+    "ru": "Без соцсетей",
+    "en": "No social media"
+  },
+  "S0382": {
+    "ru": "Без цензуры",
+    "en": "Uncensored"
+  },
+  "S0383": {
+    "ru": "у провайдера постоянные адреса",
+    "en": "provider has fixed addresses"
+  },
+  "S0384": {
+    "ru": "провайдер не вернул адресов",
+    "en": "provider returned no addresses"
+  },
+  "S0385": {
+    "ru": " · не ответили: ",
+    "en": " · no response: "
+  },
+  "S0386": {
+    "ru": "системный DNS",
+    "en": "system DNS"
+  },
+  "S0387": {
+    "ru": "системный DNS не вернул адресов",
+    "en": "system DNS returned no addresses"
+  },
+  "S0388": {
+    "ru": "системный DNS не ответил",
+    "en": "system DNS did not respond"
+  },
+  "S0389": {
+    "ru": "адресов нет",
+    "en": "no addresses"
+  },
+  "S0390": {
+    "ru": "это адрес",
+    "en": "this is an address"
+  },
+  "S0391": {
+    "ru": " (кэш)",
+    "en": " (cached)"
+  },
+  "S0392": {
+    "ru": "не задан свой URL DoH",
+    "en": "custom DoH URL not set"
+  },
+  "S0393": {
+    "ru": "DoH не вернул адресов",
+    "en": "DoH returned no addresses"
+  },
+  "S0394": {
+    "ru": "свой",
+    "en": "custom"
+  },
+  "S0395": {
+    "ru": "выключен",
+    "en": "disabled"
+  },
+  "S0396": {
+    "ru": "принимаем 127.0.0.1:{0} · {1} · выход: {2}",
+    "en": "listening on 127.0.0.1:{0} · {1} · exit: {2}"
+  },
+  "S0397": {
+    "ru": "обход остановлен",
+    "en": "bypass stopped"
+  },
+  "S0398": {
+    "ru": " (после)",
+    "en": " (after)"
+  },
+  "S0399": {
+    "ru": "мультисплит {0} байт",
+    "en": "multisplit {0} bytes"
+  },
+  "S0400": {
+    "ru": "без обхода (прямая пересылка)",
+    "en": "no bypass (direct forwarding)"
+  },
+  "S0401": {
+    "ru": "напрямую",
+    "en": "direct"
+  },
+  "S0402": {
+    "ru": "через {0}:{1} ({2})",
+    "en": "via {0}:{1} ({2})"
+  },
+  "S0403": {
+    "ru": "соединение: ",
+    "en": "connection: "
+  },
+  "S0404": {
+    "ru": "{0}: не подключились — {1}",
+    "en": "{0}: connection failed — {1}"
+  },
+  "S0405": {
+    "ru": "DNS не дал адрес: ",
+    "en": "DNS returned no address: "
+  },
+  "S0406": {
+    "ru": "{0}: не подключились ни к одному из адресов — {1}",
+    "en": "{0}: could not connect to any address — {1}"
+  },
+  "S0407": {
+    "ru": "вход ядра отказал в SOCKS5",
+    "en": "core inbound refused SOCKS5"
+  },
+  "S0408": {
+    "ru": "вход ядра отклонил CONNECT",
+    "en": "core inbound rejected CONNECT"
+  },
+  "S0409": {
+    "ru": "непонятный ответ входа ядра",
+    "en": "unexpected core inbound response"
+  },
+  "S0410": {
+    "ru": "вход ядра отклонил CONNECT: ",
+    "en": "core inbound rejected CONNECT: "
+  },
+  "S0411": {
+    "ru": "   DNS: DoH [{0}] · система [{1}] · {2}",
+    "en": "   DNS: DoH [{0}] · system [{1}] · {2}"
+  },
+  "S0412": {
+    "ru": "   HTTP: напрямую {0} · через обход {1}",
+    "en": "   HTTP: direct {0} · via bypass {1}"
+  },
+  "S0413": {
+    "ru": "различаются",
+    "en": "different"
+  },
+  "S0414": {
+    "ru": "итог: открывается {0} из {1} ",
+    "en": "summary: {0} of {1} accessible "
+  },
+  "S0415": {
+    "ru": "(напрямую {0}, через обход {1})",
+    "en": "(direct {0}, via bypass {1})"
+  },
+  "S0416": {
+    "ru": "; у {0} домен(ов) DoH и системный DNS дают разные адреса",
+    "en": "; DoH and system DNS return different addresses for {0} domain(s)"
+  },
+  "S0417": {
+    "ru": "ошибка",
+    "en": "error"
+  },
+  "S0418": {
+    "ru": "DoH выключен — адреса берём у провайдера",
+    "en": "DoH disabled; using ISP addresses"
+  },
+  "S0419": {
+    "ru": "DoH недоступен",
+    "en": "DoH unavailable"
+  },
+  "S0420": {
+    "ru": "некуда подключаться — DNS не дал адресов",
+    "en": "nowhere to connect: DNS returned no addresses"
+  },
+  "S0421": {
+    "ru": "{0}: ok {1} мс",
+    "en": "{0}: ok {1} ms"
+  },
+  "S0422": {
+    "ru": "обход выключен",
+    "en": "bypass disabled"
+  },
+  "S0423": {
+    "ru": "соединение закрыто, не прочитано ни байта ({0} мс)",
+    "en": "connection closed without receiving any bytes ({0} ms)"
+  },
+  "S0424": {
+    "ru": "пришло {0} байт, это не TLS",
+    "en": "received {0} bytes, not TLS"
+  },
+  "S0425": {
+    "ru": "ServerHello через {0} мс",
+    "en": "ServerHello after {0} ms"
+  },
+  "S0426": {
+    "ru": "alert {0} через {1} мс",
+    "en": "alert {0} after {1} ms"
+  },
+  "S0427": {
+    "ru": "в ответе не TLS ({0:X2})",
+    "en": "response is not TLS ({0:X2})"
+  },
+  "S0428": {
+    "ru": " ({0} мс)",
+    "en": " ({0} ms)"
+  },
+  "S0429": {
+    "ru": "обход не открыл туннель: ",
+    "en": "bypass could not open tunnel: "
+  },
+  "S0430": {
+    "ru": "не подключились",
+    "en": "connection failed"
+  },
+  "S0431": {
+    "ru": "сервер молчит",
+    "en": "server silent"
+  },
+  "S0432": {
+    "ru": "{0} ({1} мс){2}",
+    "en": "{0} ({1} ms){2}"
+  },
+  "S0433": {
+    "ru": "в ответе не HTTP: ",
+    "en": "response is not HTTP: "
+  },
+  "S0434": {
+    "ru": "DoH недоступен — работаем на системном DNS",
+    "en": "DoH unavailable; using system DNS"
+  },
+  "S0435": {
+    "ru": "системный DNS молчит, DoH дал адреса",
+    "en": "system DNS silent, DoH returned addresses"
+  },
+  "S0436": {
+    "ru": "адреса совпадают",
+    "en": "addresses match"
+  },
+  "S0437": {
+    "ru": "адреса РАЗЛИЧАЮТСЯ — системный DNS подменяет ответ",
+    "en": "addresses DIFFER: system DNS is tampering with responses"
+  },
+  "S0438": {
+    "ru": "отказ",
+    "en": "refused"
+  },
+  "S0439": {
+    "ru": "сброс (RST)",
+    "en": "reset (RST)"
+  },
+  "S0440": {
+    "ru": "таймаут",
+    "en": "timeout"
+  },
+  "S0441": {
+    "ru": "DNS не знает имени",
+    "en": "DNS name not found"
+  },
+  "S0442": {
+    "ru": "DNS временно не отвечает",
+    "en": "DNS temporarily unavailable"
+  },
+  "S0443": {
+    "ru": "сеть недоступна",
+    "en": "network unreachable"
+  },
+  "S0444": {
+    "ru": "хост недоступен",
+    "en": "host unreachable"
+  },
+  "S0445": {
+    "ru": "сеть: ",
+    "en": "network: "
+  },
+  "S0446": {
+    "ru": "TLS не поднялся: ",
+    "en": "TLS failed: "
+  },
+  "S0447": {
+    "ru": "соединение не поднялось: ",
+    "en": "connection failed: "
+  },
+  "S0448": {
+    "ru": "TCP {0} мс, рукопожатие не прошло: {1}",
+    "en": "TCP {0} ms, handshake failed: {1}"
+  },
+  "S0449": {
+    "ru": "TCP {0} мс, сервер ответил {1} через {2} мс",
+    "en": "TCP {0} ms, server returned {1} after {2} ms"
+  },
+  "S0450": {
+    "ru": "TCP {0} мс, ответ через {1} мс",
+    "en": "TCP {0} ms, response after {1} ms"
+  },
+  "S0451": {
+    "ru": "открывается",
+    "en": "accessible"
+  },
+  "S0452": {
+    "ru": "туннель через обход поднят, рукопожатие не прошло",
+    "en": "bypass tunnel established, handshake failed"
+  },
+  "S0453": {
+    "ru": "TCP доходит, но рукопожатие не поднимается — режут по содержимому",
+    "en": "TCP connects, but the handshake never completes — content-based blocking"
+  },
+  "S0454": {
+    "ru": "обход не поднял соединение",
+    "en": "bypass could not establish the connection"
+  },
+  "S0455": {
+    "ru": "TCP не поднимается — режет по адресу",
+    "en": "TCP fails: address-based blocking"
+  },
+  "S0456": {
+    "ru": "другой",
+    "en": "other"
+  },
+  "S0457": {
+    "ru": "проверяем площадки напрямую",
+    "en": "testing sites directly"
+  },
+  "S0458": {
+    "ru": "контроль {0}: {1}",
+    "en": "control {0}: {1}"
+  },
+  "S0459": {
+    "ru": "напрямую {0}: {1}",
+    "en": "direct {0}: {1}"
+  },
+  "S0460": {
+    "ru": "проверяем через обход",
+    "en": "testing via bypass"
+  },
+  "S0461": {
+    "ru": "через обход {0}: {1}",
+    "en": "via bypass {0}: {1}"
+  },
+  "S0462": {
+    "ru": "напрямую не ответил никто — связь появилась только через обход",
+    "en": "no direct responses; connection only available via bypass"
+  },
+  "S0463": {
+    "ru": "не ответил никто: ни контроль, ни площадки — ни напрямую, ни через обход",
+    "en": "no responses from control or test sites, either directly or via bypass"
+  },
+  "S0464": {
+    "ru": "интернета нет: ",
+    "en": "no internet: "
+  },
+  "S0465": {
+    "ru": "интернет есть: {0} — {1}",
+    "en": "internet available: {0} — {1}"
+  },
+  "S0466": {
+    "ru": "все площадки открываются и без обхода — DPI сейчас ничего не режет",
+    "en": "all sites accessible without bypass; no DPI blocking currently"
+  },
+  "S0467": {
+    "ru": "блокировки нет: площадки открываются напрямую",
+    "en": "no blocking: sites accessible directly"
+  },
+  "S0468": {
+    "ru": "проверяем обход",
+    "en": "testing bypass"
+  },
+  "S0469": {
+    "ru": "{0} отвечает ({1})",
+    "en": "{0} responds ({1})"
+  },
+  "S0470": {
+    "ru": "{0}: провайдер не пускает до адреса — пакетами не помочь, нужен VPN",
+    "en": "{0}: ISP blocks the address; packet tricks cannot help, VPN required"
+  },
+  "S0471": {
+    "ru": "{0}: DPI режет ClientHello",
+    "en": "{0}: DPI blocks ClientHello"
+  },
+  "S0472": {
+    "ru": "TCP до площадок не поднимается — перебор вариантов бессмысленен",
+    "en": "TCP to sites fails; trying variants is pointless"
+  },
+  "S0473": {
+    "ru": "перебор вариантов пропущен — нужен полный «DPI тест»",
+    "en": "variant search skipped; run a full “DPI test”"
+  },
+  "S0474": {
+    "ru": "текущие настройки не помогают — перебираем {0} вариантов на {1}",
+    "en": "current settings ineffective; trying {0} variants on {1}"
+  },
+  "S0475": {
+    "ru": "вариант {0} из {1}: {2}",
+    "en": "variant {0} of {1}: {2}"
+  },
+  "S0476": {
+    "ru": "вариант {0}/{1}: {2}",
+    "en": "variant {0}/{1}: {2}"
+  },
+  "S0477": {
+    "ru": "  движок не перезапустился: ",
+    "en": "  engine failed to restart: "
+  },
+  "S0478": {
+    "ru": "  через обход {0}: {1}",
+    "en": "  via bypass {0}: {1}"
+  },
+  "S0479": {
+    "ru": "подошёл вариант: {0}",
+    "en": "working variant: {0}"
+  },
+  "S0480": {
+    "ru": "{0} открылся на варианте «{1}»",
+    "en": "{0} accessible with variant “{1}”"
+  },
+  "S0481": {
+    "ru": "ни один вариант не помог",
+    "en": "no variants worked"
+  },
+  "S0482": {
+    "ru": "прокси не открыл туннель: ",
+    "en": "proxy could not open tunnel: "
+  },
+  "S0483": {
+    "ru": "DNS не отдал адрес: ",
+    "en": "DNS returned no address: "
+  },
+  "S0484": {
+    "ru": "в ответе не TLS ({0:X2} {1:X2})",
+    "en": "response is not TLS ({0:X2} {1:X2})"
+  },
+  "S0485": {
+    "ru": "DNS не знает такого имени",
+    "en": "DNS name not found"
+  },
+  "S0486": {
+    "ru": " после разрыва",
+    "en": " after split"
+  },
+  "S0487": {
+    "ru": "split 2 байта",
+    "en": "split 2 bytes"
+  },
+  "S0488": {
+    "ru": "мультисплит по {0} байт",
+    "en": "multisplit {0} bytes"
+  },
+  "S0489": {
+    "ru": "без обхода",
+    "en": "no bypass"
+  },
+  "S0490": {
+    "ru": "Замер через {0}:{1} SOCKS5",
+    "en": "Testing via {0}:{1} SOCKS5"
+  },
+  "S0491": {
+    "ru": ": вход ядра не принял greeting",
+    "en": ": core inbound rejected greeting"
+  },
+  "S0492": {
+    "ru": " (нет ответа)",
+    "en": " (no response)"
+  },
+  "S0493": {
+    "ru": ": нет ответа на CONNECT",
+    "en": ": no response to CONNECT"
+  },
+  "S0494": {
+    "ru": ": вход отказал rep={0} — ядро не достучалось до {1} по своим маршрутам",
+    "en": ": inbound refused rep={0}; core could not reach {1} using its routes"
+  },
+  "S0495": {
+    "ru": ": таймаут — вход ядра не ответил за ",
+    "en": ": timeout; core inbound did not respond within "
+  },
+  "S0496": {
+    "ru": " с",
+    "en": " s"
+  },
+  "S0497": {
+    "ru": "Замер через {0}:{1} HTTP CONNECT",
+    "en": "Testing via {0}:{1} HTTP CONNECT"
+  },
+  "S0498": {
+    "ru": ": нет ответа от входа ядра",
+    "en": ": no response from core inbound"
+  },
+  "S0499": {
+    "ru": ": вход отказал ({0})",
+    "en": ": inbound refused ({0})"
+  },
+  "S0500": {
+    "ru": ": OK {0} мс",
+    "en": ": OK {0} ms"
+  },
+  "S0501": {
+    "ru": ": тестовый хост не ответил на GET",
+    "en": ": test host did not respond to GET"
+  },
+  "S0502": {
+    "ru": "Всё через прокси",
+    "en": "All through proxy"
+  },
+  "S0503": {
+    "ru": "Обход РФ",
+    "en": "Bypass Russia"
+  },
+  "S0504": {
+    "ru": "Только заблокированное",
+    "en": "Blocked only"
+  },
+  "S0505": {
+    "ru": "Блокировка рекламы",
+    "en": "Ad blocking"
+  },
+  "S0506": {
+    "ru": "Файл не является набором правил",
+    "en": "File is not a rule set"
+  },
+  "S0507": {
+    "ru": "Никаких исключений: весь трафик идёт через выбранный профиль.",
+    "en": "No exceptions: all traffic uses the selected profile."
+  },
+  "S0508": {
+    "ru": "Российские сервисы и локальные адреса — напрямую, всё остальное через прокси.",
+    "en": "Russian services and local addresses connect directly; everything else uses the proxy."
+  },
+  "S0509": {
+    "ru": "Все зоны .ru",
+    "en": "All .ru domains"
+  },
+  "S0510": {
+    "ru": "Все зоны .рф",
+    "en": "All .рф domains"
+  },
+  "S0511": {
+    "ru": "Игры обычно быстрее напрямую",
+    "en": "Games are usually faster with a direct connection"
+  },
+  "S0512": {
+    "ru": "Через прокси только список сервисов, остальное напрямую.",
+    "en": "Only listed services use the proxy; everything else connects directly."
+  },
+  "S0513": {
+    "ru": "Блокировка рекламных и трекинговых доменов (можно совмещать с другими наборами).",
+    "en": "Blocks advertising and tracking domains (can be combined with other sets)."
+  },
+  "S0514": {
+    "ru": "Яндекс.Реклама",
+    "en": "Yandex Ads"
+  },
+  "S0515": {
+    "ru": "Не удалось получить outbound из JSON-профиля",
+    "en": "Could not extract outbound from JSON profile"
+  },
+  "S0516": {
+    "ru": "MTProto — прокси для Telegram. Ядро sing-box его не поддерживает: используйте «Открыть в Telegram», ",
+    "en": "MTProto is a Telegram proxy. The sing-box core does not support it. Use “Open in Telegram” "
+  },
+  "S0517": {
+    "ru": "чтобы применить прокси в самом клиенте Telegram.",
+    "en": "to apply the proxy in the Telegram client itself."
+  },
+  "S0518": {
+    "ru": "SSR (ShadowsocksR) не поддерживается ядром sing-box. Используйте Shadowsocks или другой протокол.",
+    "en": "SSR (ShadowsocksR) is not supported by sing-box. Use Shadowsocks or another protocol."
+  },
+  "S0519": {
+    "ru": "Tunnel требует JSON ядра: вставьте конфиг в поле «JSON ядра» внизу редактора профиля.",
+    "en": "Tunnel requires core JSON: paste a configuration into “Core JSON” at the bottom of the profile editor."
+  },
+  "S0520": {
+    "ru": "Протокол «{0}» не поддерживается ядром",
+    "en": "Protocol “{0}” is not supported by the core"
+  },
+  "S0521": {
+    "ru": "Не задан приватный ключ клиента (PrivateKey) — туннель WireGuard не поднимется.",
+    "en": "Client private key (PrivateKey) not set; WireGuard tunnel cannot start."
+  },
+  "S0522": {
+    "ru": "Не задан публичный ключ сервера (PublicKey) — туннель WireGuard не поднимется.",
+    "en": "Server public key (PublicKey) not set; WireGuard tunnel cannot start."
+  },
+  "S0523": {
+    "ru": "Не задан адрес сервера (Endpoint).",
+    "en": "Server address (Endpoint) not set."
+  },
+  "S0524": {
+    "ru": "В профиле нет адреса клиента (Address) — подставлен 10.0.0.2/32. Если сервер выдаёт другой адрес, трафик не пойдёт.",
+    "en": "Profile has no client address (Address); using 10.0.0.2/32. Traffic will fail if the server assigns a different address."
+  },
+  "S0525": {
+    "ru": "Ядро не передаёт reserved-байты WireGuard (",
+    "en": "Core does not transmit WireGuard reserved bytes ("
+  },
+  "S0526": {
+    "ru": ") — значение проигнорировано. Если сервер их требует, трафик не пойдёт.",
+    "en": "); value ignored. Traffic will fail if the server requires them."
+  },
+  "S0527": {
+    "ru": "Ядро старше 1.11 не умеет WireGuard-эндпоинты и не поддерживает обфускацию AmneziaWG.",
+    "en": "Cores older than 1.11 do not support WireGuard endpoints or AmneziaWG obfuscation."
+  },
+  "S0528": {
+    "ru": "Ядро не смогло собрать эндпоинт WireGuard: ",
+    "en": "Core could not build WireGuard endpoint: "
+  },
+  "S0529": {
+    "ru": "Текущее ядро (официальный sing-box) не поддерживает обфускацию AmneziaWG: ",
+    "en": "The current core (official sing-box) does not support AmneziaWG obfuscation: "
+  },
+  "S0530": {
+    "ru": "параметры Jc/Jmin/Jmax, S1–S4, H1–H4, I1–I5 будут отброшены, и сервер не примет хендшейк.",
+    "en": "Jc/Jmin/Jmax, S1–S4, H1–H4, I1–I5 will be discarded and the server will reject the handshake."
+  },
+  "S0531": {
+    "ru": " Нужна расширенная сборка ядра — Настройки → Ядро → «Расширенная (AmneziaWG)».",
+    "en": " An extended core is required: Settings → Core → “Extended build (AmneziaWG)”."
+  },
+  "S0532": {
+    "ru": "В профиле нет параметров AmneziaWG: ",
+    "en": "Profile is missing AmneziaWG parameters: "
+  },
+  "S0533": {
+    "ru": ". Если сервер их использует, хендшейк не пройдёт — сверьтесь с .conf из панели.",
+    "en": ". If the server uses them, the handshake will fail. Check the panel's .conf file."
+  },
+  "S0534": {
+    "ru": "На сервере включены случайные трейлеры AmneziaWG 3.1 (RandomTrailers), а это ядро ",
+    "en": "The server uses AmneziaWG 3.1 random trailers (RandomTrailers), but this core "
+  },
+  "S0535": {
+    "ru": "передать их не умеет: без них ответы на хендшейк отбрасываются как пакеты неизвестного ",
+    "en": "cannot transmit them: handshake responses are discarded as unknown packet "
+  },
+  "S0536": {
+    "ru": "типа, и трафик не пойдёт. Установите ядро с AWG 3.1 — Настройки → Ядро → «Расширенная ",
+    "en": "types and traffic will fail. Install an AWG 3.1 core: Settings → Core → “Extended build "
+  },
+  "S0537": {
+    "ru": "(AmneziaWG)» → «Скачать» (github.com/{0}), — либо выключите ",
+    "en": "(AmneziaWG)” → “Download” (github.com/{0}), or disable "
+  },
+  "S0538": {
+    "ru": "RandomTrailers на сервере (в панели/3x-ui) и пересохраните профиль.",
+    "en": "RandomTrailers on the server (in the panel/3x-ui) and save the profile again."
+  },
+  "S0539": {
+    "ru": "DisableCookies (AmneziaWG 3.1) этим ядром не передаётся. На работу клиента это не ",
+    "en": "This core does not transmit DisableCookies (AmneziaWG 3.1). This does not affect the client: "
+  },
+  "S0540": {
+    "ru": "влияет: флаг отключает ответы cookie на стороне сервера.",
+    "en": "the flag disables cookie responses on the server side."
+  },
+  "S0541": {
+    "ru": "Профиль помечен как AmneziaWG, но параметров обфускации в нём нет: ",
+    "en": "Profile is marked as AmneziaWG but has no obfuscation parameters: "
+  },
+  "S0542": {
+    "ru": "подключиться к AWG-серверу без Jc/S1–S4/H1–H4 нельзя. Вставьте исходный .conf в редакторе профиля.",
+    "en": "connecting to an AWG server without Jc/S1–S4/H1–H4 is impossible. Paste the original .conf into the profile editor."
+  },
+  "S0543": {
+    "ru": "С параметром HeaderProtectionKey значение {0} должно быть не меньше 12, а в профиле ",
+    "en": "With HeaderProtectionKey, {0} must be at least 12, but in this profile "
+  },
+  "S0544": {
+    "ru": "оно не задано",
+    "en": "it is not set"
+  },
+  "S0545": {
+    "ru": "оно ",
+    "en": "it is "
+  },
+  "S0546": {
+    "ru": ". Ядро не запустит туннель — сверьтесь с .conf из панели.",
+    "en": ". The core will not start the tunnel. Check the panel's .conf file."
+  },
+  "S0547": {
+    "ru": "JSON-профиль должен быть объектом",
+    "en": "JSON profile must be an object"
+  },
+  "S0548": {
+    "ru": "В JSON-конфиге не найден outbound для прокси",
+    "en": "No proxy outbound found in JSON configuration"
+  },
+  "S0549": {
+    "ru": "Ошибка разбора JSON: ",
+    "en": "JSON parse error: "
+  },
+  "S0550": {
+    "ru": "Папка «{0}» недоступна для записи, поэтому данные хранятся в «{1}».",
+    "en": "Folder “{0}” is not writable; data is stored in “{1}” instead."
+  },
+  "S0551": {
+    "ru": "Данные найдены в «{0}» и скопированы в «{1}» (файлов: {2}).",
+    "en": "Data found in “{0}” and copied to “{1}” ({2} files)."
+  },
+  "S0552": {
+    "ru": "Данные скопированы в «{0}» (файлов: {1}).",
+    "en": "Data copied to “{0}” ({1} files)."
+  },
+  "S0553": {
+    "ru": "Не удалось определить место хранения данных: ",
+    "en": "Could not determine data storage location: "
+  },
+  "S0554": {
+    "ru": "Не указана папка для данных.",
+    "en": "No data folder specified."
+  },
+  "S0555": {
+    "ru": "Папка «{0}» недоступна для записи. Выберите другую.",
+    "en": "Folder “{0}” is not writable. Choose another."
+  },
+  "S0556": {
+    "ru": "таймаут очистки адаптера",
+    "en": "adapter cleanup timed out"
+  },
+  "S0557": {
+    "ru": "Не удалось разобрать вложенный .conf",
+    "en": "Could not parse nested .conf"
+  },
+  "S0558": {
+    "ru": "в конфиге не найден адрес сервера — впишите его в профиле",
+    "en": "no server address found in configuration; enter it in the profile"
+  },
+  "S0559": {
+    "ru": "нет приватного ключа клиента — впишите его в профиле",
+    "en": "no client private key; enter it in the profile"
+  },
+  "S0560": {
+    "ru": "нет публичного ключа сервера",
+    "en": "no server public key"
+  },
+  "S0561": {
+    "ru": "нет адреса интерфейса (Address) — обычно 10.8.1.X/32",
+    "en": "no interface address (Address); usually 10.8.1.X/32"
+  },
+  "S0562": {
+    "ru": "нет адреса интерфейса (Address) — в конфиге задана подсеть {0}, адрес клиента впишите вручную (например 10.8.1.2/32)",
+    "en": "no interface address (Address); configuration specifies subnet {0}. Enter the client address manually (e.g. 10.8.1.2/32)"
+  },
+  "S0563": {
+    "ru": "{0} (нужно дополнить)",
+    "en": "{0} (incomplete)"
+  },
+  "S0564": {
+    "ru": "суффикс",
+    "en": "suffix"
+  },
+  "S0565": {
+    "ru": "подсеть",
+    "en": "subnet"
+  },
+  "S0566": {
+    "ru": "Домен",
+    "en": "Domain"
+  },
+  "S0567": {
+    "ru": "Ключевое слово",
+    "en": "Keyword"
+  },
+  "S0568": {
+    "ru": "Укажите IP-адрес DNS-сервера",
+    "en": "Enter the DNS server's IP address"
+  },
+  "S0569": {
+    "ru": "В адресе не должно быть пробелов",
+    "en": "The address must not contain spaces"
+  },
+  "S0570": {
+    "ru": "Это не IP-адрес. Пример: 1.1.1.1 или 2606:4700:4700::1111",
+    "en": "Not an IP address. Example: 1.1.1.1 or 2606:4700:4700::1111"
+  },
+  "S0571": {
+    "ru": "Поддерживаются адреса udp://, tls://, https://, quic:// и h3://",
+    "en": "Supported addresses: udp://, tls://, https://, quic:// and h3://"
+  },
+  "S0572": {
+    "ru": "Не удалось разобрать адрес сервера",
+    "en": "Could not parse server address"
+  },
+  "S0573": {
+    "ru": "Введите домен или regex",
+    "en": "Enter a domain or regex"
+  },
+  "S0574": {
+    "ru": "Это IP-адрес: к нему подключаются сразу, DNS не нужен. Введите домен или regex",
+    "en": "This is an IP address: connections go to it directly, without DNS. Enter a domain or regex"
+  },
+  "S0575": {
+    "ru": "Ядро не поддерживает в regex просмотр вперёд/назад — (?=…), (?!…)",
+    "en": "The core does not support lookahead/lookbehind in regex: (?=…), (?!…)"
+  },
+  "S0576": {
+    "ru": "Ядро не поддерживает в regex обратные ссылки (\\1)",
+    "en": "The core does not support regex backreferences (\\1)"
+  },
+  "S0577": {
+    "ru": "Ошибка в regex — проверьте скобки и спецсимволы",
+    "en": "Invalid regex: check brackets and special characters"
+  },
+  "S0578": {
+    "ru": "В JSON не найден подходящий outbound",
+    "en": "No suitable outbound found in JSON"
+  },
+  "S0579": {
+    "ru": "Ядро sing-box не поддерживает тип outbound «{0}»",
+    "en": "sing-box core does not support outbound type “{0}”"
+  },
+  "S0580": {
+    "ru": "В конфиге не указан адрес сервера",
+    "en": "No server address specified in configuration"
+  },
+  "S0581": {
+    "ru": "Неподдерживаемый endpoint «{0}»",
+    "en": "Unsupported endpoint “{0}”"
+  },
+  "S0582": {
+    "ru": "Протокол Xray «{0}» пока не поддерживается",
+    "en": "Xray protocol “{0}” is not supported yet"
+  },
+  "S0583": {
+    "ru": "Не удалось декодировать ссылку vpn:// (ожидается base64 от конфига WireGuard/AmneziaWG)",
+    "en": "Could not decode vpn:// link (expected a base64 WireGuard/AmneziaWG configuration)"
+  },
+  "S0584": {
+    "ru": "Не удалось разобрать JSON-конфиг",
+    "en": "Could not parse JSON configuration"
+  },
+  "S0585": {
+    "ru": "Ошибка JSON: ",
+    "en": "JSON error: "
+  },
+  "S0586": {
+    "ru": "Не удалось разобрать WireGuard-конфиг",
+    "en": "Could not parse WireGuard configuration"
+  },
+  "S0587": {
+    "ru": "Не распознано: {0}",
+    "en": "Unrecognized: {0}"
+  },
+  "S0588": {
+    "ru": "VMess-ссылка не в формате base64(JSON)",
+    "en": "VMess link is not base64(JSON)"
+  },
+  "S0589": {
+    "ru": "В VMess-конфиге не указан адрес сервера",
+    "en": "No server address specified in VMess configuration"
+  },
+  "S0590": {
+    "ru": "Не удалось разобрать логин/пароль Shadowsocks",
+    "en": "Could not parse Shadowsocks username/password"
+  },
+  "S0591": {
+    "ru": "Неверный формат ss:// ссылки",
+    "en": "Invalid ss:// link format"
+  },
+  "S0592": {
+    "ru": "SSR: не удалось декодировать base64",
+    "en": "SSR: could not decode base64"
+  },
+  "S0593": {
+    "ru": "SSR: неверный формат",
+    "en": "SSR: invalid format"
+  },
+  "S0594": {
+    "ru": "MTProto-ссылка без server/port",
+    "en": "MTProto link has no server/port"
+  },
+  "S0595": {
+    "ru": "Неизвестный протокол ссылки",
+    "en": "Unknown link protocol"
+  },
+  "S0596": {
+    "ru": "Ссылка vpn:// не декодируется — вероятно, скопирована не полностью",
+    "en": "Cannot decode vpn:// link; it may not have been copied in full"
+  },
+  "S0597": {
+    "ru": "Внутри ссылки vpn:// не найден конфиг WireGuard/AmneziaWG",
+    "en": "No WireGuard/AmneziaWG configuration found inside vpn:// link"
+  },
+  "S0598": {
+    "ru": "Б",
+    "en": "B"
+  },
+  "S0599": {
+    "ru": "КБ",
+    "en": "KB"
+  },
+  "S0600": {
+    "ru": "МБ",
+    "en": "MB"
+  },
+  "S0601": {
+    "ru": "ГБ",
+    "en": "GB"
+  },
+  "S0602": {
+    "ru": "ТБ",
+    "en": "TB"
+  },
+  "S0603": {
+    "ru": "Пустой WireGuard-конфиг",
+    "en": "Empty WireGuard configuration"
+  },
+  "S0604": {
+    "ru": "В [Peer] не указан Endpoint",
+    "en": "No Endpoint specified in [Peer]"
+  },
+  "S0605": {
+    "ru": "нет в свежем ответе провайдера",
+    "en": "missing from provider's latest response"
+  },
+  "S0606": {
+    "ru": "нет в списке провайдера",
+    "en": "not in provider list"
+  },
+  "S0607": {
+    "ru": " · запрос адресов…",
+    "en": " · requesting addresses…"
+  },
+  "S0608": {
+    "ru": " · адреса не получены",
+    "en": " · addresses unavailable"
+  },
+  "S0609": {
+    "ru": " · нажмите, чтобы получить адреса",
+    "en": " · click to request addresses"
+  },
+  "S0610": {
+    "ru": " · выбран ",
+    "en": " · selected "
+  },
+  "S0611": {
+    "ru": "Запрашиваем адреса серверов у провайдера…",
+    "en": "Requesting server addresses from provider…"
+  },
+  "S0612": {
+    "ru": "Не удалось обновить: ",
+    "en": "Could not refresh: "
+  },
+  "S0613": {
+    "ru": " · показан список от ",
+    "en": " · showing list from "
+  },
+  "S0614": {
+    "ru": "Список сохранён прежней версией — обновится при раскрытии",
+    "en": "List saved by an earlier version; will refresh when expanded"
+  },
+  "S0615": {
+    "ru": "Список серверов ещё не запрашивали",
+    "en": "Server list has not been requested yet"
+  },
+  "S0616": {
+    "ru": "Обновлено ",
+    "en": "Updated "
+  },
+  "S0617": {
+    "ru": "Запрос…",
+    "en": "Requesting…"
+  },
+  "S0618": {
+    "ru": "Быстрее всех: ",
+    "en": "Fastest: "
+  },
+  "S0619": {
+    "ru": "Ни один сервер не ответил",
+    "en": "No server responded"
+  },
+  "S0620": {
+    "ru": "приложение",
+    "en": "application"
+  },
+  "S0621": {
+    "ru": "{0} и все его поддомены",
+    "en": "{0} and all its subdomains"
+  },
+  "S0622": {
+    "ru": "Домены, в имени которых есть «{0}»",
+    "en": "Domains whose names contain “{0}”"
+  },
+  "S0623": {
+    "ru": "Домены, имя которых подходит под выражение {0}",
+    "en": "Domains whose names match expression {0}"
+  },
+  "S0624": {
+    "ru": "Системный",
+    "en": "System"
+  },
+  "S0625": {
+    "ru": "Резолвер Windows — обычно DNS провайдера",
+    "en": "Windows resolver, usually ISP DNS"
+  },
+  "S0626": {
+    "ru": "Адреса сайтов узнаёт Windows — обычно через DNS провайдера. В TUN-режиме запросы идут на 1.1.1.1 напрямую. ",
+    "en": "Windows resolves website addresses, usually through ISP DNS. In TUN mode, queries go directly to 1.1.1.1. "
+  },
+  "S0627": {
+    "ru": "Для WireGuard/AmneziaWG берётся DNS из конфига профиля (например 8.8.8.8): запросы идут внутри туннеля, как в клиенте Amnezia.",
+    "en": "WireGuard/AmneziaWG uses DNS from the profile configuration (e.g. 8.8.8.8); queries go inside the tunnel, as in the Amnezia client."
+  },
+  "S0628": {
+    "ru": "Через Proxy",
+    "en": "Via Proxy"
+  },
+  "S0629": {
+    "ru": "DNS-over-TLS 1.1.1.1 через активный профиль",
+    "en": "DNS-over-TLS 1.1.1.1 via active profile"
+  },
+  "S0630": {
+    "ru": "Запросы уходят через подключённый профиль по DNS-over-TLS (1.1.1.1): провайдер их не видит и не может подменить ответ.",
+    "en": "Queries use the connected profile via DNS-over-TLS (1.1.1.1): the ISP cannot see them or tamper with responses."
+  },
+  "S0631": {
+    "ru": "Выберите DNS для «{0}»",
+    "en": "Select DNS for “{0}”"
+  },
+  "S0632": {
+    "ru": "Нажмите на «Системный», «Через Proxy», сервер провайдера или свой DNS — после выбора вернёмся во вкладку «{0}»",
+    "en": "Click “System”, “Via Proxy”, a provider server or custom DNS. After selection, you will return to “{0}”"
+  },
+  "S0633": {
+    "ru": "через Proxy (DNS-over-TLS 1.1.1.1)",
+    "en": "via Proxy (DNS-over-TLS 1.1.1.1)"
+  },
+  "S0634": {
+    "ru": "{0} {1}",
+    "en": "{0} {1}"
+  },
+  "S0635": {
+    "ru": " · свой DNS у ",
+    "en": " · custom DNS for "
+  },
+  "S0636": {
+    "ru": " и ",
+    "en": " and "
+  },
+  "S0637": {
+    "ru": "Свой DNS",
+    "en": "Custom DNS"
+  },
+  "S0638": {
+    "ru": "{0}: не удалось получить адреса — {1}",
+    "en": "{0}: could not obtain addresses — {1}"
+  },
+  "S0639": {
+    "ru": "Не удалось открыть сайт: ",
+    "en": "Could not open website: "
+  },
+  "S0640": {
+    "ru": "Пинг DNS недоступен, пока работает TUN: ядро перехватывает DNS-запросы, и замер ",
+    "en": "DNS ping is unavailable while TUN is running: the core intercepts DNS queries, so measurements "
+  },
+  "S0641": {
+    "ru": "показал бы не те серверы. Отключитесь или выключите TUN и повторите.",
+    "en": "would test the wrong servers. Disconnect or disable TUN and retry."
+  },
+  "S0642": {
+    "ru": "Пинговать нечего: в списке нет серверов",
+    "en": "Nothing to ping: no servers in the list"
+  },
+  "S0643": {
+    "ru": "Пинг DNS не удался: ",
+    "en": "DNS ping failed: "
+  },
+  "S0644": {
+    "ru": "Пинг DNS: ни один сервер не ответил — проверьте подключение к интернету",
+    "en": "DNS ping: no server responded; check your internet connection"
+  },
+  "S0645": {
+    "ru": "Пинг DNS: ответили {0} из {1}, быстрее всех — {2} ",
+    "en": "DNS ping: {0} of {1} responded, fastest: {2} "
+  },
+  "S0646": {
+    "ru": "DNS «{0}» добавлен — нажмите на него в списке, чтобы выбрать",
+    "en": "DNS “{0}” added. Click it in the list to select"
+  },
+  "S0647": {
+    "ru": "Изменить DNS",
+    "en": "Edit DNS"
+  },
+  "S0648": {
+    "ru": "DNS «{0}»: новый адрес {1}",
+    "en": "DNS “{0}”: new address {1}"
+  },
+  "S0649": {
+    "ru": "Удалить «{0}» из списка?",
+    "en": "Remove “{0}” from the list?"
+  },
+  "S0650": {
+    "ru": "\n\nЭтот DNS выбран у {0}. Они вернутся на основной DNS.",
+    "en": "\n\nThis DNS is selected for {0}. They will revert to the primary DNS."
+  },
+  "S0651": {
+    "ru": "Удалить DNS",
+    "en": "Delete DNS"
+  },
+  "S0652": {
+    "ru": "Удалён DNS «{0}»: у {1} снова основной",
+    "en": "DNS “{0}” deleted: {1} now uses primary DNS"
+  },
+  "S0653": {
+    "ru": "запись",
+    "en": "entry"
+  },
+  "S0654": {
+    "ru": "записи",
+    "en": "entries"
+  },
+  "S0655": {
+    "ru": "записей",
+    "en": "entries"
+  },
+  "S0656": {
+    "ru": "уже в списке: ",
+    "en": "already in list: "
+  },
+  "S0657": {
+    "ru": " и ещё ",
+    "en": " and "
+  },
+  "S0658": {
+    "ru": "Уже в списке: ",
+    "en": "Already in list: "
+  },
+  "S0659": {
+    "ru": "«{0}» добавлен — нажмите «Выбрать DNS»",
+    "en": "“{0}” added. Click “Select DNS”"
+  },
+  "S0660": {
+    "ru": "Добавлено записей: {0} — у каждой нажмите «Выбрать DNS»",
+    "en": "Added {0} entries. Click “Select DNS” under each one"
+  },
+  "S0661": {
+    "ru": "DNS для «{0}» убран: домен снова на основном",
+    "en": "DNS for “{0}” removed: domain now uses primary DNS"
+  },
+  "S0662": {
+    "ru": "«{0}» убран из списка доменов",
+    "en": "“{0}” removed from domain list"
+  },
+  "S0663": {
+    "ru": "DNS для «{0}»: {1}",
+    "en": "DNS for “{0}”: {1}"
+  },
+  "S0664": {
+    "ru": "Запись «{0}» с ошибкой — свой DNS для неё не действует",
+    "en": "Entry “{0}” has an error; custom DNS does not apply"
+  },
+  "S0665": {
+    "ru": "Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*",
+    "en": "Applications (*.exe)|*.exe|All files (*.*)|*.*"
+  },
+  "S0666": {
+    "ru": "«{0}» уже в списке приложений",
+    "en": "“{0}” is already in the application list"
+  },
+  "S0667": {
+    "ru": "Приложение «{0}» добавлено — нажмите «Выбрать DNS»",
+    "en": "Application “{0}” added. Click “Select DNS”"
+  },
+  "S0668": {
+    "ru": "DNS для «{0}» убран: приложение снова на основном",
+    "en": "DNS for “{0}” removed: application now uses primary DNS"
+  },
+  "S0669": {
+    "ru": "Приложение «{0}» убрано",
+    "en": "Application “{0}” removed"
+  },
+  "S0670": {
+    "ru": "У «{0}» уже этот DNS: {1}",
+    "en": "“{0}” already uses this DNS: {1}"
+  },
+  "S0671": {
+    "ru": "DNS для «{0}»: {1} — заработает, когда включите галочку",
+    "en": "DNS for “{0}”: {1}. Will apply when checked"
+  },
+  "S0672": {
+    "ru": "DNS для «{0}»: {1} — заработает, когда исправите запись",
+    "en": "DNS for “{0}”: {1}. Will apply when the entry is fixed"
+  },
+  "S0673": {
+    "ru": "DNS для «{0}» включён: {1}",
+    "en": "DNS for “{0}” enabled: {1}"
+  },
+  "S0674": {
+    "ru": "DNS для «{0}» выключен: {1} снова на основном",
+    "en": "DNS for “{0}” disabled: {1} now uses primary DNS"
+  },
+  "S0675": {
+    "ru": "Выключить",
+    "en": "Disable"
+  },
+  "S0676": {
+    "ru": "Включить",
+    "en": "Enable"
+  },
+  "S0677": {
+    "ru": "Сломано",
+    "en": "Broken"
+  },
+  "S0678": {
+    "ru": "Накрыт",
+    "en": "Blocked"
+  },
+  "S0679": {
+    "ru": "Проверка…",
+    "en": "Testing…"
+  },
+  "S0680": {
+    "ru": "Запуск…",
+    "en": "Starting…"
+  },
+  "S0681": {
+    "ru": "Нет сети",
+    "en": "No network"
+  },
+  "S0682": {
+    "ru": "Ошибка",
+    "en": "Error"
+  },
+  "S0683": {
+    "ru": "Выключено",
+    "en": "Off"
+  },
+  "S0684": {
+    "ru": "стратегии выключены — трафик идёт как есть",
+    "en": "strategies disabled; traffic is forwarded unchanged"
+  },
+  "S0685": {
+    "ru": "нет соединений",
+    "en": "no connections"
+  },
+  "S0686": {
+    "ru": " соединений",
+    "en": " connections"
+  },
+  "S0687": {
+    "ru": "Отключить",
+    "en": "Disconnect"
+  },
+  "S0688": {
+    "ru": "Подключить",
+    "en": "Connect"
+  },
+  "S0689": {
+    "ru": "Профиль не выбран",
+    "en": "No profile selected"
+  },
+  "S0690": {
+    "ru": "Добавьте профиль во вкладке «Профили»",
+    "en": "Add a profile on the “Profiles” tab"
+  },
+  "S0691": {
+    "ru": "Отключено",
+    "en": "Disconnected"
+  },
+  "S0692": {
+    "ru": "VibeTun {0} · ядро: ",
+    "en": "VibeTun {0} · core: "
+  },
+  "S0693": {
+    "ru": "Ядро не найдено — установите его в настройках",
+    "en": "Core not found; install it in settings"
+  },
+  "S0694": {
+    "ru": "Восстановление подключения…",
+    "en": "Restoring connection…"
+  },
+  "S0695": {
+    "ru": "Маршруты изменены — переподключение…",
+    "en": "Routes changed; reconnecting…"
+  },
+  "S0696": {
+    "ru": "{0} — применится при подключении",
+    "en": "{0}; will apply on connection"
+  },
+  "S0697": {
+    "ru": "{0} — переподключение…",
+    "en": "{0}; reconnecting…"
+  },
+  "S0698": {
+    "ru": "Сначала выберите профиль",
+    "en": "Select a profile first"
+  },
+  "S0699": {
+    "ru": "MTProto работает только внутри Telegram — нажмите «Открыть в Telegram»",
+    "en": "MTProto only works in Telegram. Click “Open in Telegram”"
+  },
+  "S0700": {
+    "ru": "Подключение не восстановлено: для TUN-режима нужны права администратора — нажмите «Подключить»",
+    "en": "Connection not restored: TUN mode requires administrator privileges. Click “Connect”"
+  },
+  "S0701": {
+    "ru": "Требуются права администратора",
+    "en": "Administrator privileges required"
+  },
+  "S0702": {
+    "ru": "Для TUN-режима и маршрутизации приложений нужно перезапустить приложение с правами администратора. ",
+    "en": "TUN mode and application routing require restarting the application as administrator. "
+  },
+  "S0703": {
+    "ru": "Перезапустить сейчас?",
+    "en": "Restart now?"
+  },
+  "S0704": {
+    "ru": "Не удалось перезапустить с правами администратора",
+    "en": "Could not restart as administrator"
+  },
+  "S0705": {
+    "ru": "Конфиг: ",
+    "en": "Configuration: "
+  },
+  "S0706": {
+    "ru": "Конфиг (ошибка): ",
+    "en": "Configuration (error): "
+  },
+  "S0707": {
+    "ru": "Подключение невозможно",
+    "en": "Cannot connect"
+  },
+  "S0708": {
+    "ru": "Ядро отклонило конфигурацию",
+    "en": "Core rejected configuration"
+  },
+  "S0709": {
+    "ru": "Запуск ядра…",
+    "en": "Starting core…"
+  },
+  "S0710": {
+    "ru": "Ядро не запустилось",
+    "en": "Core failed to start"
+  },
+  "S0711": {
+    "ru": "Подключено: {0}",
+    "en": "Connected: {0}"
+  },
+  "S0712": {
+    "ru": "Подключено: {0} — {1}",
+    "en": "Connected: {0} — {1}"
+  },
+  "S0713": {
+    "ru": "Ошибка запуска: ",
+    "en": "Startup error: "
+  },
+  "S0714": {
+    "ru": "текущее ядро не поддерживает RandomTrailers/DisableCookies (AmneziaWG 3.1)",
+    "en": "current core does not support RandomTrailers/DisableCookies (AmneziaWG 3.1)"
+  },
+  "S0715": {
+    "ru": "текущее ядро не поддерживает обфускацию AmneziaWG",
+    "en": "current core does not support AmneziaWG obfuscation"
+  },
+  "S0716": {
+    "ru": "Переключение на расширенное ядро (AmneziaWG)…",
+    "en": "Switching to extended core (AmneziaWG)…"
+  },
+  "S0717": {
+    "ru": "Подготовка расширенного ядра (AmneziaWG)…",
+    "en": "Preparing extended core (AmneziaWG)…"
+  },
+  "S0718": {
+    "ru": "не удалось распаковать встроенное ядро: ",
+    "en": "could not extract bundled core: "
+  },
+  "S0719": {
+    "ru": "расширенное ядро не подтвердило поддержку AmneziaWG",
+    "en": "extended core did not confirm AmneziaWG support"
+  },
+  "S0720": {
+    "ru": "Нужно ядро с поддержкой AmneziaWG",
+    "en": "A core with AmneziaWG support is required"
+  },
+  "S0721": {
+    "ru": "AmneziaWG не работает на официальном sing-box: без параметров обфускации (Jc, S1–S4, H1–H4, I1–I5) ",
+    "en": "AmneziaWG does not work with official sing-box: without obfuscation parameters (Jc, S1–S4, H1–H4, I1–I5), "
+  },
+  "S0722": {
+    "ru": "сервер не примет хендшейк, и прокси окажется «подключён, но ничего не грузит».\n\n",
+    "en": "the server rejects the handshake and the proxy appears connected but cannot load anything.\n\n"
+  },
+  "S0723": {
+    "ru": "Сейчас: ",
+    "en": "Current: "
+  },
+  "S0724": {
+    "ru": "Скачать ядро с AmneziaWG (github.com/{0})?",
+    "en": "Download a core with AmneziaWG (github.com/{0})?"
+  },
+  "S0725": {
+    "ru": "Скачать",
+    "en": "Download"
+  },
+  "S0726": {
+    "ru": "Без расширенного ядра AmneziaWG не подключить",
+    "en": "AmneziaWG requires an extended core"
+  },
+  "S0727": {
+    "ru": "Скачивание ядра с AmneziaWG…",
+    "en": "Downloading core with AmneziaWG…"
+  },
+  "S0728": {
+    "ru": "Расширенное ядро установлено: ",
+    "en": "Extended core installed: "
+  },
+  "S0729": {
+    "ru": "скачанное ядро не подтвердило поддержку AmneziaWG",
+    "en": "downloaded core did not confirm AmneziaWG support"
+  },
+  "S0730": {
+    "ru": "не удалось скачать ядро: ",
+    "en": "could not download core: "
+  },
+  "S0731": {
+    "ru": "AmneziaWG недоступен",
+    "en": "AmneziaWG unavailable"
+  },
+  "S0732": {
+    "ru": "\n\nФорк с AmneziaWG 3.x: https://github.com/{0}/releases ",
+    "en": "\n\nAmneziaWG 3.x fork: https://github.com/{0}/releases "
+  },
+  "S0733": {
+    "ru": "\nРасширенная сборка: https://github.com/{0}/releases ",
+    "en": "\nExtended build: https://github.com/{0}/releases "
+  },
+  "S0734": {
+    "ru": "(архив sing-box-…-windows-amd64.zip, файл положить в каталог ядра как sing-box-extended.exe).",
+    "en": "(sing-box-…-windows-amd64.zip archive; place the file in the core directory as sing-box-extended.exe)."
+  },
+  "S0735": {
+    "ru": "\n\nВ профиле включены RandomTrailers/DisableCookies (AmneziaWG 3.1). Их понимает форк ",
+    "en": "\n\nProfile has RandomTrailers/DisableCookies (AmneziaWG 3.1) enabled. Supported by fork "
+  },
+  "S0736": {
+    "ru": "{0} (сборка с тегом with_awg) и форк Amnezia ",
+    "en": "{0} (build with the with_awg tag) and the Amnezia fork "
+  },
+  "S0737": {
+    "ru": "(https://github.com/hoaxisr/amnezia-box, эндпоинт type=\"awg\" — только сборки под Linux). ",
+    "en": "(https://github.com/hoaxisr/amnezia-box, type=\"awg\" endpoint; Linux builds only). "
+  },
+  "S0738": {
+    "ru": "Если скачать не удалось, выключите RandomTrailers на сервере и пересохраните профиль.",
+    "en": "If downloading fails, disable RandomTrailers on the server and save the profile again."
+  },
+  "S0739": {
+    "ru": "Для AmneziaWG включена расширенная сборка ядра",
+    "en": "Extended core enabled for AmneziaWG"
+  },
+  "S0740": {
+    "ru": "Прокси отключён",
+    "en": "Proxy disconnected"
+  },
+  "S0741": {
+    "ru": "Не удалось вернуть системный прокси: ",
+    "en": "Could not restore system proxy: "
+  },
+  "S0742": {
+    "ru": "Не удалось настроить системный прокси: ",
+    "en": "Could not configure system proxy: "
+  },
+  "S0743": {
+    "ru": "Туннель запущен, но трафик через него не идёт. Для AmneziaWG так бывает, когда параметры ",
+    "en": "Tunnel started, but no traffic passes through it. With AmneziaWG this happens when obfuscation "
+  },
+  "S0744": {
+    "ru": "обфускации не совпадают с серверными или ядро собрано без поддержки AWG.",
+    "en": "parameters do not match the server or the core was built without AWG support."
+  },
+  "S0745": {
+    "ru": "Туннель запущен, но трафик через него не идёт: сервер не отвечает или профиль настроен неверно.",
+    "en": "Tunnel started, but no traffic passes through it: server unresponsive or profile misconfigured."
+  },
+  "S0746": {
+    "ru": "Туннель запущен, но трафик не идёт. В профиле включены RandomTrailers (AmneziaWG 3.1), ",
+    "en": "Tunnel started, but no traffic passes through it. Profile has RandomTrailers (AmneziaWG 3.1) enabled, "
+  },
+  "S0747": {
+    "ru": "а это ядро их не поддерживает: сервер присылает хендшейк со случайным хвостом, клиент ",
+    "en": "but this core does not support them: the server sends a handshake with a random trailer, which the client "
+  },
+  "S0748": {
+    "ru": "считает пакет нераспознанным и отбрасывает. Выключите RandomTrailers на сервере и ",
+    "en": "treats as an unknown packet and discards. Disable RandomTrailers on the server and "
+  },
+  "S0749": {
+    "ru": "пересохраните профиль — либо установите ядро с AWG 3.1 (github.com/{0}): ",
+    "en": "save the profile again, or install an AWG 3.1 core (github.com/{0}): "
+  },
+  "S0750": {
+    "ru": "Настройки → Ядро → «Расширенная (AmneziaWG)» → «Скачать».",
+    "en": "Settings → Core → “Extended build (AmneziaWG)” → “Download”."
+  },
+  "S0751": {
+    "ru": "Ядро: {0} · AmneziaWG: {1} · ",
+    "en": "Core: {0} · AmneziaWG: {1} · "
+  },
+  "S0752": {
+    "ru": "AWG 3.1 (random_trailers): {0} · ",
+    "en": "AWG 3.1 (random_trailers): {0} · "
+  },
+  "S0753": {
+    "ru": "проверка ядра: {0}",
+    "en": "core check: {0}"
+  },
+  "S0754": {
+    "ru": "Проверка задержки…",
+    "en": "Testing latency…"
+  },
+  "S0755": {
+    "ru": "Сервер не ответил",
+    "en": "Server did not respond"
+  },
+  "S0756": {
+    "ru": "Задержка: ",
+    "en": "Latency: "
+  },
+  "S0757": {
+    "ru": "Обход DPI включён: {0} · {1}",
+    "en": "DPI bypass enabled: {0} · {1}"
+  },
+  "S0758": {
+    "ru": "Обход DPI не запустился: ",
+    "en": "DPI bypass failed to start: "
+  },
+  "S0759": {
+    "ru": "Обход DPI выключен",
+    "en": "DPI bypass disabled"
+  },
+  "S0761": {
+    "ru": "Проверка обхода: ",
+    "en": "Bypass check: "
+  },
+  "S0764": {
+    "ru": "Интернет недоступен — DPI-тест ничего не показал",
+    "en": "Internet unavailable; DPI test was inconclusive"
+  },
+  "S0765": {
+    "ru": "DPI сломан: {0}",
+    "en": "DPI broken: {0}"
+  },
+  "S0766": {
+    "ru": " — но обход сейчас выключен",
+    "en": "; bypass is currently disabled"
+  },
+  "S0767": {
+    "ru": " — разрыв пакетов тут не поможет, нужен VPN: включите профиль и режим «через профиль»",
+    "en": "; packet splitting cannot help here. VPN required: enable a profile and “Via profile” mode"
+  },
+  "S0768": {
+    "ru": " — откройте сервис в разделе «DPI» и нажмите «Подобрать»: движок переберёт приёмы и запишет рабочие профилями",
+    "en": " — open the service in the DPI section and press “Search”: the engine will try the techniques and save the working ones as profiles"
+  },
+  "S0769": {
+    "ru": "Накрыт: ",
+    "en": "Blocked: "
+  },
+  "S0775": {
+    "ru": "Обход DPI: не удалось обновить выход — ",
+    "en": "DPI bypass: could not update outbound — "
+  },
+  "S0776": {
+    "ru": "Настройки обхода DPI применены",
+    "en": "DPI bypass settings applied"
+  },
+  "S0777": {
+    "ru": "Не удалось перезапустить обход DPI: ",
+    "en": "Could not restart DPI bypass: "
+  },
+  "S0778": {
+    "ru": "Приложение уже запущено с правами администратора",
+    "en": "Application is already running as administrator"
+  },
+  "S0779": {
+    "ru": "Перезапуск с правами администратора отклонён",
+    "en": "Restart as administrator declined"
+  },
+  "S0780": {
+    "ru": "Ссылка отправлена в Telegram",
+    "en": "Link sent to Telegram"
+  },
+  "S0781": {
+    "ru": "Ссылка скопирована в буфер — вставьте её в Telegram",
+    "en": "Link copied to clipboard. Paste it into Telegram"
+  },
+  "S0782": {
+    "ru": "Ядро: {0}{1}Путь: {2}{3}",
+    "en": "Core: {0}{1}Path: {2}{3}"
+  },
+  "S0783": {
+    "ru": "Профиль: {0}{1}Состояние: {2}{3}",
+    "en": "Profile: {0}{1}State: {2}{3}"
+  },
+  "S0784": {
+    "ru": "Админ: {0}{1}",
+    "en": "Admin: {0}{1}"
+  },
+  "S0785": {
+    "ru": "Диагностика скопирована",
+    "en": "Diagnostics copied"
+  },
+  "S0786": {
+    "ru": "Подключено",
+    "en": "Connected"
+  },
+  "S0787": {
+    "ru": "Остановка…",
+    "en": "Stopping…"
+  },
+  "S0788": {
+    "ru": "Ошибка ядра",
+    "en": "Core error"
+  },
+  "S0789": {
+    "ru": "профиль не выбран",
+    "en": "no profile selected"
+  },
+  "S0790": {
+    "ru": "прокси + обход DPI",
+    "en": "proxy + DPI bypass"
+  },
+  "S0791": {
+    "ru": "обход DPI",
+    "en": "DPI bypass"
+  },
+  "S0792": {
+    "ru": "Обход DPI не остановлен при выходе: ",
+    "en": "DPI bypass did not stop on exit: "
+  },
+  "S0793": {
+    "ru": "Ядро не остановлено при выходе: ",
+    "en": "Core did not stop on exit: "
+  },
+  "S0794": {
+    "ru": "MTProto применяется только внутри Telegram — после сохранения нажмите «Открыть в Telegram».",
+    "en": "MTProto only applies inside Telegram. After saving, click “Open in Telegram”."
+  },
+  "S0795": {
+    "ru": "AmneziaWG требует расширенную сборку ядра (Настройки → Ядро).",
+    "en": "AmneziaWG requires an extended core build (Settings → Core)."
+  },
+  "S0796": {
+    "ru": "SSR не поддерживается ядром sing-box.",
+    "en": "SSR is not supported by sing-box."
+  },
+  "S0797": {
+    "ru": "Tunnel (Custom) — вставьте JSON ядра в поле «JSON ядра» внизу редактора: сервер/порт сверху не заполняются.",
+    "en": "Tunnel (Custom): paste core JSON into “Core JSON” at the bottom of the editor. Leave the server/port above empty."
+  },
+  "S0798": {
+    "ru": "не измерялось",
+    "en": "not measured"
+  },
+  "S0799": {
+    "ru": "только Telegram",
+    "en": "Telegram only"
+  },
+  "S0800": {
+    "ru": "Буфер обмена пуст",
+    "en": "Clipboard is empty"
+  },
+  "S0801": {
+    "ru": "Не удалось распознать профиль из буфера",
+    "en": "Could not recognize a profile from the clipboard"
+  },
+  "S0802": {
+    "ru": "Не распознано: ",
+    "en": "Unrecognized: "
+  },
+  "S0803": {
+    "ru": "Часть строк не распознана: {0}",
+    "en": "Some lines were not recognized: {0}"
+  },
+  "S0804": {
+    "ru": "Текст и конфиги (*.txt;*.json;*.conf;*.yaml)|*.txt;*.json;*.conf;*.yaml|Все файлы (*.*)|*.*",
+    "en": "Text and configurations (*.txt;*.json;*.conf;*.yaml)|*.txt;*.json;*.conf;*.yaml|All files (*.*)|*.*"
+  },
+  "S0805": {
+    "ru": "Не удалось прочитать файл",
+    "en": "Could not read file"
+  },
+  "S0806": {
+    "ru": "Добавлено профилей: {0}",
+    "en": "Added {0} profiles"
+  },
+  "S0807": {
+    "ru": "Профиль сохранён",
+    "en": "Profile saved"
+  },
+  "S0808": {
+    "ru": "Удалить «{0}»? Действие необратимо.",
+    "en": "Delete “{0}”? This cannot be undone."
+  },
+  "S0809": {
+    "ru": "Профиль удалён",
+    "en": "Profile deleted"
+  },
+  "S0810": {
+    "ru": "Профиль «{0}» создан",
+    "en": "Profile “{0}” created"
+  },
+  "S0811": {
+    "ru": "Дублировать профиль",
+    "en": "Duplicate profile"
+  },
+  "S0812": {
+    "ru": "Новое имя",
+    "en": "New name"
+  },
+  "S0813": {
+    "ru": " (копия)",
+    "en": " (copy)"
+  },
+  "S0814": {
+    "ru": "Профиль продублирован",
+    "en": "Profile duplicated"
+  },
+  "S0815": {
+    "ru": "Замер задержки завершён",
+    "en": "Latency test completed"
+  },
+  "S0816": {
+    "ru": "Конфигурация скопирована в буфер",
+    "en": "Configuration copied to clipboard"
+  },
+  "S0817": {
+    "ru": "Не удалось скопировать",
+    "en": "Could not copy"
+  },
+  "S0818": {
+    "ru": "IP/подсеть",
+    "en": "IP/subnet"
+  },
+  "S0819": {
+    "ru": "системный прокси",
+    "en": "system proxy"
+  },
+  "S0820": {
+    "ru": "Приложение «{0}» добавлено",
+    "en": "Application “{0}” added"
+  },
+  "S0821": {
+    "ru": "Профиль ",
+    "en": "Profile "
+  },
+  "S0822": {
+    "ru": "Удалить профиль маршрутизации",
+    "en": "Delete routing profile"
+  },
+  "S0823": {
+    "ru": "Удалить «{0}»?",
+    "en": "Delete “{0}”?"
+  },
+  "S0824": {
+    "ru": "Новый набор правил",
+    "en": "New rule set"
+  },
+  "S0825": {
+    "ru": "Набор ",
+    "en": "Set "
+  },
+  "S0826": {
+    "ru": "Пользовательский набор",
+    "en": "Custom set"
+  },
+  "S0827": {
+    "ru": "Набор «{0}» создан",
+    "en": "Set “{0}” created"
+  },
+  "S0828": {
+    "ru": "Копия набора",
+    "en": "Copy of set"
+  },
+  "S0829": {
+    "ru": "Набор продублирован",
+    "en": "Set duplicated"
+  },
+  "S0830": {
+    "ru": "Удалить набор правил",
+    "en": "Delete rule set"
+  },
+  "S0831": {
+    "ru": "Набор удалён",
+    "en": "Set deleted"
+  },
+  "S0832": {
+    "ru": "Набор правил (*.json)|*.json|Все файлы (*.*)|*.*",
+    "en": "Rule set (*.json)|*.json|All files (*.*)|*.*"
+  },
+  "S0833": {
+    "ru": "Набор «{0}» импортирован",
+    "en": "Set “{0}” imported"
+  },
+  "S0834": {
+    "ru": "Не удалось импортировать набор",
+    "en": "Could not import set"
+  },
+  "S0835": {
+    "ru": "Набор правил (*.json)|*.json",
+    "en": "Rule set (*.json)|*.json"
+  },
+  "S0836": {
+    "ru": "Набор сохранён в файл",
+    "en": "Set saved to file"
+  },
+  "S0837": {
+    "ru": "Не удалось сохранить набор",
+    "en": "Could not save set"
+  },
+  "S0838": {
+    "ru": "TUN включён — при подключении потребуются права администратора",
+    "en": "TUN enabled; connecting will require administrator privileges"
+  },
+  "S0839": {
+    "ru": "Сейчас {0}. Обычно хватает 3–8: пакет должен дойти до DPI, но не до сайта. ",
+    "en": "Current value: {0}. Usually 3–8 is enough: the packet must reach DPI but not the website. "
+  },
+  "S0840": {
+    "ru": "Если «Накрыт» — увеличьте; если сайты открываются и без обхода, значение слишком большое.",
+    "en": "If “Blocked”, increase it. If websites open without bypass, the value is too high."
+  },
+  "S0841": {
+    "ru": "Ядро не установлено",
+    "en": "Core not installed"
+  },
+  "S0842": {
+    "ru": "Ядро с поддержкой AmneziaWG не найдено на диске. ",
+    "en": "No core with AmneziaWG support found on disk. "
+  },
+  "S0843": {
+    "ru": "Скачать его с GitHub (github.com/{0})?",
+    "en": "Download it from GitHub (github.com/{0})?"
+  },
+  "S0844": {
+    "ru": "Официальный sing-box не найден на диске. Скачать его с GitHub?",
+    "en": "Official sing-box not found on disk. Download it from GitHub?"
+  },
+  "S0845": {
+    "ru": "Расширенное ядро не установлено — AmneziaWG работать не будет",
+    "en": "Extended core not installed; AmneziaWG will not work"
+  },
+  "S0846": {
+    "ru": "Не удалось скачать ядро",
+    "en": "Could not download core"
+  },
+  "S0847": {
+    "ru": "Ошибка загрузки ядра",
+    "en": "Core download error"
+  },
+  "S0848": {
+    "ru": "Ядро не найдено после установки",
+    "en": "Core not found after installation"
+  },
+  "S0849": {
+    "ru": "Расширенное ядро включено: AmneziaWG поддерживается",
+    "en": "Extended core enabled: AmneziaWG supported"
+  },
+  "S0850": {
+    "ru": "Ядро переключено, но обфускацию AmneziaWG оно не подтвердило",
+    "en": "Core switched, but AmneziaWG obfuscation support not confirmed"
+  },
+  "S0851": {
+    "ru": "Включён официальный sing-box: ",
+    "en": "Official sing-box enabled: "
+  },
+  "S0852": {
+    "ru": "Ядра (sing-box и sing-box-extended) вшиты в приложение — интернет при первом запуске не нужен.",
+    "en": "Cores (sing-box and sing-box-extended) are bundled with the application. No internet required on first startup."
+  },
+  "S0853": {
+    "ru": "Ядро sing-box вшито в приложение.",
+    "en": "sing-box core is bundled with the application."
+  },
+  "S0854": {
+    "ru": "Расширенное ядро (AmneziaWG) вшито в приложение.",
+    "en": "Extended core (AmneziaWG) is bundled with the application."
+  },
+  "S0855": {
+    "ru": "Вшитых ядер нет: приложение скачает ядро с GitHub.",
+    "en": "No bundled cores: the application will download a core from GitHub."
+  },
+  "S0856": {
+    "ru": "Установите ядро, чтобы включить прокси.",
+    "en": "Install the core to enable the proxy."
+  },
+  "S0857": {
+    "ru": "правила 1.11+: {0}",
+    "en": "1.11+ rules: {0}"
+  },
+  "S0858": {
+    "ru": "endpoints: {0}",
+    "en": "endpoints: {0}"
+  },
+  "S0859": {
+    "ru": "AmneziaWG: {0}",
+    "en": "AmneziaWG: {0}"
+  },
+  "S0860": {
+    "ru": " (по версии, нажмите «Проверить»)",
+    "en": " (based on version; click “Check”)"
+  },
+  "S0861": {
+    "ru": " (проверено)",
+    "en": " (verified)"
+  },
+  "S0862": {
+    "ru": "AWG 3.1: {0}",
+    "en": "AWG 3.1: {0}"
+  },
+  "S0863": {
+    "ru": "\nСхема: параметры AmneziaWG прямо в эндпоинте wireguard (форк sing-box-lx) — ",
+    "en": "\nSchema: AmneziaWG parameters directly in the wireguard endpoint (sing-box-lx fork); "
+  },
+  "S0864": {
+    "ru": "доступны все, включая RandomTrailers/DisableCookies из AWG 3.1.",
+    "en": "all parameters available, including AWG 3.1 RandomTrailers/DisableCookies."
+  },
+  "S0865": {
+    "ru": "\nСхема: отдельный эндпоинт type=\"awg\" (форк Amnezia) — доступны все параметры, включая AWG 3.1.",
+    "en": "\nSchema: separate type=\"awg\" endpoint (Amnezia fork); all parameters available, including AWG 3.1."
+  },
+  "S0866": {
+    "ru": "\nСхема: эндпоинт wireguard с вложенным блоком amnezia (sing-box-extended) — AWG до 3.0, ",
+    "en": "\nSchema: wireguard endpoint with nested amnezia block (sing-box-extended); AWG up to 3.0, "
+  },
+  "S0867": {
+    "ru": "RandomTrailers/DisableCookies это ядро отбрасывает.",
+    "en": "this core discards RandomTrailers/DisableCookies."
+  },
+  "S0868": {
+    "ru": "\nЭндпоинт WireGuard в этом ядре не собирается: ",
+    "en": "\nWireGuard endpoint cannot be built with this core: "
+  },
+  "S0869": {
+    "ru": "папка ещё не выбрана",
+    "en": "no folder selected yet"
+  },
+  "S0870": {
+    "ru": "Сейчас данные хранятся в: ",
+    "en": "Data is currently stored in: "
+  },
+  "S0871": {
+    "ru": "После перезапуска данные будут храниться в: ",
+    "en": "After restarting, data will be stored in: "
+  },
+  "S0872": {
+    "ru": ". Если там ещё нет данных, они будут скопированы.",
+    "en": ". If no data exists there yet, it will be copied."
+  },
+  "S0873": {
+    "ru": "Папка для данных VibeTun",
+    "en": "VibeTun data folder"
+  },
+  "S0874": {
+    "ru": "Место хранения не изменено",
+    "en": "Storage location not changed"
+  },
+  "S0875": {
+    "ru": "Место хранения выбрано. Оно изменится после перезапуска VibeTun.",
+    "en": "Storage location selected. It will change after restarting VibeTun."
+  },
+  "S0876": {
+    "ru": "Перезапуск",
+    "en": "Restart"
+  },
+  "S0877": {
+    "ru": "Новое место хранения вступит в силу после перезапуска VibeTun.\n\nПерезапустить сейчас?",
+    "en": "The new storage location will take effect after restarting VibeTun.\n\nRestart now?"
+  },
+  "S0878": {
+    "ru": "Ядро восстановлено из приложения: ",
+    "en": "Core restored from application: "
+  },
+  "S0879": {
+    "ru": "Вшитого ядра для выбранного варианта нет — скачайте с GitHub",
+    "en": "No bundled core for the selected variant. Download it from GitHub"
+  },
+  "S0880": {
+    "ru": "Не удалось восстановить ядро",
+    "en": "Could not restore core"
+  },
+  "S0881": {
+    "ru": "Ядро найдено: ",
+    "en": "Core found: "
+  },
+  "S0882": {
+    "ru": "Загрузка ядра с GitHub…",
+    "en": "Downloading core from GitHub…"
+  },
+  "S0883": {
+    "ru": "Ядро установлено: ",
+    "en": "Core installed: "
+  },
+  "S0884": {
+    "ru": "Не удалось установить ядро",
+    "en": "Could not install core"
+  },
+  "S0885": {
+    "ru": "Архив ядра (*.zip)|*.zip|Исполняемый файл (*.exe)|*.exe|Все файлы (*.*)|*.*",
+    "en": "Core archive (*.zip)|*.zip|Executable (*.exe)|*.exe|All files (*.*)|*.*"
+  },
+  "S0886": {
+    "ru": "Ядро sing-box (sing-box.exe)|sing-box.exe;*.exe|Все файлы (*.*)|*.*",
+    "en": "sing-box core (sing-box.exe)|sing-box.exe;*.exe|All files (*.*)|*.*"
+  },
+  "S0887": {
+    "ru": "Не удалось открыть папку",
+    "en": "Could not open folder"
+  },
+  "S0888": {
+    "ru": "Вернуть все настройки приложения к значениям по умолчанию?",
+    "en": "Restore all application settings to their defaults?"
+  },
+  "S0889": {
+    "ru": "Сбросить",
+    "en": "Reset"
+  },
+  "S0890": {
+    "ru": "Настройки сброшены",
+    "en": "Settings reset"
+  },
+  "S0891": {
+    "ru": "d MMMM yyyy г., HH:mm",
+    "en": "d MMMM yyyy, HH:mm"
+  },
+  "S0892": {
+    "ru": "Новее",
+    "en": "Newer"
+  },
+  "S0893": {
+    "ru": "Загрузка описания изменений с GitHub…",
+    "en": "Loading changelog from GitHub…"
+  },
+  "S0894": {
+    "ru": "Список релизов обновлён ({0})",
+    "en": "Release list refreshed ({0})"
+  },
+  "S0895": {
+    "ru": "Не удалось загрузить релизы с GitHub: ",
+    "en": "Could not load GitHub releases: "
+  },
+  "S0896": {
+    "ru": "Загрузка",
+    "en": "Downloading"
+  },
+  "S0897": {
+    "ru": "Не удалось загрузить описание изменений с GitHub. Проверьте подключение к интернету и нажмите «Обновить список».",
+    "en": "Could not load changelog from GitHub. Check your internet connection and click “Refresh list”."
+  },
+  "S0898": {
+    "ru": "Откат до",
+    "en": "Roll back to"
+  },
+  "S0899": {
+    "ru": "Обновление до",
+    "en": "Update to"
+  },
+  "S0900": {
+    "ru": "Подготовка к скачиванию {0}…",
+    "en": "Preparing to download {0}…"
+  },
+  "S0901": {
+    "ru": "Скачивание {0}… {1} из {2}",
+    "en": "Downloading {0}… {1} of {2}"
+  },
+  "S0902": {
+    "ru": "Скачивание {0}… {1}",
+    "en": "Downloading {0}… {1}"
+  },
+  "S0903": {
+    "ru": "{0} {1}: замена файла и перезапуск…",
+    "en": "{0} {1}: replacing file and restarting…"
+  },
+  "S0904": {
+    "ru": "{0} {1} — перезапуск приложения…",
+    "en": "{0} {1}; restarting application…"
+  },
+  "S0905": {
+    "ru": "Скачивание отменено",
+    "en": "Download canceled"
+  },
+  "S0906": {
+    "ru": "Не удалось выполнить {0}: {1}",
+    "en": "Could not perform {0}: {1}"
+  },
+  "S0907": {
+    "ru": "Ошибка отката",
+    "en": "Rollback error"
+  },
+  "S0908": {
+    "ru": "Ошибка обновления",
+    "en": "Update error"
+  },
+  "S0909": {
+    "ru": "Понятно",
+    "en": "OK"
+  },
+  "S0910": {
+    "ru": "Сообщения ядра",
+    "en": "Core messages"
+  },
+  "S0911": {
+    "ru": "Лог пуст.",
+    "en": "Log is empty."
+  },
+  "S0912": {
+    "ru": "Ничего не выбрано",
+    "en": "Nothing selected"
+  },
+  "S0913": {
+    "ru": "Выбрано: {0}",
+    "en": "Selected: {0}"
+  },
+  "S0914": {
+    "ru": "файл",
+    "en": "file"
+  },
+  "S0915": {
+    "ru": "Ничего не распознано",
+    "en": "Nothing recognized"
+  },
+  "S0916": {
+    "ru": "Распознанные профили: {0}",
+    "en": "Detected profiles: {0}"
+  },
+  "S0917": {
+    "ru": "Добавить {0}",
+    "en": "Add {0}"
+  },
+  "S0918": {
+    "ru": "Текст и конфиги (*.txt;*.json;*.conf;*.vpn;*.wg)|*.txt;*.json;*.conf;*.vpn;*.wg|Все файлы (*.*)|*.*",
+    "en": "Text and configurations (*.txt;*.json;*.conf;*.vpn;*.wg)|*.txt;*.json;*.conf;*.vpn;*.wg|All files (*.*)|*.*"
+  },
+  "S0919": {
+    "ru": "Профиль — ",
+    "en": "Profile — "
+  },
+  "S0920": {
+    "ru": "Укажите название профиля.",
+    "en": "Enter a profile name."
+  },
+  "S0921": {
+    "ru": "Укажите адрес сервера.",
+    "en": "Enter a server address."
+  },
+  "S0922": {
+    "ru": "Панель",
+    "en": "Panel"
+  },
+  "S0923": {
+    "ru": "Добавить панель",
+    "en": "Add panel"
+  },
+  "S0924": {
+    "ru": "Добавить подключение",
+    "en": "Add connection"
+  },
+  "S0925": {
+    "ru": "Логин и пароль",
+    "en": "Username and password"
+  },
+  "S0926": {
+    "ru": "Будут удалены все сохранённые входы панелей — куки и данные сайтов встроенного браузера. ",
+    "en": "All saved panel sign-ins will be deleted, including cookies and embedded browser website data. "
+  },
+  "S0927": {
+    "ru": "Сами панели и их адреса останутся. Продолжить?",
+    "en": "Panels and their addresses will remain. Continue?"
+  },
+  "S0928": {
+    "ru": "Логины и пароли",
+    "en": "Usernames and passwords"
+  },
+  "S0929": {
+    "ru": "Сохранённые входы удалены. При следующем открытии сайтов панелей нужно будет войти заново.",
+    "en": "Saved sign-ins deleted. You will need to sign in again when reopening panel websites."
+  },
+  "S0930": {
+    "ru": "Папка профиля сейчас занята — очистка выполнится автоматически при следующем запуске приложения.",
+    "en": "The profile folder is currently in use; it will be cleared automatically on the next application startup."
+  },
+  "S0931": {
+    "ru": "Приложение свёрнуто в трей: клик по иконке — быстрая панель, ",
+    "en": "Application minimized to tray: click the icon for the quick panel, "
+  },
+  "S0932": {
+    "ru": "двойной клик — окно, правая кнопка — «Закрыть».",
+    "en": "double-click for the window, or right-click for “Close”."
+  },
+  "S0933": {
+    "ru": "Выход из VibeTun не завершился за 20 секунд — принудительное завершение.",
+    "en": "VibeTun did not exit within 20 seconds; terminating forcibly."
+  },
+  "S0934": {
+    "ru": "Переименовать",
+    "en": "Rename"
+  },
+  "S0935": {
+    "ru": "Не удалось запустить браузер: ",
+    "en": "Could not start browser: "
+  },
+  "S0936": {
+    "ru": "Нужен Microsoft Edge WebView2 Runtime (обычно уже установлен в Windows 11).",
+    "en": "Microsoft Edge WebView2 Runtime is required (usually preinstalled on Windows 11)."
+  },
+  "S0937": {
+    "ru": "VibeTun SSH — укажите адрес (user@host или host) и порт, затем кнопку подключения.",
+    "en": "VibeTun SSH: enter an address (user@host or host) and port, then click Connect."
+  },
+  "S0938": {
+    "ru": "Укажите адрес: user@host или host.",
+    "en": "Enter an address: user@host or host."
+  },
+  "S0939": {
+    "ru": "После @ не указан хост.",
+    "en": "No host specified after @."
+  },
+  "S0940": {
+    "ru": "Подключение отменено: нет логина или пароля.",
+    "en": "Connection canceled: username or password missing."
+  },
+  "S0941": {
+    "ru": "Подключение к {0}@{1}:{2}…",
+    "en": "Connecting to {0}@{1}:{2}…"
+  },
+  "S0942": {
+    "ru": "SSH: подключено к {0}@{1}:{2}",
+    "en": "SSH: connected to {0}@{1}:{2}"
+  },
+  "S0943": {
+    "ru": "Подключено к {0}@{1}:{2}. Enter — ввод, Ctrl+C — прервать, ",
+    "en": "Connected to {0}@{1}:{2}. Enter: input; Ctrl+C: interrupt; "
+  },
+  "S0944": {
+    "ru": "Ctrl+Shift+V — вставить, Ctrl+Shift+C — копировать.",
+    "en": "Ctrl+Shift+V: paste; Ctrl+Shift+C: copy."
+  },
+  "S0945": {
+    "ru": "Ошибка подключения: ",
+    "en": "Connection error: "
+  },
+  "S0946": {
+    "ru": "SSH: ошибка подключения: ",
+    "en": "SSH: connection error: "
+  },
+  "S0947": {
+    "ru": "Отключено.",
+    "en": "Disconnected."
+  },
+  "S0948": {
+    "ru": "SSH: соединение закрыто.",
+    "en": "SSH: connection closed."
+  },
+  "S0949": {
+    "ru": "Соединение закрыто.",
+    "en": "Connection closed."
+  },
+  "S0950": {
+    "ru": "SSH: соединение закрыто сервером.",
+    "en": "SSH: connection closed by server."
+  },
+  "S0951": {
+    "ru": "Канал закрыт: ",
+    "en": "Channel closed: "
+  },
+  "S0952": {
+    "ru": "Создать группу",
+    "en": "Create group"
+  },
+  "S0953": {
+    "ru": "Переименовать",
+    "en": "Rename"
+  },
+  "S0954": {
+    "ru": "Расформировать",
+    "en": "Dissolve"
+  },
+  "S0955": {
+    "ru": "Удалить группу",
+    "en": "Delete group"
+  },
+  "S0956": {
+    "ru": "Перетащите профили сюда",
+    "en": "Drop profiles here"
+  },
+  "S0957": {
+    "ru": "Группа {0}",
+    "en": "Group {0}"
+  },
+  "S0958": {
+    "ru": "Название группы",
+    "en": "Group name"
+  },
+  "S0959": {
+    "ru": "Профилей в группе «{0}»: {1}. Выберите действие.",
+    "en": "Profiles in group “{0}”: {1}. Choose an action."
+  },
+  "S0960": {
+    "ru": "Группа «{0}» создана",
+    "en": "Group “{0}” created"
+  },
+  "S0961": {
+    "ru": "Группа переименована: «{0}»",
+    "en": "Group renamed: “{0}”"
+  },
+  "S0962": {
+    "ru": "Группа «{0}» расформирована",
+    "en": "Group “{0}” dissolved"
+  },
+  "S0963": {
+    "ru": "Группа «{0}» и её профили удалены",
+    "en": "Group “{0}” and its profiles deleted"
+  },
+  "S0964": {
+    "ru": "Профилей пока нет",
+    "en": "No profiles yet"
+  },
+  "S0965": {
+    "ru": "Добавьте профиль или создайте группу",
+    "en": "Add a profile or create a group"
+  },
+  "S0966": {
+    "ru": "Ничего не найдено",
+    "en": "No matches found"
+  },
+  "S0968": {
+    "ru": "Удалить только группу",
+    "en": "Delete group only"
+  },
+  "S0969": {
+    "ru": "Профили останутся в основном списке.",
+    "en": "Profiles will remain in the main list."
+  },
+  "S0970": {
+    "ru": "Удалить группу и профили",
+    "en": "Delete group and profiles"
+  },
+  "S0971": {
+    "ru": "Все профили в группе будут удалены.",
+    "en": "All profiles in this group will be deleted."
+  },
+  "S0972": {
+    "ru": "В группе нет профилей.",
+    "en": "This group is empty."
+  },
+  "S0973": {
+    "ru": "Группа «{0}» удалена, профили сохранены",
+    "en": "Group “{0}” deleted; profiles were kept"
+  },
+  "S0974": {
+    "ru": "Свернуть или развернуть группу",
+    "en": "Collapse or expand group"
+  },
+  "S0975": {
+    "ru": "Добавить подписку",
+    "en": "Add subscription"
+  },
+  "S0976": {
+    "ru": "Введите ссылку подписки (HTTP или HTTPS).",
+    "en": "Enter the subscription URL (HTTP or HTTPS)."
+  },
+  "S0978": {
+    "ru": "Подписка «{0}» содержит {1} профилей. Выберите, как добавить их.",
+    "en": "Subscription “{0}” contains {1} profiles. Choose how to add them."
+  },
+  "S0979": {
+    "ru": "Добавить как подписку",
+    "en": "Add as subscription"
+  },
+  "S0980": {
+    "ru": "Добавить только профили",
+    "en": "Add profiles only"
+  },
+  "S0981": {
+    "ru": "Добавить профили в группу",
+    "en": "Add profiles to a group"
+  },
+  "S0982": {
+    "ru": "Существующая группа",
+    "en": "Existing group"
+  },
+  "S0983": {
+    "ru": "Или создать новую группу",
+    "en": "Or create a new group"
+  },
+  "S0984": {
+    "ru": "Название новой группы",
+    "en": "New group name"
+  },
+  "S0985": {
+    "ru": "Выберите существующую группу или введите название новой.",
+    "en": "Choose an existing group or enter a name for a new one."
+  },
+  "S0986": {
+    "ru": "Обновить подписку",
+    "en": "Refresh subscription"
+  },
+  "S0987": {
+    "ru": "Подписка «{0}» обновлена: добавлено {1}, обновлено {2}. Исчезнувшие профили сохранены.",
+    "en": "Subscription “{0}” refreshed: {1} added, {2} updated. Profiles no longer on the server were kept."
+  },
+  "S0988": {
+    "ru": "Добавлено профилей: {0}. Группа: «{1}».",
+    "en": "Added {0} profiles to group “{1}”."
+  },
+  "S0989": {
+    "ru": "Часть строк подписки не распознана: {0}",
+    "en": "Some subscription entries could not be parsed: {0}"
+  },
+  "S0990": {
+    "ru": "Не удалось загрузить подписку: {0}",
+    "en": "Could not load subscription: {0}"
+  },
+  "S0991": {
+    "ru": "Не удалось обновить подписку «{0}»: {1}",
+    "en": "Could not refresh subscription “{0}”: {1}"
+  },
+  "S0992": {
+    "ru": "Подписка «{0}» добавлена: профилей {1}.",
+    "en": "Subscription “{0}” added with {1} profiles."
+  },
+  "S0993": {
+    "ru": "Подписка",
+    "en": "Subscription"
+  },
+  "S0994": {
+    "ru": "Проверка ключа SSH-сервера",
+    "en": "Verify SSH server host key"
+  },
+  "S0995": {
+    "ru": "При первом подключении проверьте ключ сервера по доверенному каналу.\n\nСервер: {0}\nАлгоритм: {1}\nSHA-256 отпечаток: {2}\n\nЕсли отпечаток не совпадает с данными администратора, отмените подключение. Доверять этому ключу?",
+    "en": "On first connection, verify the server key through a trusted channel.\n\nServer: {0}\nAlgorithm: {1}\nSHA-256 fingerprint: {2}\n\nCancel if the fingerprint does not match the administrator’s records. Trust this key?"
+  },
+  "S0996": {
+    "ru": "Доверять ключу и подключиться",
+    "en": "Trust key and connect"
+  },
+  "S0997": {
+    "ru": "Ключ SSH-сервера для {0} изменился. Это может быть переустановка сервера, но также может указывать на атаку.\n\nАлгоритм: {1}\nСохранённый отпечаток: {2}\nНовый SHA-256 отпечаток: {3}\n\nСверьте новый отпечаток с администратором перед подтверждением.",
+    "en": "The SSH host key for {0} has changed. This may be a server reinstall, but it could also indicate an attack.\n\nAlgorithm: {1}\nPreviously trusted fingerprint: {2}\nNew SHA-256 fingerprint: {3}\n\nVerify the new fingerprint with the administrator before accepting it."
+  },
+  "S0998": {
+    "ru": "Принять новый ключ",
+    "en": "Accept new key"
+  },
+  "S0999": {
+    "ru": "Ключ SSH не подтверждён. Подключение отменено.",
+    "en": "SSH host key was not trusted. Connection cancelled."
+  },
+  "Extra952": {
+    "ru": "да",
+    "en": "yes"
+  },
+  "Extra953": {
+    "ru": "нет",
+    "en": "no"
+  },
+  "Extra954": {
+    "ru": "не выполнялась",
+    "en": "not performed"
+  },
+  "Extra955": {
+    "ru": "системный",
+    "en": "system"
+  },
+  "Extra956": {
+    "ru": "домена",
+    "en": "domains"
+  },
+  "Extra957": {
+    "ru": "доменов",
+    "en": "domains"
+  },
+  "Extra958": {
+    "ru": "приложения",
+    "en": "applications"
+  },
+  "Extra959": {
+    "ru": "приложений",
+    "en": "applications"
+  },
+  "Extra960": {
+    "ru": "откат",
+    "en": "rollback"
+  },
+  "Extra961": {
+    "ru": "обновление",
+    "en": "update"
+  },
+  "Search": {
+    "ru": "Поиск",
+    "en": "Search"
+  },
+  "SearchApps": {
+    "ru": "Поиск по названию или пути",
+    "en": "Search by name or path"
+  },
+  "ExampleIP": {
+    "ru": "например, 1.1.1.1",
+    "en": "e.g. 1.1.1.1"
+  },
+  "ExampleDNS": {
+    "ru": "например, Мой DNS",
+    "en": "e.g. My DNS"
+  },
+  "ExampleRoot": {
+    "ru": "например, root",
+    "en": "e.g. root"
+  },
+  "LogLimitPositive": {
+    "ru": "Укажите целое число больше нуля.",
+    "en": "Enter a positive integer."
+  },
+  "dpi.title": {
+    "ru": "DPI",
+    "en": "DPI"
+  },
+  "dpi.subtitle": {
+    "ru": "«Общие» работают со всем трафиком, сервисы ниже — только со своими доменами. Отдельный сервис важнее «Общих»: если домен есть в списке, применяется его набор.",
+    "en": "“General” works for all traffic; the services below only for their own domains. A service wins over General: if the domain is in the list, its set is used."
+  },
+  "dpi.add": {
+    "ru": "Добавить сервис",
+    "en": "Add service"
+  },
+  "dpi.pingAll": {
+    "ru": "Пинг всех сервисов",
+    "en": "Ping all services"
+  },
+  "dpi.empty.title": {
+    "ru": "Сервисов пока нет",
+    "en": "No services yet"
+  },
+  "dpi.empty.hint": {
+    "ru": "Добавьте сервис и укажите его домен — например discord.com или youtube.com. В окне сервиса можно проверить обмен пакетами кнопкой «Тест» и подобрать сразу несколько рабочих стратегий кнопкой «Подобрать»: они сохранятся профилями auto, самые быстрые пойдут первыми, остальные — запасными.",
+    "en": "Add a service and set its domain — discord.com or youtube.com, for example. In the service window you can check the packet exchange with Test and pick several working strategies with Search: they are stored as auto profiles, the fastest first and the rest as fallbacks."
+  },
+  "dpi.footer": {
+    "ru": "Всё настраивается здесь: «Общие» — порт, режим выхода, системный прокси и приёмы для всего трафика; сервисы — домены, приёмы и DNS. Подбор сохраняет найденные стратегии профилями «auto» и ставит их сервису по порядку.",
+    "en": "Everything is configured here: General holds the port, exit mode, system proxy and techniques for all traffic; services hold domains, techniques and DNS. The search saves found strategies as “auto” profiles and assigns them to the service in order."
+  },
+  "dpi.refreshIcon": {
+    "ru": "Скачать значок заново",
+    "en": "Re-download icon"
+  },
+  "dpi.openSite": {
+    "ru": "Открыть сайт",
+    "en": "Open site"
+  },
+  "dpi.enable": {
+    "ru": "Сервис включён — обход применяется к его домену",
+    "en": "Service is on — the bypass applies to its domain"
+  },
+  "dpi.enabledHint": {
+    "ru": "Включён: набор приёмов сервиса применяется к его доменам.",
+    "en": "On: the technique set of the service applies to its domains."
+  },
+  "dpi.noDomain": {
+    "ru": "домен не указан",
+    "en": "no domain"
+  },
+  "dpi.common": {
+    "ru": "общий набор",
+    "en": "common set"
+  },
+  "dpi.commonHint": {
+    "ru": "набор «Общих»",
+    "en": "the “General” set"
+  },
+  "dpi.profileLabel": {
+    "ru": "профиль: {0}",
+    "en": "profile: {0}"
+  },
+  "dpi.summary": {
+    "ru": "Сервисов: {0} · профилей: {1}",
+    "en": "Services: {0} · profiles: {1}"
+  },
+  "dpi.serviceName": {
+    "ru": "Сервис {0}",
+    "en": "Service {0}"
+  },
+  "dpi.removeText": {
+    "ru": "Удалить сервис «{0}»?",
+    "en": "Delete service “{0}”?"
+  },
+  "dpi.serviceAdded": {
+    "ru": "Сервис «{0}» добавлен.",
+    "en": "Service “{0}” added."
+  },
+  "dpi.serviceSaved": {
+    "ru": "Сервис «{0}» сохранён.",
+    "en": "Service “{0}” saved."
+  },
+  "dpi.serviceRemoved": {
+    "ru": "Сервис «{0}» удалён.",
+    "en": "Service “{0}” deleted."
+  },
+  "dpi.iconFailed": {
+    "ru": "Значок сервиса не скачался — останется общий.",
+    "en": "Service icon could not be downloaded — the generic one stays."
+  },
+  "dpi.iconDone": {
+    "ru": "Значок сервиса обновлён.",
+    "en": "Service icon updated."
+  },
+  "dpi.pingDone": {
+    "ru": "Ответили {0} из {1} сервисов.",
+    "en": "{0} of {1} services answered."
+  },
+  "dpi.window.add": {
+    "ru": "Новый сервис DPI",
+    "en": "New DPI service"
+  },
+  "dpi.window.edit": {
+    "ru": "Сервис DPI",
+    "en": "DPI service"
+  },
+  "dpi.window.service": {
+    "ru": "Сервис",
+    "en": "Service"
+  },
+  "dpi.window.domain": {
+    "ru": "Домен сервиса",
+    "en": "Service domain"
+  },
+  "dpi.window.domainHint": {
+    "ru": "Домен сервиса — к его трафику применяется набор приёмов ниже. Можно перечислить несколько доменов через запятую: у площадок содержимое приходит и с других доменов (у Discord — discordapp.com, discordapp.net, discord.media), и без них страница открывается, а картинки нет. Домен и его поддомены совпадают, «*.» можно не писать.",
+    "en": "The service domain — the technique set below applies to its traffic. Several domains can be listed separated by commas: platforms serve content from other domains too (Discord uses discordapp.com, discordapp.net, discord.media), and without them the page opens but images do not. A domain matches its subdomains; no need to write \"*.\"."
+  },
+  "dpi.window.strategy": {
+    "ru": "Приёмы обхода",
+    "en": "Bypass techniques"
+  },
+  "dpi.window.profiles": {
+    "ru": "Профили настроек",
+    "en": "Settings profiles"
+  },
+  "dpi.window.profilesHint": {
+    "ru": "Профиль — готовый набор приёмов. Нажмите на профиль, чтобы подставить его настройки, либо создайте свой, переименуйте, удалите, экспортируйте или импортируйте файлом.",
+    "en": "A profile is a ready set of techniques. Click a profile to load its settings, or create, rename, delete, export and import your own."
+  },
+  "dpi.window.commonHint": {
+    "ru": "Без профиля работает общий набор обхода из настроек приложения.",
+    "en": "Without a profile the common bypass settings are used."
+  },
+  "dpi.window.profileHint": {
+    "ru": "Профиль подставлен в форму ниже: правки затрагивают только этот сервис.",
+    "en": "The profile is loaded into the form below: edits affect this service only."
+  },
+  "dpi.window.needName": {
+    "ru": "Укажите название сервиса.",
+    "en": "Enter the service name."
+  },
+  "dpi.window.needDomain": {
+    "ru": "Укажите домен сервиса.",
+    "en": "Enter the service domain."
+  },
+  "dpi.window.badDomain": {
+    "ru": "Домен выглядит неправильно: нужен вид «example.com». Несколько доменов перечисляются через запятую, «*.» писать не нужно — поддомены совпадают сами.",
+    "en": "The domain looks wrong: the form “example.com” is expected. Separate several domains with commas; no need for “*.” — subdomains match automatically."
+  },
+  "dpi.window.fieldHint": {
+    "ru": "Приёмы применяются к доменам сервиса. Порт, режим выхода и системный прокси — общие: они настраиваются у «Общих» в разделе «DPI».",
+    "en": "Techniques apply to the service domains. Port, exit mode and system proxy are shared: configure them in General in the DPI section."
+  },
+  "dpi.btn.test": {
+    "ru": "Тест",
+    "en": "Test"
+  },
+  "dpi.btn.auto": {
+    "ru": "Подобрать",
+    "en": "Auto-select"
+  },
+  "dpi.btn.save": {
+    "ru": "Сохранить",
+    "en": "Save"
+  },
+  "dpi.btn.stop": {
+    "ru": "Остановить",
+    "en": "Stop"
+  },
+  "dpi.btn.common": {
+    "ru": "Общий набор",
+    "en": "Common set"
+  },
+  "dpi.progress": {
+    "ru": "Проверяем {0} из {1}: {2}",
+    "en": "Trying {0} of {1}: {2}"
+  },
+  "dpi.profile.title": {
+    "ru": "Профиль обхода",
+    "en": "Bypass profile"
+  },
+  "dpi.profile.name": {
+    "ru": "Название профиля",
+    "en": "Profile name"
+  },
+  "dpi.profile.new": {
+    "ru": "Новый профиль",
+    "en": "New profile"
+  },
+  "dpi.profile.created": {
+    "ru": "Профиль «{0}» создан.",
+    "en": "Profile “{0}” created."
+  },
+  "dpi.profile.renamed": {
+    "ru": "Профиль переименован в «{0}».",
+    "en": "Profile renamed to “{0}”."
+  },
+  "dpi.profile.removed": {
+    "ru": "Профиль «{0}» удалён.",
+    "en": "Profile “{0}” deleted."
+  },
+  "dpi.profile.removeText": {
+    "ru": "Удалить профиль «{0}»? Настройки сервисов не изменятся.",
+    "en": "Delete profile “{0}”? Service settings stay as they are."
+  },
+  "dpi.profile.exported": {
+    "ru": "Профиль сохранён в файл «{0}».",
+    "en": "Profile saved to “{0}”."
+  },
+  "dpi.profile.imported": {
+    "ru": "Профиль «{0}» загружен из файла.",
+    "en": "Profile “{0}” loaded from file."
+  },
+  "dpi.profile.importFailed": {
+    "ru": "Не удалось прочитать файл профиля.",
+    "en": "Could not read the profile file."
+  },
+  "dpi.profile.customNote": {
+    "ru": "Свой набор приёмов.",
+    "en": "Custom set of techniques."
+  },
+  "dpi.profile.usage": {
+    "ru": "сервисов: {0}",
+    "en": "services: {0}"
+  },
+  "dpi.profileUsage": {
+    "ru": "сервисов: {0}",
+    "en": "services: {0}"
+  },
+  "dpi.profile.auto": {
+    "ru": "подобран",
+    "en": "auto"
+  },
+  "dpi.p.split2": {
+    "ru": "Split 2 · SNI + запись",
+    "en": "Split 2 · SNI + record"
+  },
+  "dpi.n.split2": {
+    "ru": "Разрыв ClientHello посередине имени и переупаковка в две записи TLS — базовый приём против ТСПУ.",
+    "en": "Split the ClientHello mid-name and repack it into two TLS records — the basic technique."
+  },
+  "dpi.p.split1": {
+    "ru": "Split 1 байт",
+    "en": "Split 1 byte"
+  },
+  "dpi.n.split1": {
+    "ru": "Разрыв в первом байте записи: DPI не успевает разобрать заголовок пакета.",
+    "en": "Split at the first byte of the record: DPI cannot parse the packet header in time."
+  },
+  "dpi.p.multisplit": {
+    "ru": "Multisplit 8",
+    "en": "Multisplit 8"
+  },
+  "dpi.n.multisplit": {
+    "ru": "ClientHello уходит множеством кусков по 8 байт: имя сайта DPI собрать не успевает.",
+    "en": "The ClientHello leaves in many 8-byte chunks: DPI cannot reassemble the name."
+  },
+  "dpi.p.disorder": {
+    "ru": "Disorder",
+    "en": "Disorder"
+  },
+  "dpi.n.disorder": {
+    "ru": "Начало разрыва уходит с TTL=1 и до DPI не доходит: ядро пересылает его следом — DPI собирает запрос не по порядку.",
+    "en": "The start of the split leaves with TTL=1 and never reaches the DPI: the kernel retransmits it later, so the DPI reassembles out of order."
+  },
+  "dpi.p.fake": {
+    "ru": "Fake TTL 8 ×3",
+    "en": "Fake TTL 8 ×3"
+  },
+  "dpi.n.fake": {
+    "ru": "Фейк-пакет с малым TTL видит DPI, но не сервер; три повтора.",
+    "en": "A fake packet with a small TTL reaches DPI but not the server; three repeats."
+  },
+  "dpi.p.fakesplit": {
+    "ru": "Fake + split",
+    "en": "Fake + split"
+  },
+  "dpi.n.fakesplit": {
+    "ru": "Фейк-пакет вместе с разрывом ClientHello — там, где одиночный приём не помогает.",
+    "en": "Fake packet together with the split — for the cases where a single technique fails."
+  },
+  "dpi.p.faketls": {
+    "ru": "Fake TLS (чужой SNI)",
+    "en": "Fake TLS (decoy SNI)"
+  },
+  "dpi.n.faketls": {
+    "ru": "В фейк-пакете чужое имя www.google.com: настоящее имя сайта DPI не видит.",
+    "en": "The fake packet carries the decoy name www.google.com: DPI never sees the real one."
+  },
+  "dpi.p.autottl": {
+    "ru": "Fake + авто-TTL",
+    "en": "Fake + auto TTL"
+  },
+  "dpi.n.autottl": {
+    "ru": "TTL фейк-пакета считается по числу прыжков до площадки.",
+    "en": "The fake packet TTL is computed from the number of hops to the site."
+  },
+  "dpi.p.mss": {
+    "ru": "MSS 64",
+    "en": "MSS 64"
+  },
+  "dpi.n.mss": {
+    "ru": "Система сама режет ClientHello на мелкие сегменты (TCP_MAXSEG).",
+    "en": "The system splits the ClientHello into small segments itself (TCP_MAXSEG)."
+  },
+  "dpi.p.auto": {
+    "ru": "auto",
+    "en": "auto"
+  },
+  "dpi.p.auto.note": {
+    "ru": "Подобрано кнопкой «Подобрать»: рабочая стратегия для сервиса.",
+    "en": "Found by “Auto-select”: a working strategy for the service."
+  },
+  "dpi.strategy.disorder": {
+    "ru": "disorder",
+    "en": "disorder"
+  },
+  "dpi.strategy.autottl": {
+    "ru": "fake авто-TTL",
+    "en": "fake auto TTL"
+  },
+  "dpi.strategy.decoy": {
+    "ru": " · чужой SNI {0}",
+    "en": " · decoy SNI {0}"
+  },
+  "dpi.field.splitpos": {
+    "ru": "Позиция разрыва",
+    "en": "Split position"
+  },
+  "dpi.split.sni": {
+    "ru": "середина имени (SNI)",
+    "en": "mid-name (SNI)"
+  },
+  "dpi.split.first": {
+    "ru": "1-й байт",
+    "en": "1st byte"
+  },
+  "dpi.split.second": {
+    "ru": "2-й байт",
+    "en": "2nd byte"
+  },
+  "dpi.split.midsld": {
+    "ru": "середина домена",
+    "en": "mid-domain"
+  },
+  "dpi.split.mid": {
+    "ru": "середина записи",
+    "en": "mid-record"
+  },
+  "dpi.field.snisplit": {
+    "ru": "Разрыв по SNI",
+    "en": "SNI split"
+  },
+  "dpi.field.recordsplit": {
+    "ru": "Две записи TLS",
+    "en": "Two TLS records"
+  },
+  "dpi.field.fake": {
+    "ru": "Фейк-пакет",
+    "en": "Fake packet"
+  },
+  "dpi.field.fakeValue": {
+    "ru": "TTL фейка",
+    "en": "Fake TTL"
+  },
+  "dpi.field.fakeCount": {
+    "ru": "Повторы",
+    "en": "Repeats"
+  },
+  "dpi.field.fakeAfter": {
+    "ru": "Фейк после ClientHello",
+    "en": "Fake after ClientHello"
+  },
+  "dpi.field.autottl": {
+    "ru": "Авто-TTL",
+    "en": "Auto TTL"
+  },
+  "dpi.field.fakesni": {
+    "ru": "Свой SNI в фейке",
+    "en": "Decoy SNI in fake"
+  },
+  "dpi.field.mss": {
+    "ru": "Дробление по MSS",
+    "en": "MSS clamping"
+  },
+  "dpi.field.multisplit": {
+    "ru": "Мультисплит",
+    "en": "Multisplit"
+  },
+  "dpi.field.disorder": {
+    "ru": "Обратный порядок (disorder)",
+    "en": "Reversed order (disorder)"
+  },
+  "dpi.field.splitdelay": {
+    "ru": "Пауза между частями, мс",
+    "en": "Delay between parts, ms"
+  },
+  "dpi.field.size": {
+    "ru": "Размер куска, байт",
+    "en": "Chunk size, bytes"
+  },
+  "dpi.field.mssValue": {
+    "ru": "MSS, байт",
+    "en": "MSS, bytes"
+  },
+  "dpi.log.direct": {
+    "ru": "Проверяем {0} напрямую…",
+    "en": "Checking {0} directly…"
+  },
+  "dpi.log.directResult": {
+    "ru": "Напрямую: {0}",
+    "en": "Direct: {0}"
+  },
+  "dpi.log.via": {
+    "ru": "Проверяем через обход ({0})…",
+    "en": "Checking through the bypass ({0})…"
+  },
+  "dpi.log.viaResult": {
+    "ru": "Через обход: {0}",
+    "en": "Through the bypass: {0}"
+  },
+  "dpi.log.enginePort": {
+    "ru": "Обход поднят на порту {0}.",
+    "en": "Bypass started on port {0}."
+  },
+  "dpi.log.engineFail": {
+    "ru": "Не удалось поднять обход: {0}",
+    "en": "Could not start the bypass: {0}"
+  },
+  "dpi.log.autoStart": {
+    "ru": "Подбор стратегии для {0}…",
+    "en": "Finding a strategy for {0}…"
+  },
+  "dpi.log.autoNotNeeded": {
+    "ru": "Сервис открывается напрямую — обход не нужен.",
+    "en": "The service opens directly — no bypass needed."
+  },
+  "dpi.log.autoAddressBlocked": {
+    "ru": "Провайдер не пускает до адреса: разрыв пакетов тут бессилен, поможет VPN.",
+    "en": "The provider blocks the address itself: packet splitting cannot help, use a VPN."
+  },
+  "dpi.log.autoTry": {
+    "ru": "Вариант {0} из {1}: {2}",
+    "en": "Variant {0} of {1}: {2}"
+  },
+  "dpi.log.autoHit": {
+    "ru": "Работает: {0} — найдено {1} из {2}",
+    "en": "Works: {0} — found {1} of {2}"
+  },
+  "dpi.log.autoNone": {
+    "ru": "Ни один вариант не помог.",
+    "en": "None of the variants helped."
+  },
+  "dpi.log.separator": {
+    "ru": "────────",
+    "en": "────────"
+  },
+  "dpi.log.testHeader": {
+    "ru": "Тест сервиса {0}",
+    "en": "Testing service {0}"
+  },
+  "dpi.log.autoHeader": {
+    "ru": "Подбор стратегии для {0}",
+    "en": "Finding a strategy for {0}"
+  },
+  "dpi.log.cancelled": {
+    "ru": "Проверка прервана.",
+    "en": "The check was cancelled."
+  },
+  "dpi.log.error": {
+    "ru": "Ошибка: ",
+    "en": "Error: "
+  },
+  "dpi.test.noDomain": {
+    "ru": "Не указан домен сервиса.",
+    "en": "The service domain is empty."
+  },
+  "dpi.test.directOk": {
+    "ru": "Сервис отвечает напрямую: {0} мс. Обход не нужен.",
+    "en": "The service answers directly: {0} ms. No bypass needed."
+  },
+  "dpi.test.directOkShort": {
+    "ru": "доступен напрямую",
+    "en": "available directly"
+  },
+  "dpi.test.addressBlocked": {
+    "ru": "Провайдер не пускает до адреса — поможет VPN, а не разрыв пакетов.",
+    "en": "The provider blocks the address itself — a VPN is needed, not packet splitting."
+  },
+  "dpi.test.engineFailed": {
+    "ru": "Не удалось поднять обход для проверки.",
+    "en": "Could not start the bypass for the check."
+  },
+  "dpi.test.bypassOk": {
+    "ru": "Сервис отвечает через обход: {0} мс.",
+    "en": "The service answers through the bypass: {0} ms."
+  },
+  "dpi.test.bypassFail": {
+    "ru": "Через обход ответа нет: {0}",
+    "en": "No answer through the bypass: {0}"
+  },
+  "dpi.test.autoHit": {
+    "ru": "Подобрана стратегия: {0}",
+    "en": "Strategy found: {0}"
+  },
+  "dpi.test.autoNone": {
+    "ru": "Ни один вариант не открыл поток. Смотрите журнал: «сервер молчит после ClientHello» — режут по содержимому, «сбрасывает соединение» — рвут поток, «TCP не поднимается» — режут по адресу (нужен VPN).",
+    "en": "No variant opened the flow. Check the log: \"server silent after ClientHello\" means content-based blocking, \"resets the connection\" means the flow is cut, \"TCP does not connect\" means address-based blocking (a VPN is needed)."
+  },
+  "dpi.test.cancelled": {
+    "ru": "Проверка отменена.",
+    "en": "The check was cancelled."
+  },
+  "dpi.auto.current": {
+    "ru": "текущие настройки сервиса",
+    "en": "current service settings"
+  },
+  "dpi.profile.renameBtn": {
+    "ru": "Переименовать",
+    "en": "Rename"
+  },
+  "dpi.profile.exportBtn": {
+    "ru": "Экспорт в файл",
+    "en": "Export to file"
+  },
+  "dpi.profile.importBtn": {
+    "ru": "Импорт",
+    "en": "Import"
+  },
+  "dpi.log.servicesChanged": {
+    "ru": "Раздел «DPI»: сервисов {0} — наборы приёмов применятся к новым соединениям.",
+    "en": "DPI section: {0} services — the new techniques apply to new connections."
+  },
+  "dpi.profile.saveBtn": {
+    "ru": "В профиль",
+    "en": "To profile"
+  },
+  "dpi.profile.saved": {
+    "ru": "Настройки записаны в профиль «{0}».",
+    "en": "Settings saved to profile “{0}”."
+  },
+  "dpi.pingOne": {
+    "ru": "Измерить пинг ещё раз",
+    "en": "Measure the ping again"
+  },
+  "dpi.iconPending": {
+    "ru": "Скачиваем значок…",
+    "en": "Downloading the icon…"
+  },
+  "dpi.disabled": {
+    "ru": "выключен",
+    "en": "off"
+  },
+  "dpi.diag.title": {
+    "ru": "Сервисы DPI ({0}): ",
+    "en": "DPI services ({0}): "
+  },
+  "dpi.diag.line": {
+    "ru": "{0} [{1}] — {2}",
+    "en": "{0} [{1}] — {2}"
+  },
+  "dpi.servicesCount": {
+    "ru": "сервисов: {0}",
+    "en": "services: {0}"
+  },
+  "dpi.admin.title": {
+    "ru": "Нужны права администратора",
+    "en": "Administrator rights required"
+  },
+  "dpi.admin.hint": {
+    "ru": "Windows даёт обычной программе только разрыв, disorder и мультисплит. Фейк-пакет в том же потоке и seqovl требуют raw-сокета, а он доступен лишь с правами администратора — без них YouTube и Discord вряд ли откроются.",
+    "en": "Windows only allows splitting, disorder and multisplit to a regular program. An in-flow fake packet and seqovl need a raw socket, which requires administrator rights — without them YouTube and Discord are unlikely to open."
+  },
+  "dpi.admin.restart": {
+    "ru": "Перезапустить",
+    "en": "Restart"
+  },
+  "dpi.admin.elevated": {
+    "ru": "инъекция пакетов: права администратора есть",
+    "en": "packet injection: running as administrator"
+  },
+  "dpi.admin.raw": {
+    "ru": "инъекция пакетов: доступна",
+    "en": "packet injection: available"
+  },
+  "dpi.admin.none": {
+    "ru": "инъекция пакетов: недоступна (нужны права администратора)",
+    "en": "packet injection: unavailable (administrator rights required)"
+  },
+  "dpi.admin.restarting": {
+    "ru": "Перезапускаем с правами администратора…",
+    "en": "Restarting as administrator…"
+  },
+  "dpi.admin.restartFailed": {
+    "ru": "Не удалось запросить права администратора",
+    "en": "Could not request administrator rights"
+  },
+  "dpi.diag.injection": {
+    "ru": "Инъекция пакетов: {0}",
+    "en": "Packet injection: {0}"
+  },
+  "dpi.log.rawReady": {
+    "ru": "Инъекция сегментов доступна: фейк уходит в тот же поток, что и настоящий ClientHello.",
+    "en": "Segment injection available: the fake goes into the same flow as the real ClientHello."
+  },
+  "dpi.log.rawMissing": {
+    "ru": "Прав администратора нет: инъекция сегментов недоступна, работают разрыв, disorder и мультисплит.",
+    "en": "No administrator rights: segment injection unavailable, splitting, disorder and multisplit still work."
+  },
+  "dpi.log.fakeInject": {
+    "ru": "Фейк в потоке: {0} байт, TTL {1}, обманка {2}, повторов {3}, место — {4}",
+    "en": "Fake in flow: {0} bytes, TTL {1}, fooling {2}, repeats {3}, placement — {4}"
+  },
+  "dpi.log.fakeNoInjection": {
+    "ru": "Фейк не отправлен: нужны права администратора (raw-сокет).",
+    "en": "Fake not sent: administrator rights are required (raw socket)."
+  },
+  "dpi.log.fakeFailed": {
+    "ru": "Фейк не ушёл: система отклонила отправку сегмента.",
+    "en": "Fake not sent: the system rejected the segment."
+  },
+  "dpi.log.strategyTry": {
+    "ru": "Стратегия {0} из {1}: {2}",
+    "en": "Strategy {0} of {1}: {2}"
+  },
+  "dpi.log.strategySilent": {
+    "ru": "{0}: сервер молчит после ClientHello — пробуем следующую стратегию",
+    "en": "{0}: server is silent after ClientHello — trying the next strategy"
+  },
+  "dpi.log.strategyReset": {
+    "ru": "{0}: сервер сбросил соединение — пробуем следующую стратегию",
+    "en": "{0}: server reset the connection — trying the next strategy"
+  },
+  "dpi.log.strategyFail": {
+    "ru": "{0}: соединение не поднялось — {1}",
+    "en": "{0}: connection failed — {1}"
+  },
+  "dpi.log.allSilent": {
+    "ru": "Ни одна стратегия ({1}) не открыла {0}: TCP доходит, но сервер молчит после ClientHello — режут по содержимому.",
+    "en": "None of the {1} strategies opened {0}: TCP connects, but the server stays silent after ClientHello — content-based blocking."
+  },
+  "dpi.log.allReset": {
+    "ru": "Ни одна стратегия ({1}) не открыла {0}: сервер сбрасывает соединение.",
+    "en": "None of the {1} strategies opened {0}: the server resets the connection."
+  },
+  "dpi.log.allFailed": {
+    "ru": "Ни одна стратегия ({1}) не открыла {0}.",
+    "en": "None of the {1} strategies opened {0}."
+  },
+  "dpi.log.autoSaved": {
+    "ru": "{0}: {1} ({2} мс)",
+    "en": "{0}: {1} ({2} ms)"
+  },
+  "dpi.log.autoKept": {
+    "ru": "Наборов с прошлого подбора оставлено запасными: {0}",
+    "en": "Kept as fallbacks from the previous run: {0}"
+  },
+  "dpi.log.autoFound": {
+    "ru": "Рабочих стратегий: {0} из {1}. Самая быстрая станет основной, остальные — запасными.",
+    "en": "Working strategies: {0} of {1}. The fastest becomes the main one, the rest are fallbacks."
+  },
+  "dpi.test.autoMany": {
+    "ru": "Рабочих стратегий: {0}, основная — {1}",
+    "en": "Working strategies: {0}, main — {1}"
+  },
+  "dpi.test.autoFew": {
+    "ru": "Рабочих стратегий: {0} из {1} — стоит запустить подбор ещё раз. Основная — {2}",
+    "en": "Working strategies: {0} of {1} — run the search again later. Main — {2}"
+  },
+  "dpi.test.autoSilent": {
+    "ru": "{0}: ни одна стратегия не открыла поток — сервер молчит после ClientHello (блокировка по содержимому)",
+    "en": "{0}: no strategy opened the flow — server is silent after ClientHello (content-based blocking)"
+  },
+  "dpi.test.autoReset": {
+    "ru": "Ни одна стратегия не открыла поток: сервер сбрасывает соединение.",
+    "en": "No strategy opened the flow: the server resets the connection."
+  },
+  "dpi.strategy.oob": {
+    "ru": "срочные данные (oob)",
+    "en": "urgent data (oob)"
+  },
+  "dpi.strategy.noinject": {
+    "ru": " без инъекции",
+    "en": " without injection"
+  },
+  "dpi.strategy.failover": {
+    "ru": "перебор {0} стратегий",
+    "en": "failover {0} strategies"
+  },
+  "dpi.fool.none": {
+    "ru": "без обманки",
+    "en": "no fooling"
+  },
+  "dpi.place.overlap": {
+    "ru": "на месте запроса",
+    "en": "at the request"
+  },
+  "dpi.place.ahead": {
+    "ru": "перед запросом (seqovl)",
+    "en": "before the request (seqovl)"
+  },
+  "dpi.field.oob": {
+    "ru": "Срочные данные (oob)",
+    "en": "Urgent data (oob)"
+  },
+  "dpi.field.oobTip": {
+    "ru": "Первый байт уходит как urgent: DPI видит запрос «с дыркой». Приём экспериментальный — его проверяет подбор.",
+    "en": "The first byte goes out as urgent: the DPI sees a request with a hole. Experimental — verify it with the search."
+  },
+  "dpi.field.disorderTip": {
+    "ru": "Начало запроса уходит с TTL=1 и до DPI не доходит: ядро пересылает его следом, и DPI собирает запрос не по порядку.",
+    "en": "The start of the request leaves with TTL=1 and never reaches the DPI: the kernel retransmits it later, so the DPI reassembles the request out of order."
+  },
+  "dpi.field.fooling": {
+    "ru": "Обманка фейка",
+    "en": "Fake fooling"
+  },
+  "dpi.field.foolingTip": {
+    "ru": "Чем испортить фейк, чтобы сервер его выбросил, а DPI разобрал: TTL (до сервера не доходит), битая контрольная сумма, сдвинутый номер последовательности.",
+    "en": "How to spoil the fake so the server drops it while the DPI still parses it: TTL (never reaches the server), bad checksum, shifted sequence number."
+  },
+  "dpi.field.placement": {
+    "ru": "Место фейка",
+    "en": "Fake placement"
+  },
+  "dpi.field.placementTip": {
+    "ru": "«На месте запроса» — фейк занимает те же байты, что настоящий ClientHello; «перед запросом» — раньше него (seqovl у zapret).",
+    "en": "\"At the request\" — the fake occupies the same bytes as the real ClientHello; \"before the request\" — earlier than it (seqovl in zapret)."
+  },
+  "dpi.field.inject": {
+    "ru": "Фейк в том же потоке (нужны права администратора)",
+    "en": "Fake in the same flow (needs administrator rights)"
+  },
+  "dpi.field.injectTip": {
+    "ru": "Сегмент собирается вручную и отправляется raw-сокетом — только так фейк попадает в поток, который видит DPI. Без прав фейк не отправляется.",
+    "en": "The segment is assembled by hand and sent over a raw socket — that is the only way the fake gets into the flow the DPI sees. Without the rights no fake is sent."
+  },
+  "dpi.field.failover": {
+    "ru": "Перебор стратегий",
+    "en": "Strategy failover"
+  },
+  "dpi.field.failoverWait": {
+    "ru": "Ожидание ответа, мс",
+    "en": "Response wait, ms"
+  },
+  "dpi.field.failoverTip": {
+    "ru": "Сколько стратегий сервиса пробовать на одно соединение, если сервер молчит, и сколько ждать ответа перед следующей попыткой.",
+    "en": "How many strategies to try per connection while the server is silent, and how long to wait before the next attempt."
+  },
+  "dpi.fool.ttl": {
+    "ru": "TTL (до DPI доходит)",
+    "en": "TTL (reaches the DPI)"
+  },
+  "dpi.fool.badsum": {
+    "ru": "Битая сумма",
+    "en": "Bad checksum"
+  },
+  "dpi.fool.badseq": {
+    "ru": "Сдвинутый seq",
+    "en": "Shifted seq"
+  },
+  "dpi.fool.noack": {
+    "ru": "Без ACK",
+    "en": "No ACK"
+  },
+  "dpi.fool.tltsum": {
+    "ru": "TTL + битая сумма",
+    "en": "TTL + bad checksum"
+  },
+  "dpi.p.fakebadsum": {
+    "ru": "Fake + битая сумма",
+    "en": "Fake + bad checksum"
+  },
+  "dpi.n.fakebadsum": {
+    "ru": "У фейка портится контрольная сумма: сервер сегмент выбрасывает, а DPI разбирает содержимое.",
+    "en": "The fake gets a broken checksum: the server drops the segment while the DPI still parses the content."
+  },
+  "dpi.p.seqovl": {
+    "ru": "Fake перед запросом (seqovl)",
+    "en": "Fake before request (seqovl)"
+  },
+  "dpi.n.seqovl": {
+    "ru": "Фейк занимает байты раньше настоящего ClientHello — сборка потока у DPI сбивается.",
+    "en": "The fake occupies bytes before the real ClientHello, so the DPI's stream reassembly gets confused."
+  },
+  "dpi.p.tlsrec": {
+    "ru": "Две записи TLS",
+    "en": "Two TLS records"
+  },
+  "dpi.n.tlsrec": {
+    "ru": "ClientHello переупаковывается в две записи TLS: DPI, собирающий запись по длине, видит неполные.",
+    "en": "The ClientHello is repacked into two TLS records: a DPI that reassembles by record length sees incomplete ones."
+  },
+  "dpi.p.oob": {
+    "ru": "Срочные данные (oob)",
+    "en": "Urgent data (oob)"
+  },
+  "dpi.n.oob": {
+    "ru": "Первый байт уходит как urgent — часть DPI такой запрос не разбирает.",
+    "en": "The first byte is sent as urgent — some DPI implementations cannot parse such a request."
+  },
+  "dpi.log.singleSilent": {
+    "ru": "{0}: ответа нет за {1} мс — соединение оставлено открытым. Похоже на блокировку по содержимому: нажмите «Подобрать» в окне сервиса.",
+    "en": "{0}: no response within {1} ms — the connection is left open. This looks like content-based blocking: run the search in the service window."
+  },
+  "dpi.log.tunnelClosed": {
+    "ru": "Туннель клиенту уже открыт, поэтому закрываем соединение — клиент повторит запрос; причину смотрите строкой выше.",
+    "en": "The tunnel is already open to the client, so the connection is closed — the client will retry; see the reason above."
+  },
+  "dpi.log.dohAuto": {
+    "ru": "Адреса сайтов движок спрашивает через DoH (как советует zapret): системный DNS провайдера часто отдаёт подставной адрес, и тогда обход не помогает ни одним приёмом.",
+    "en": "The engine resolves site addresses over DoH (as zapret advises): the provider's DNS often returns a substituted address, and then no bypass technique helps."
+  },
+  "dpi.log.resolve": {
+    "ru": "адрес {0}: {1} ({2})",
+    "en": "address {0}: {1} ({2})"
+  },
+  "dpi.log.repeats": {
+    "ru": " — таких же записей пропущено: {0}",
+    "en": " — same entries skipped: {0}"
+  },
+  "dpi.log.autoCount": {
+    "ru": "перебираем {0} вариантов, ищем {1} рабочих",
+    "en": "trying {0} variants, looking for {1} working ones"
+  },
+  "dpi.log.dnsSystem": {
+    "ru": "системный DNS для {0}: {1}",
+    "en": "system DNS for {0}: {1}"
+  },
+  "dpi.log.dnsDoh": {
+    "ru": "DoH отвечает: {0}",
+    "en": "DoH answers: {0}"
+  },
+  "dpi.log.dnsNoDoh": {
+    "ru": "DoH недоступен ({0}) — проверка адреса не удалась",
+    "en": "DoH is not reachable ({0}) — the address check failed"
+  },
+  "dpi.log.dnsFail": {
+    "ru": "проверка DNS не удалась: {0}",
+    "en": "the DNS check failed: {0}"
+  },
+  "dpi.log.dnsPoison": {
+    "ru": "{0}: адреса не совпадают — системный DNS отдаёт {1}, DoH — {2}. Похоже на подмену адреса: соединение «есть», а на ClientHello никто не отвечает. Включите DNS обхода (DoH) в «Настройках» → «Обход DPI».",
+    "en": "{0}: the addresses differ — system DNS returns {1}, DoH returns {2}. This looks like address tampering: the connection “succeeds”, but nothing answers the ClientHello. Turn on bypass DNS (DoH) in “Settings” → “DPI bypass”."
+  },
+  "dpi.test.bypassPoison": {
+    "ru": "Через обход ответа нет: {0} Похоже, провайдер подменяет DNS — включите DNS обхода (DoH).",
+    "en": "No answer through the bypass: {0} The provider seems to substitute DNS — turn on bypass DNS (DoH)."
+  },
+  "dpi.test.autoPoison": {
+    "ru": "Рабочий вариант для {0} не нашёлся. Адреса от системного DNS и от DoH не совпадают — похоже на подмену адреса провайдером: включите DNS обхода (DoH) и подберите заново.",
+    "en": "No working option was found for {0}. The system DNS and DoH addresses differ — the address looks tampered with by the provider: turn on bypass DNS (DoH) and search again."
+  },
+  "dpi.log.fakeNoSeq": {
+    "ru": "Слежение за потоком не увидело SYN/ACK (принято {0}, из них IPv4/TCP {1}, наших {2}, режим: {3}): номера последовательности неизвестны, поэтому фейки уходят «слепыми».",
+    "en": "The flow sniffer did not see the SYN/ACK (received {0}, IPv4/TCP {1}, matching {2}, mode: {3}): the sequence numbers are unknown, so fakes are sent blind."
+  },
+  "dpi.admin.rawNoSeq": {
+    "ru": "Приёмы с фейк-пакетом включены, но слежение за потоком ещё не увидело SYN/ACK: фейк уходит «слепым» — со случайным номером последовательности и обманками badsum/noack. Проверьте, не перехватывает ли пакеты антивирус или другой обход.",
+    "en": "Fake-packet techniques are on, but the flow tracker has not seen a SYN/ACK yet: the fake goes out blind, with a random sequence number and the badsum/noack decoys. Check whether an antivirus or another bypass is capturing packets."
+  },
+  "dpi.log.fakeBlind": {
+    "ru": "Фейк отправлен без номеров последовательности: {0} байт, TTL {1}, повторов {2}, обманки {3}. DPI разберёт содержимое такого сегмента, а сервер его выбросит — случайный номер вне окна приёма, а badsum и noack закрывают остальные случаи.",
+    "en": "The fake was sent without sequence numbers: {0} bytes, TTL {1}, repeats {2}, fooling {3}. A DPI still parses the payload of such a segment, while the server drops it — the random sequence number is outside the receive window, and badsum plus noack cover the rest."
+  },
+  "dpi.log.strategyLate": {
+    "ru": "{0}: ответа нет за {1} мс — ждём ещё столько же, потому что начало ClientHello могло дойти до сервера только повторной передачей.",
+    "en": "{0}: no answer within {1} ms — waiting one more window, because the beginning of the ClientHello may reach the server only on a retransmission."
+  },
+  "dpi.log.strategyGeneral": {
+    "ru": "Последняя попытка — набор «Общих» из раздела «DPI»: {0}",
+    "en": "Last attempt — the “General” set from the DPI section: {0}"
+  },
+  "dpi.log.autoQuic": {
+    "ru": "Если сайт при этом открывается в браузере, а подбор ничего не нашёл, браузер идёт мимо движка — чаще всего по QUIC (UDP/443). Отключите QUIC в браузере (chrome://flags → Experimental QUIC protocol) и повторите подбор: так видно, работает ли сам обход. Discord голосом и видео тоже идёт по UDP — этот путь движок не перехватывает.",
+    "en": "If the site still opens in the browser while the search found nothing, the browser bypasses the engine — most often over QUIC (UDP/443). Turn QUIC off in the browser (chrome://flags → Experimental QUIC protocol) and search again: that shows whether the bypass itself works. Discord voice and video also use UDP — the engine does not intercept that path."
+  },
+  "dpi.auto.general": {
+    "ru": "общий набор из «Настроек» → «Обход DPI»",
+    "en": "common set from Settings → DPI bypass"
+  },
+  "dpi.hello.eof": {
+    "ru": "сервер закрыл соединение, не ответив на ClientHello",
+    "en": "the server closed the connection without answering the ClientHello"
+  },
+  "dpi.hello.serverHello": {
+    "ru": "ServerHello",
+    "en": "ServerHello"
+  },
+  "dpi.log.helloOk": {
+    "ru": "Контрольный сайт принимает наш браузерный ClientHello: варианты проверяем им — так замер ближе к браузеру и быстрее полного рукопожатия.",
+    "en": "The control site accepts our browser-like ClientHello: variants are measured with it — closer to a browser and faster than a full handshake."
+  },
+  "dpi.log.helloFail": {
+    "ru": "Наш ClientHello контрольный сайт не принял ({0}) — варианты проверяем полным рукопожатием.",
+    "en": "The control site did not accept our ClientHello ({0}) — variants are measured with a full handshake."
+  },
+  "dpi.log.noAttempts": {
+    "ru": "все попытки стратегии исчерпаны",
+    "en": "all attempts of the strategy are exhausted"
+  },
+  "dpi.log.strategyRetry": {
+    "ru": "{0}: поток не открылся — повторяем ту же стратегию (попытка {1}, ждём {2} мс). ТСПУ часто рвёт или глушит именно первую попытку, а браузер такие обрывы переживает только потому, что повторяет сам.",
+    "en": "{0}: the flow did not open — retrying the same strategy (attempt {1}, waiting {2} ms). Traffic filtering often resets or silences exactly the first attempt, and a browser survives such resets only because it retries itself."
+  },
+  "dpi.log.autoRetry": {
+    "ru": "Вторая волна: повторяем варианты, у которых TCP доходил до площадки, но ответа не было ({0} шт.) — у них есть шанс пройти со второй попытки.",
+    "en": "Second wave: retrying variants where TCP reached the site but no answer came ({0} of them) — they have a chance to pass on a second attempt."
+  },
+  "dpi.log.autoRetryTry": {
+    "ru": "Повтор варианта: {0}",
+    "en": "Retrying variant: {0}"
+  },
+  "dpi.window.related": {
+    "ru": "Содержимое этого сервиса приходит и с других доменов: {0}. Без них страница открывается, а картинки, видео и вложения — нет.",
+    "en": "This service also serves content from other domains: {0}. Without them the page opens, but images, video and attachments do not."
+  },
+  "dpi.window.relatedAdd": {
+    "ru": "Добавить",
+    "en": "Add"
+  },
+  "dpi.log.relatedAdded": {
+    "ru": "в домены сервиса добавлено: {0} — теперь обход применяется и к картинкам, и к вложениям",
+    "en": "added to the service domains: {0} — the bypass now covers images and attachments too"
+  },
+  "dpi.domainsMore": {
+    "ru": "{0} и ещё доменов: {1}",
+    "en": "{0} and {1} more domains"
+  },
+  "dpi.log.contentCheck": {
+    "ru": "проверяю и служебный домен {0}: с него приходят картинки и вложения",
+    "en": "also checking the service domain {0}: images and attachments come from it"
+  },
+  "dpi.log.contentOk": {
+    "ru": "{0} открывается той же стратегией — картинки и вложения будут работать",
+    "en": "{0} opens with the same strategy — images and attachments will work"
+  },
+  "dpi.log.contentFail": {
+    "ru": "{0}: {1} — стратегия открывает только главную страницу, беру следующую",
+    "en": "{0}: {1} — the strategy opens only the main page, trying the next one"
+  },
+  "dpi.log.autoPartial": {
+    "ru": "служебный домен не открылся ни у одного варианта — сохраняю {0} из тех, что открывают главную страницу",
+    "en": "no option opened the content domain — saving {0} of those that open the main page"
+  },
+  "dpi.test.autoPartial": {
+    "ru": "Сохранено {0} вариантов: главная страница открывается, а содержимое с {1} — нет. Чаще всего так выглядит блокировка по адресу: в этом случае поможет другой размер фрагмента.",
+    "en": "{0} options saved: the main page opens, but content from {1} does not. This usually means an address-level block: a different fragment size may help."
+  },
+  "dpi.general": {
+    "ru": "Общие",
+    "en": "General"
+  },
+  "dpi.generalScope": {
+    "ru": "весь трафик",
+    "en": "all traffic"
+  },
+  "dpi.generalOff": {
+    "ru": "выключены — приёмы применяются только к сервисам ниже",
+    "en": "off — techniques apply only to the services below"
+  },
+  "dpi.generalOnHint": {
+    "ru": "Включены: приёмы применяются ко всему трафику, как раньше. Выключите — обход будет работать только для сервисов ниже.",
+    "en": "On: the techniques apply to all traffic, as before. Turn off to bypass only the services below."
+  },
+  "dpi.generalOffHint": {
+    "ru": "Выключены: приёмы применяются только к доменам сервисов ниже, остальной трафик идёт как есть.",
+    "en": "Off: techniques apply only to the domains of the services below; other traffic goes as is."
+  },
+  "dpi.generalEdit": {
+    "ru": "Настройки «Общих»",
+    "en": "General settings"
+  },
+  "dpi.generalSaved": {
+    "ru": "Настройки «Общих» сохранены — обход перезапущен с новым набором",
+    "en": "General settings saved — the bypass restarted with the new set"
+  },
+  "dpi.window.generalTitle": {
+    "ru": "Общие — набор приёмов для всего трафика",
+    "en": "General — techniques for all traffic"
+  },
+  "dpi.window.generalHint": {
+    "ru": "Это не сервис, а общий набор: домены ему не нужны, приёмы применяются ко всему трафику, пока включён переключатель «Общие». Переименовать его нельзя. Здесь же живут транспортные поля и DNS — раньше они были в «Настройках» → «Обход DPI».",
+    "en": "This is not a service but the general set: it needs no domains — its techniques apply to all traffic while the “General” switch is on, and it cannot be renamed. Transport fields and DNS live here too — they used to be in Settings → DPI bypass."
+  },
+  "dpi.window.transport": {
+    "ru": "Транспорт",
+    "en": "Transport"
+  },
+  "dpi.window.exit": {
+    "ru": "Куда идти после обхода",
+    "en": "Where to go after the bypass"
+  },
+  "dpi.window.transportHint": {
+    "ru": "Порт — локальный прокси обхода, на него указывает «Системный прокси» (тогда весь трафик системы идёт через обход). «Куда идти после обхода» — напрямую к сайту или в локальный вход активного профиля. Правки применяются сразу: обход перезапускается.",
+    "en": "The port is the local bypass proxy; “System proxy” points there (then all system traffic goes through the bypass). “Where to go after the bypass” — directly to the site or into the local inbound of the active profile. Edits apply immediately: the bypass restarts."
+  },
+  "dpi.window.dns": {
+    "ru": "DNS сервера",
+    "en": "DNS servers"
+  },
+  "dpi.window.dnsPick": {
+    "ru": "Выбрать…",
+    "en": "Choose…"
+  },
+  "dpi.window.dnsClear": {
+    "ru": "Убрать",
+    "en": "Clear"
+  },
+  "dpi.window.dnsHint": {
+    "ru": "Каким сервером спрашивать адреса доменов: выбранный DNS берётся из того же списка, что в разделе «DNS», — там же, где DNS для домена и приложения. Провайдерский DNS часто подменяет адрес заблокированного сайта, и тогда любой приём обхода бесполезен.",
+    "en": "Which server resolves the service domains: the DNS comes from the same list as in the DNS section, where domains and apps choose theirs. Provider DNS often substitutes addresses of blocked sites, which makes any bypass technique useless."
+  },
+  "dpi.dns.none": {
+    "ru": "не выбран — адреса берутся как у обхода в целом",
+    "en": "not chosen — addresses come from the general bypass settings"
+  },
+  "dpi.dns.chosen": {
+    "ru": "выбран: {0}",
+    "en": "chosen: {0}"
+  },
+  "dpi.dns.pickHint": {
+    "ru": "Откроется раздел «DNS»: нажмите на сервер, и раздел вернёт вас сюда.",
+    "en": "The DNS section will open: click a server and it returns you here."
+  },
+  "dpi.dns.picked": {
+    "ru": "DNS для «{0}»: {1} — движок обхода будет спрашивать адреса у него",
+    "en": "DNS for “{0}”: {1} — the bypass engine will resolve addresses through it"
+  },
+  "dpi.dns.serverSource": {
+    "ru": "DNS {0}",
+    "en": "DNS {0}"
+  },
+  "dpi.dns.fellBack": {
+    "ru": "системный DNS — выбранный сервер {0} не ответил",
+    "en": "system DNS — the chosen server {0} did not answer"
+  },
+  "dpi.dns.system": {
+    "ru": "Системный",
+    "en": "System"
+  },
+  "dpi.dns.proxy": {
+    "ru": "Через Proxy",
+    "en": "Via Proxy"
+  },
+  "dpi.nounService": {
+    "ru": "сервис",
+    "en": "service"
+  },
+  "dpi.noName": {
+    "ru": "сервис без имени",
+    "en": "unnamed service"
+  },
+  "dpi.log.route": {
+    "ru": "{0}: {1}",
+    "en": "{0}: {1}"
+  },
+  "dpi.route.service": {
+    "ru": "набор сервиса «{0}»",
+    "en": "service set “{0}”"
+  },
+  "dpi.route.general": {
+    "ru": "«Общие» — набор применяется ко всему трафику",
+    "en": "“General” — the set applies to all traffic"
+  },
+  "dpi.route.none": {
+    "ru": "своего сервиса нет, «Общие» выключены — трафик идёт как есть",
+    "en": "no matching service and “General” is off — traffic goes as is"
+  },
+  "dpi.disabledHint": {
+    "ru": "Выключен: к доменам сервиса применяется набор «Общих».",
+    "en": "Off: the “General” set applies to the domains of the service."
+  },
+  "S1000": {
+    "ru": "Обход включён",
+    "en": "Bypass on"
+  }
+}

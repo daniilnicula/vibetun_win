@@ -52,11 +52,11 @@ public partial class MainWindow : Window
         _dialogs = new DialogService(this);
         _panelMenu = new NavSectionMenu<PanelEntry>(PanelMenu, () => App.Settings.Current.Panels,
             name => new PanelEntry { Name = name }, OpenPanelEntry, OnPanelEntryDeleted,
-            () => App.Settings.SaveSoon(), _dialogs, "Панель", "Добавить панель");
+            () => App.Settings.SaveSoon(), _dialogs, L.T("S0922"), L.T("S0923"));
         _sshMenu = new NavSectionMenu<SshEntry>(SshMenu, () => App.Settings.Current.SshItems,
             name => new SshEntry { Name = name }, OpenSshEntry, OnSshEntryDeleted,
-            () => App.Settings.SaveSoon(), _dialogs, "SSH", "Добавить подключение",
-            OnSshEntryConfigure, "Логин и пароль");
+            () => App.Settings.SaveSoon(), _dialogs, "SSH", L.T("S0924"),
+            OnSshEntryConfigure, L.T("S0925"));
 
         // раскрытые списки остаются раскрытыми и после перезапуска
         if (App.Settings.Current.NavPanelsExpanded)
@@ -73,8 +73,10 @@ public partial class MainWindow : Window
         // страницы листаются в сторону пункта: вниз — если пункт ниже прежнего в списке навигации
         MainPages.PositionOf = NavPositionOf;
 
-        // подсветка выбранной вкладки переезжает между пунктами; разделы «Панели»/«SSH» сами не подсвечиваются
+        // Общая подсветка переезжает между вкладками и вложенными строками панелей/SSH.
         _navMarker = new SlideMarker(NavHost, NavMarker, ActiveNavItem, _ => "AccentSoft");
+        if (_panelMenu is not null) _panelMenu.EntrySelectionChanged += SyncMenuSelection;
+        if (_sshMenu is not null) _sshMenu.EntrySelectionChanged += SyncMenuSelection;
         NavList.SelectionChanged += (_, _) => _navMarker?.Sync(!_navDragging);
         NavList.LayoutUpdated += (_, _) => _navMarker?.Sync(false);
         Motion.AttachHoverPress(PanelHeader);
@@ -93,17 +95,32 @@ public partial class MainWindow : Window
         return -1;
     }
 
-    /// <summary>Пункт, который подсвечивается: выбранная вкладка, но не сами разделы «Панели»/«SSH».</summary>
+    /// <summary>Активный пункт навигации или выбранная строка внутри раздела «Панели»/«SSH».</summary>
     private FrameworkElement? ActiveNavItem()
     {
-        if (NavList.SelectedItem is not ListBoxItem { Tag: string tag } item) return null;
-        return tag is "panel" or "ssh" ? null : item;
+        var tag = _vm?.ActiveTab ?? (NavList.SelectedValue as string);
+        return tag switch
+        {
+            "panel" => _panelMenu?.SelectedElement,
+            "ssh" => _sshMenu?.SelectedElement,
+            _ => NavList.Items.OfType<ListBoxItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag as string, tag, StringComparison.Ordinal))
+        };
+    }
+
+    private void OnLanguageChanged()
+    {
+        _panelMenu?.Rebuild();
+        _sshMenu?.Rebuild();
+        SyncMenuSelection();
     }
 
     public async Task InitializeAsync()
     {
         _vm = new MainViewModel(new DialogService(this));
         DataContext = _vm;
+        L.Changed += OnLanguageChanged;
+        Closed += (_, _) => L.Changed -= OnLanguageChanged;
 
         // одиночный клик по иконке в трее — мини-панель у иконки (двойной — окно, см. TrayService)
         _trayPanel = new TrayPanelWindow { DataContext = _vm };
@@ -484,8 +501,8 @@ public partial class MainWindow : Window
     {
         App.Settings.Current.SelectedPanelId = entry.Id;
         App.Settings.SaveSoon();
-        if (_vm is not null) _vm.ActiveTab = "panel";
         PanelTab.ShowEntry(entry);
+        if (_vm is not null) _vm.ActiveTab = "panel";
     }
 
     /// <summary>Клик по подключению в списке: показать его терминал и перейти на вкладку «SSH».</summary>
@@ -493,8 +510,8 @@ public partial class MainWindow : Window
     {
         App.Settings.Current.SelectedSshId = entry.Id;
         App.Settings.SaveSoon();
-        if (_vm is not null) _vm.ActiveTab = "ssh";
         SshTab.ShowEntry(entry);
+        if (_vm is not null) _vm.ActiveTab = "ssh";
     }
 
     private void OnPanelEntryDeleted(PanelEntry entry)
@@ -538,11 +555,13 @@ public partial class MainWindow : Window
         SyncMenuSelection();
     }
 
-    /// <summary>Подсветка записей в списках «Панели»/«SSH» — строго по тому, что реально открыто.</summary>
+    /// <summary>Подсветка записей только в активном разделе; общая плашка переезжает к выбранной строке.</summary>
     private void SyncMenuSelection()
     {
-        _panelMenu?.Rebuild(PanelTab.Current?.Id);
-        _sshMenu?.Rebuild(SshTab.Current?.Id);
+        var activeTab = _vm?.ActiveTab;
+        _panelMenu?.Select(activeTab == "panel" ? PanelTab.Current?.Id : null);
+        _sshMenu?.Select(activeTab == "ssh" ? SshTab.Current?.Id : null);
+        _navMarker?.Sync(true);
     }
 
     private void OnMaximizeClick(object sender, RoutedEventArgs e)
@@ -730,19 +749,19 @@ public partial class MainWindow : Window
     /// <summary>Удалить сохранённые входы панелей (куки-профиль WebView2: логины, сессии, кэш сайтов).</summary>
     public async Task ClearPanelLoginsAsync()
     {
-        var confirmed = _dialogs?.Confirm("Удалить логины и пароли",
-            "Будут удалены все сохранённые входы панелей — куки и данные сайтов встроенного браузера. " +
-            "Сами панели и их адреса останутся. Продолжить?",
-            okText: "Удалить", danger: true) == true;
+        var confirmed = _dialogs?.Confirm(L.T("S0249"),
+            L.T("S0926") +
+            L.T("S0927"),
+            okText: L.T("S0083"), danger: true) == true;
         if (!confirmed) return;
 
         PanelTab?.UnloadAll();
         await Task.Delay(500);   // даём процессу WebView2 освободить папку профиля
         var deleted = await PanelPage.ClearStoredLoginsAsync();
-        _dialogs?.Info("Логины и пароли",
+        _dialogs?.Info(L.T("S0928"),
             deleted
-                ? "Сохранённые входы удалены. При следующем открытии сайтов панелей нужно будет войти заново."
-                : "Папка профиля сейчас занята — очистка выполнится автоматически при следующем запуске приложения.");
+                ? L.T("S0929")
+                : L.T("S0930"));
     }
 
     private void HideToTray()
@@ -755,8 +774,8 @@ public partial class MainWindow : Window
         {
             App.Settings.Current.TrayHintShown = true;
             App.Settings.SaveSoon();
-            _vm?.Tray.ShowHint("VibeTun", "Приложение свёрнуто в трей: клик по иконке — быстрая панель, " +
-                                              "двойной клик — окно, правая кнопка — «Закрыть».");
+            _vm?.Tray.ShowHint("VibeTun", L.T("S0931") +
+                                              L.T("S0932"));
         }
     }
 
@@ -784,7 +803,7 @@ public partial class MainWindow : Window
         _ = Task.Delay(TimeSpan.FromSeconds(20)).ContinueWith(_ =>
         {
             // в errors.log остаётся след: по нему видно, что выход не завершился сам
-            App.LogCrash(new TimeoutException("Выход из VibeTun не завершился за 20 секунд — принудительное завершение."));
+            App.LogCrash(new TimeoutException(L.T("S0933")));
             try { vm?.PrepareForSystemShutdown(); } catch { /* ignore */ }   // вернёт прокси и сохранит настройки
             try { vm?.Core.Dispose(); } catch { /* ignore */ }               // завершит процесс ядра
             if (App.RestartOnExit) App.StartNewInstance();

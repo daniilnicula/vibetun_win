@@ -20,12 +20,12 @@ public static class DnsAddress
 
         if (text.Length == 0)
         {
-            error = "Укажите IP-адрес DNS-сервера";
+            error = L.T("S0568");
             return false;
         }
         if (text.Any(char.IsWhiteSpace))
         {
-            error = "В адресе не должно быть пробелов";
+            error = L.T("S0569");
             return false;
         }
 
@@ -37,19 +37,19 @@ public static class DnsAddress
                 normalized = ip.ToString();
                 return true;
             }
-            error = "Это не IP-адрес. Пример: 1.1.1.1 или 2606:4700:4700::1111";
+            error = L.T("S0570");
             return false;
         }
 
         var scheme = text[..schemeEnd].ToLowerInvariant();
         if (!Schemes.Contains(scheme))
         {
-            error = "Поддерживаются адреса udp://, tls://, https://, quic:// и h3://";
+            error = L.T("S0571");
             return false;
         }
         if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) || string.IsNullOrEmpty(uri.Host))
         {
-            error = "Не удалось разобрать адрес сервера";
+            error = L.T("S0572");
             return false;
         }
 

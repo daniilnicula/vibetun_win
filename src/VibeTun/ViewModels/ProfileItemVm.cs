@@ -10,6 +10,7 @@ public sealed class ProfileItemVm : ObservableObject
     private int _pingMs;
     private bool _isActive;
     private bool _isPinging;
+    private bool _isDragging;
 
     public ProfileItemVm(ProxyProfile profile)
     {
@@ -36,7 +37,7 @@ public sealed class ProfileItemVm : ObservableObject
         {
             var parts = new List<string>();
             if (!string.IsNullOrWhiteSpace(Profile.Group)) parts.Add(Profile.Group!);
-            if (IsTelegramOnly) parts.Add("только Telegram");
+            if (IsTelegramOnly) parts.Add(L.T("S0799"));
             return string.Join(" · ", parts);
         }
     }
@@ -76,9 +77,17 @@ public sealed class ProfileItemVm : ObservableObject
         set => SetProperty(ref _isActive, value);
     }
 
+    public bool IsDragging
+    {
+        get => _isDragging;
+        set => SetProperty(ref _isDragging, value);
+    }
+
     public void Refresh()
     {
         Raise(nameof(Name));
+        Raise(nameof(Protocol));
+        Raise(nameof(IsTelegramOnly));
         Raise(nameof(ProtocolLabel));
         Raise(nameof(Badge));
         Raise(nameof(Address));

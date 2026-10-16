@@ -68,7 +68,7 @@ public static class BundledCores
             if (File.Exists(target) && stamp.TryGetValue(resource, out var known) && known == marker)
                 continue;
 
-            progress?.Report($"Распаковка ядра {Path.GetFileName(target)}…");
+            progress?.Report(L.F("S0284", Path.GetFileName(target)));
             var temp = target + ".tmp";
             try
             {

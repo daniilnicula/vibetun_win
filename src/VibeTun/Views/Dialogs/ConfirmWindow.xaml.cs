@@ -24,7 +24,7 @@ public partial class ConfirmWindow : Window
             return;
         }
 
-        var cancel = new Button { Content = "Отмена", Style = (Style)FindResource("BtnGhost"), MinWidth = 96 };
+        var cancel = new Button { Content = L.T("S0015"), Style = (Style)FindResource("BtnGhost"), MinWidth = 96 };
         cancel.Click += (_, _) =>
         {
             DialogResult = false;

@@ -135,10 +135,10 @@ public sealed class RoutingViewModel : ObservableObject
 
     public string NewRuleKindLabel => _newRuleKind switch
     {
-        MatchKind.Domain => "домен",
+        MatchKind.Domain => L.T("S0270"),
         MatchKind.Ip => "IP",
         MatchKind.Regex => "regex",
-        MatchKind.Keyword => "ключ",
+        MatchKind.Keyword => L.T("S0272"),
         _ => "—"
     };
 
@@ -230,7 +230,7 @@ public sealed class RoutingViewModel : ObservableObject
         }
     }
 
-    public string RulesCountText => $"{Rules.Count} правил · {Apps.Count} приложений";
+    public string RulesCountText => L.F("S0274", Rules.Count, Apps.Count);
 
     // ------------------------------------------------------------------ загрузка
     public void Load()
@@ -360,7 +360,7 @@ public sealed class RoutingViewModel : ObservableObject
     // --------------------------------------------------------------------- apps
     private Task AddAppFromExeAsync()
     {
-        var path = _dialogs.OpenFile("Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*");
+        var path = _dialogs.OpenFile(L.T("S0665"));
         if (path is null) return Task.CompletedTask;
         AddAppPath(path);
         return Task.CompletedTask;
@@ -392,7 +392,7 @@ public sealed class RoutingViewModel : ObservableObject
         Apps.Add(vm);
         ApplyAppFilter();
         ScheduleSave();
-        Notify?.Invoke($"Приложение «{vm.Name}» добавлено", false);
+        Notify?.Invoke(L.F("S0820", vm.Name), false);
     }
 
     private void RemoveApp(AppRuleItemVm? app)
@@ -406,7 +406,7 @@ public sealed class RoutingViewModel : ObservableObject
     // ------------------------------------------------------------------ профили
     private void NewProfile()
     {
-        var name = _dialogs.PromptText("Новый профиль маршрутизации", "Название", "Профиль " + (Profiles.Count + 1));
+        var name = _dialogs.PromptText(L.T("S0164"), L.T("S0027"), L.T("S0821") + (Profiles.Count + 1));
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var model = new RouteProfile
@@ -425,8 +425,8 @@ public sealed class RoutingViewModel : ObservableObject
     private void DeleteProfile()
     {
         if (SelectedProfile is null || Profiles.Count <= 1) return;
-        if (!_dialogs.Confirm("Удалить профиль маршрутизации",
-                $"Удалить «{SelectedProfile.Name}»?", "Удалить")) return;
+        if (!_dialogs.Confirm(L.T("S0822"),
+                L.F("S0823", SelectedProfile.Name), L.T("S0083"))) return;
 
         Profiles.Remove(SelectedProfile);
         SelectedProfile = Profiles.FirstOrDefault();
@@ -436,44 +436,44 @@ public sealed class RoutingViewModel : ObservableObject
     // ---------------------------------------------------------------- наборы
     private void NewSet()
     {
-        var name = _dialogs.PromptText("Новый набор правил", "Название", "Набор " + (Sets.Count + 1));
+        var name = _dialogs.PromptText(L.T("S0824"), L.T("S0027"), L.T("S0825") + (Sets.Count + 1));
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        var set = new RouteSet { Name = name!, Description = "Пользовательский набор" };
+        var set = new RouteSet { Name = name!, Description = L.T("S0826") };
         _store.Save(set);
         var vm = new RouteSetItemVm(set);
         Sets.Add(vm);
         SelectedSet = vm;
-        Notify?.Invoke($"Набор «{set.Name}» создан", false);
+        Notify?.Invoke(L.F("S0827", set.Name), false);
     }
 
     private void DuplicateSet()
     {
         if (SelectedSet is null) return;
-        var name = _dialogs.PromptText("Копия набора", "Название", SelectedSet.Name + " (копия)");
+        var name = _dialogs.PromptText(L.T("S0828"), L.T("S0027"), SelectedSet.Name + L.T("S0813"));
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var copy = _store.Duplicate(SelectedSet.Model, name!);
         var vm = new RouteSetItemVm(copy);
         Sets.Add(vm);
         SelectedSet = vm;
-        Notify?.Invoke("Набор продублирован", false);
+        Notify?.Invoke(L.T("S0829"), false);
     }
 
     private void DeleteSet()
     {
         if (SelectedSet is null || SelectedSet.BuiltIn) return;
-        if (!_dialogs.Confirm("Удалить набор правил", $"Удалить «{SelectedSet.Name}»?", "Удалить")) return;
+        if (!_dialogs.Confirm(L.T("S0830"), L.F("S0823", SelectedSet.Name), L.T("S0083"))) return;
 
         _store.Delete(SelectedSet.Model);
         Sets.Remove(SelectedSet);
         SelectedSet = Sets.FirstOrDefault();
-        Notify?.Invoke("Набор удалён", false);
+        Notify?.Invoke(L.T("S0831"), false);
     }
 
     private void ImportSet()
     {
-        var path = _dialogs.OpenFile("Набор правил (*.json)|*.json|Все файлы (*.*)|*.*");
+        var path = _dialogs.OpenFile(L.T("S0832"));
         if (path is null) return;
         try
         {
@@ -481,27 +481,27 @@ public sealed class RoutingViewModel : ObservableObject
             var vm = new RouteSetItemVm(set);
             Sets.Add(vm);
             SelectedSet = vm;
-            Notify?.Invoke($"Набор «{set.Name}» импортирован", false);
+            Notify?.Invoke(L.F("S0833", set.Name), false);
         }
         catch (Exception ex)
         {
-            _dialogs.Error("Не удалось импортировать набор", ex.Message);
+            _dialogs.Error(L.T("S0834"), ex.Message);
         }
     }
 
     private void ExportSet()
     {
         if (SelectedSet is null) return;
-        var path = _dialogs.SaveFile("Набор правил (*.json)|*.json", AppPaths.Slug(SelectedSet.Name) + ".json");
+        var path = _dialogs.SaveFile(L.T("S0835"), AppPaths.Slug(SelectedSet.Name) + ".json");
         if (path is null) return;
         try
         {
             _store.Export(SelectedSet.Model, path);
-            Notify?.Invoke("Набор сохранён в файл", false);
+            Notify?.Invoke(L.T("S0836"), false);
         }
         catch (Exception ex)
         {
-            _dialogs.Error("Не удалось сохранить набор", ex.Message);
+            _dialogs.Error(L.T("S0837"), ex.Message);
         }
     }
 
@@ -510,7 +510,7 @@ public sealed class RoutingViewModel : ObservableObject
         if (SelectedProfile is null) return;
         SelectedProfile.TunEnabled = true;
         Raise(nameof(ShowTunHint));
-        Notify?.Invoke("TUN включён — при подключении потребуются права администратора", false);
+        Notify?.Invoke(L.T("S0838"), false);
         ScheduleSave();
     }
 }

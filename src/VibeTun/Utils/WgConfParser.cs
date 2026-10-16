@@ -32,14 +32,14 @@ public static class WgConfParser
 
         if (iface.Count == 0)
         {
-            error = "Пустой WireGuard-конфиг";
+            error = L.T("S0603");
             return null;
         }
 
         (string host, int port) = (peer.TryGetValue("Endpoint", out var ep) ? SplitHostPort(ep) : ("", 0));
         if (host.Length == 0)
         {
-            error = "В [Peer] не указан Endpoint";
+            error = L.T("S0604");
             return null;
         }
 

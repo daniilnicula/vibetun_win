@@ -58,6 +58,7 @@ public partial class App : Application
         AppPaths.EnsureCreated();
         AppUpdateService.CleanupOldExecutable();
         Settings.Load();
+        L.SetLanguage(Settings.Current.Language);
         ThemeService.Apply(Settings.Current.Theme);
         ThemeService.ApplyAccent(Settings.Current.AccentColor);
         Motion.SetSpeed(Settings.Current.AnimationSpeed);
@@ -92,8 +93,8 @@ public partial class App : Application
         WriteCrashLog(e.Exception);
         try
         {
-            MessageBox.Show("Произошла непредвиденная ошибка:\n\n" + e.Exception.Message +
-                            "\n\nПодробности записаны в " + Path.Combine(AppPaths.LogsDir, "errors.log"),
+            MessageBox.Show(L.T("S0268") + e.Exception.Message +
+                            L.T("S0269") + Path.Combine(AppPaths.LogsDir, "errors.log"),
                 "VibeTun", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch { /* ignore */ }
@@ -161,6 +162,7 @@ public partial class App : Application
         }
         catch { /* ignore */ }
 
+        ThemeService.Shutdown();
         try { _mutex?.ReleaseMutex(); } catch { /* ignore */ }
         _mutex?.Dispose();
 

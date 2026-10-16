@@ -18,7 +18,7 @@ public enum ReleaseRelation
 /// <summary>Элемент списка релизов во вкладке «Обновление».</summary>
 public sealed class ReleaseItemVm : ObservableObject
 {
-    private static readonly CultureInfo RuCulture = CultureInfo.GetCultureInfo("ru-RU");
+
 
     private ReleaseRelation _relation;
 
@@ -35,14 +35,14 @@ public sealed class ReleaseItemVm : ObservableObject
     public string Title => Release.Title;
 
     /// <summary>Короткая дата под названием в левом списке релизов.</summary>
-    public string DateText => Release.PublishedAt.ToLocalTime().ToString("d MMMM yyyy", RuCulture);
+    public string DateText => Release.PublishedAt.ToLocalTime().ToString("d MMMM yyyy", L.Culture);
 
     /// <summary>Полная дата под названием в правой части.</summary>
     public string DateFullText
     {
         get
         {
-            var date = Release.PublishedAt.ToLocalTime().ToString("d MMMM yyyy г., HH:mm", RuCulture);
+            var date = Release.PublishedAt.ToLocalTime().ToString(L.T("S0891"), L.Culture);
             return Release.AssetSize > 0 ? $"{date} · {Text.Bytes(Release.AssetSize)}" : date;
         }
     }
@@ -70,8 +70,8 @@ public sealed class ReleaseItemVm : ObservableObject
 
     public string BadgeText => _relation switch
     {
-        ReleaseRelation.Current => "Текущая",
-        ReleaseRelation.Newer => "Новее",
+        ReleaseRelation.Current => L.T("S0258"),
+        ReleaseRelation.Newer => L.T("S0892"),
         _ => ""
     };
 
@@ -109,7 +109,7 @@ public sealed class UpdatesViewModel : ObservableObject
             Name = initialTag,
             TargetCommitish = "Windows",
             PublishedAt = DateTime.UtcNow,
-            Body = "Загрузка описания изменений с GitHub…"
+            Body = L.T("S0893")
         }, ReleaseRelation.Current);
 
         RefreshCommand = new AsyncRelayCommand(() => LoadReleasesAsync(force: true), () => !IsLoading && !IsDownloading);
@@ -300,12 +300,12 @@ public sealed class UpdatesViewModel : ObservableObject
             RaiseDisplayedState();
 
             if (force)
-                Notify?.Invoke($"Список релизов обновлён ({Releases.Count})", false);
+                Notify?.Invoke(L.F("S0894", Releases.Count), false);
         }
         catch (Exception ex)
         {
-            ErrorText = "Не удалось загрузить релизы с GitHub: " + ex.Message;
-            if (_currentRelease is not null && _currentRelease.DescriptionText.StartsWith("Загрузка", StringComparison.Ordinal))
+            ErrorText = L.T("S0895") + ex.Message;
+            if (_currentRelease is not null && _currentRelease.DescriptionText.StartsWith(L.T("S0896"), StringComparison.Ordinal))
             {
                 _currentRelease = new ReleaseItemVm(new AppReleaseInfo
                 {
@@ -313,7 +313,7 @@ public sealed class UpdatesViewModel : ObservableObject
                     Name = _currentRelease.Title,
                     TargetCommitish = "Windows",
                     PublishedAt = _currentRelease.Release.PublishedAt,
-                    Body = "Не удалось загрузить описание изменений с GitHub. Проверьте подключение к интернету и нажмите «Обновить список»."
+                    Body = L.T("S0897")
                 }, ReleaseRelation.Current);
                 Raise(nameof(CurrentRelease));
                 RaiseDisplayedState();
@@ -334,7 +334,7 @@ public sealed class UpdatesViewModel : ObservableObject
         if (target is null || target.IsCurrent || IsDownloading) return;
 
         var isRollback = target.IsOlder;
-        var actionVerb = isRollback ? "Откат до" : "Обновление до";
+        var actionVerb = isRollback ? L.T("S0898") : L.T("S0899");
 
         _downloadCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -342,7 +342,7 @@ public sealed class UpdatesViewModel : ObservableObject
 
         IsDownloading = true;
         DownloadProgress = 0;
-        DownloadStatusText = $"Подготовка к скачиванию {target.Title}…";
+        DownloadStatusText = L.F("S0900", target.Title);
         ErrorText = "";
 
         try
@@ -356,8 +356,8 @@ public sealed class UpdatesViewModel : ObservableObject
                     {
                         DownloadProgress = percent;
                         DownloadStatusText = total > 0
-                            ? $"Скачивание {target.Title}… {Text.Bytes(received)} из {Text.Bytes(total)}"
-                            : $"Скачивание {target.Title}… {Text.Bytes(received)}";
+                            ? L.F("S0901", target.Title, Text.Bytes(received), Text.Bytes(total))
+                            : L.F("S0902", target.Title, Text.Bytes(received));
                     }
 
                     if (dispatcher is not null && !dispatcher.CheckAccess())
@@ -368,8 +368,8 @@ public sealed class UpdatesViewModel : ObservableObject
                 cts.Token);
 
             DownloadProgress = 100;
-            DownloadStatusText = $"{actionVerb} {target.Title}: замена файла и перезапуск…";
-            Notify?.Invoke($"{actionVerb} {target.Title} — перезапуск приложения…", false);
+            DownloadStatusText = L.F("S0903", actionVerb, target.Title);
+            Notify?.Invoke(L.F("S0904", actionVerb, target.Title), false);
 
             await Task.Delay(250, cts.Token);
 
@@ -384,15 +384,15 @@ public sealed class UpdatesViewModel : ObservableObject
         {
             DownloadStatusText = "";
             DownloadProgress = 0;
-            Notify?.Invoke("Скачивание отменено", false);
+            Notify?.Invoke(L.T("S0905"), false);
         }
         catch (Exception ex)
         {
             DownloadStatusText = "";
             DownloadProgress = 0;
-            ErrorText = $"Не удалось выполнить {(isRollback ? "откат" : "обновление")}: {ex.Message}";
+            ErrorText = L.F("S0906", (isRollback ? L.T("Extra960") : L.T("Extra961")), ex.Message);
             Notify?.Invoke(ErrorText, true);
-            _dialogs.Error(isRollback ? "Ошибка отката" : "Ошибка обновления", ex.Message);
+            _dialogs.Error(isRollback ? L.T("S0907") : L.T("S0908"), ex.Message);
         }
         finally
         {

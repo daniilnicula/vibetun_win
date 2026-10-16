@@ -9,7 +9,8 @@ public partial class CoreLogWindow : Window
     {
         InitializeComponent();
         TitleText.Text = title;
-        LogText.Text = text;
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+        LogText.Text = string.Join(Environment.NewLine, lines.TakeLast(Math.Max(1, App.Settings.Current.LogLimit)));
         LogText.CaretIndex = LogText.Text.Length;
         LogText.ScrollToEnd();
     }

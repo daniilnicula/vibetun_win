@@ -47,7 +47,7 @@ public static class TunCleanup
             };
             using var p = Process.Start(psi);
             if (p == null) return null;
-            if (!p.WaitForExit(10000)) return "таймаут очистки адаптера";
+            if (!p.WaitForExit(10000)) return L.T("S0556");
             var err = p.StandardError.ReadToEnd().Trim();
             return p.ExitCode == 0 ? null : err; // чаще всего адаптера просто нет — это норма
         }

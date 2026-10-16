@@ -72,21 +72,21 @@ public static class DnsPattern
         var text = (input ?? "").Trim();
         if (text.Length == 0)
         {
-            error = "Введите домен или regex";
+            error = L.T("S0573");
             return false;
         }
 
         var (_, kind) = Text.NormalizeUserPattern(text);
         if (kind == MatchKind.Ip)
         {
-            error = "Это IP-адрес: к нему подключаются сразу, DNS не нужен. Введите домен или regex";
+            error = L.T("S0574");
             return false;
         }
 
         var (field, value) = SingBoxConfigBuilder.Normalize(new RouteRule { Pattern = text, Kind = kind });
         if (value.Length == 0)
         {
-            error = "Введите домен или regex";
+            error = L.T("S0573");
             return false;
         }
 
@@ -109,12 +109,12 @@ public static class DnsPattern
         error = "";
         if (value.Contains("(?=") || value.Contains("(?!") || value.Contains("(?<=") || value.Contains("(?<!"))
         {
-            error = "Ядро не поддерживает в regex просмотр вперёд/назад — (?=…), (?!…)";
+            error = L.T("S0575");
             return false;
         }
         if (Regex.IsMatch(value, @"(?<!\\)\\[1-9]"))
         {
-            error = "Ядро не поддерживает в regex обратные ссылки (\\1)";
+            error = L.T("S0576");
             return false;
         }
 
@@ -125,7 +125,7 @@ public static class DnsPattern
         }
         catch (ArgumentException)
         {
-            error = "Ошибка в regex — проверьте скобки и спецсимволы";
+            error = L.T("S0577");
             return false;
         }
     }

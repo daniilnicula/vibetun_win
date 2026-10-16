@@ -11,6 +11,8 @@ public static class JsonConfigConverter
 {
     private static readonly string[] NonProxyTypes =
         { "direct", "block", "dns", "selector", "urltest", "tun", "mixed", "tproxy", "redirect" };
+    private static readonly string[] SupportedXrayTypes =
+        { "vless", "vmess", "trojan", "shadowsocks", "socks", "http", "wireguard" };
 
     public static ProxyProfile? Convert(JsonElement root, string raw, out string? error)
     {
@@ -19,8 +21,12 @@ public static class JsonConfigConverter
         if (root.TryGetProperty("outbounds", out var outbounds) && outbounds.ValueKind == JsonValueKind.Array)
         {
             var first = outbounds.EnumerateArray().FirstOrDefault(el =>
-                el.ValueKind == JsonValueKind.Object &&
-                (Prop(el, "protocol") is not null || (Prop(el, "type") is { } t && !NonProxyTypes.Contains(t))));
+            {
+                if (el.ValueKind != JsonValueKind.Object) return false;
+                if (Prop(el, "protocol") is { } xrayProtocol)
+                    return SupportedXrayTypes.Contains(xrayProtocol.ToLowerInvariant());
+                return Prop(el, "type") is { } singBoxType && !NonProxyTypes.Contains(singBoxType.ToLowerInvariant());
+            });
 
             if (first.ValueKind == JsonValueKind.Object)
             {
@@ -45,7 +51,7 @@ public static class JsonConfigConverter
         if (Prop(root, "type") is not null) return FromSingBox(root, raw, out error);
         if (Prop(root, "protocol") is not null) return FromXray(root, raw, out error);
 
-        error = "В JSON не найден подходящий outbound";
+        error = L.T("S0578");
         return null;
     }
 
@@ -111,7 +117,7 @@ public static class JsonConfigConverter
                 FillWireGuard(node, o);
                 break;
             default:
-                error = $"Ядро sing-box не поддерживает тип outbound «{type}»";
+                error = L.F("S0579", type);
                 return null;
         }
 
@@ -127,7 +133,7 @@ public static class JsonConfigConverter
         };
         if (node.Server.Length == 0 && type != "wireguard")
         {
-            error = "В конфиге не указан адрес сервера";
+            error = L.T("S0580");
             return null;
         }
         return profile;
@@ -139,7 +145,7 @@ public static class JsonConfigConverter
         var type = (Prop(o, "type") ?? "").ToLowerInvariant();
         if (type != "wireguard")
         {
-            error = $"Неподдерживаемый endpoint «{type}»";
+            error = L.F("S0581", type);
             return null;
         }
 
@@ -255,7 +261,7 @@ public static class JsonConfigConverter
 
         if (proto.Length == 0)
         {
-            error = $"Протокол Xray «{xproto}» пока не поддерживается";
+            error = L.F("S0582", xproto);
             return null;
         }
 
@@ -282,11 +288,17 @@ public static class JsonConfigConverter
             }
             else
             {
+                // 3x-ui JSON subscriptions use the flat Xray outbound settings form,
+                // while imported configs commonly wrap credentials in vnext/users.
                 node.Server = Prop(settings, "address") ?? Prop(settings, "servers") ?? "";
                 node.Port = Num(settings, "port") ?? 0;
-                node.Password = Prop(settings, "password");
+                node.Uuid = Prop(settings, "id") ?? Prop(settings, "uuid");
+                node.Flow = Prop(settings, "flow");
+                node.Password = Prop(settings, "password") ?? Prop(settings, "pass");
                 node.Method = Prop(settings, "method");
-                if (Prop(settings, "user") is { } usr) node.Username = usr;
+                node.Username = Prop(settings, "user") ?? Prop(settings, "username");
+                if (Num(settings, "alterId") is { } alterId) node.Extra["alterId"] = alterId.ToString();
+                if (Prop(settings, "security") is { } security) node.Extra["security"] = security;
             }
 
             if (proto == ProtocolIds.Wireguard)
@@ -361,9 +373,12 @@ public static class JsonConfigConverter
         }
 
         var tag = Prop(o, "tag");
+        var name = string.IsNullOrWhiteSpace(tag) || string.Equals(tag, "proxy", StringComparison.OrdinalIgnoreCase)
+            ? $"{node.Server}:{node.Port}"
+            : tag;
         return new ProxyProfile
         {
-            Name = string.IsNullOrWhiteSpace(tag) ? $"{node.Server}:{node.Port}" : tag,
+            Name = name,
             Protocol = proto,
             Node = node
         };

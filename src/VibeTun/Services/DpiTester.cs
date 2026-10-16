@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text;
 using VibeTun.Models;
@@ -79,11 +81,14 @@ public sealed class DpiProbeResult
     public long AnswerMs;
     public string Error = "";
 
-    /// <summary>Тип первой записи TLS в ответе: 0x16 — handshake, 0x15 — alert.</summary>
+    /// <summary>Тип первой записи TLS в ответе: 0x16 — handshake.</summary>
     public int RecordType;
 
-    /// <summary>Код alert, если сервер ответил им (0 — ответа не было или это не alert).</summary>
-    public int AlertCode;
+    /// <summary>Что выторговали при рукопожатии (версия TLS, шифр, ALPN) — для журнала.</summary>
+    public string Tls = "";
+
+    /// <summary>Соединение сброшено (RST): так выглядит блокировка, которая рвёт поток, а не молчит.</summary>
+    public bool Reset;
 
     public bool Ok => Answered;
 
@@ -95,14 +100,10 @@ public sealed class DpiProbeResult
 
     public string Describe()
     {
-        if (Error.Length > 0 && !Connected) return "соединение не поднялось: " + Error;
-        if (Error.Length > 0) return $"TCP {ConnectMs} мс, ответа нет: {Error}";
-        if (RecordType == 0x15)
-        {
-            var alert = AlertCode > 0 ? $"alert {AlertCode} ({AlertName(AlertCode)})" : "alert";
-            return $"TCP {ConnectMs} мс, сервер ответил {alert} через {AnswerMs} мс";
-        }
-        return $"TCP {ConnectMs} мс, ответ через {AnswerMs} мс";
+        if (Error.Length > 0 && !Connected) return L.T("S0447") + Error;
+        if (Error.Length > 0) return L.F("S0448", ConnectMs, Error);
+        if (Answered && Tls.Length > 0) return L.F("S0449", ConnectMs, Tls, AnswerMs);
+        return L.F("S0450", ConnectMs, AnswerMs);
     }
 
     /// <summary>Одна строка для журнала: что произошло, на каком адресе и с какими цифрами.</summary>
@@ -110,34 +111,19 @@ public sealed class DpiProbeResult
     {
         var lead = Kind switch
         {
-            DpiProbeKind.Answered => "открывается",
+            DpiProbeKind.Answered => L.T("S0451"),
             DpiProbeKind.Silent => ViaProxy
-                ? "туннель через обход поднят, ответа нет"
-                : "TCP доходит, ответа нет — режет по содержимому",
+                ? L.T("S0452")
+                : L.T("S0453"),
             _ => ViaProxy
-                ? "обход не поднял туннель"
-                : "TCP не поднимается — режет по адресу"
+                ? L.T("S0454")
+                : L.T("S0455")
         };
 
         var address = Address.Length > 0 ? $" [{Address}]" : "";
         return $"{lead}{address}: {Describe()}";
     }
 
-    /// <summary>Человеческое название alert — по нему видно, чем серверу не угодил ClientHello.</summary>
-    private static string AlertName(int code) => code switch
-    {
-        0 => "close_notify",
-        40 => "handshake_failure",
-        50 => "illegal_parameter",
-        51 => "unknown_ca",
-        70 => "protocol_version",
-        80 => "internal_error",
-        86 => "inappropriate_fallback",
-        109 => "missing_extension",
-        112 => "unrecognized_name",
-        120 => "no_application_protocol",
-        _ => "другой"
-    };
 }
 
 /// <summary>
@@ -151,6 +137,22 @@ public sealed class DpiProbeResult
 /// </summary>
 public static class DpiTester
 {
+    /// <summary>
+    /// Адреса домена для замера: сервером, выбранным для сервиса в разделе «DNS» (обычный DNS
+    /// по адресу), либо как раньше — DoH обхода или системный DNS. Замер должен идти на те же
+    /// адреса, что и живой обход: иначе результат подбора ничего не значит.
+    /// </summary>
+    private static async Task<DnsLookup> ResolveAsync(string host, DpiBypassSettings settings, CancellationToken ct)
+    {
+        if (settings.ResolveServer.Length > 0)
+        {
+            var server = await DnsResolver.ServerAddressAsync(settings.ResolveServer, ct);
+            if (server is not null) return await DnsResolver.ResolveViaAsync(host, server, ct);
+        }
+
+        return await DnsResolver.ResolveAsync(host, settings.Doh, settings.DohUrl, ct);
+    }
+
     /// <summary>Площадки, которые в РФ блокируются средствами DPI.</summary>
     public static readonly string[] BlockedHosts =
     {
@@ -160,8 +162,8 @@ public static class DpiTester
         "youtube.com"
     };
 
-    /// <summary>Контроль: то, что в РФ открывается и так.</summary>
-    private static readonly string[] ControlHosts =
+    /// <summary>Контроль: то, что в РФ открывается и так. Публичный — на нём проверяется наш ClientHello.</summary>
+    public static readonly string[] ControlHosts =
     {
         "cloudflare.com",
         "www.gstatic.com"
@@ -203,15 +205,15 @@ public static class DpiTester
         // картине, а не по одному контрольному адресу: иначе тест упирался в контроль,
         // который провайдер не пускает (или который отвечает alert вместо ServerHello),
         // и говорил «интернета нет» там, где ютуб спокойно открывался.
-        progress?.Invoke("проверяем площадки напрямую");
+        progress?.Invoke(L.T("S0457"));
 
         var everything = ControlHosts.Concat(BlockedHosts).ToArray();
         var probes = await ProbeAllAsync(everything, 0, DirectTimeoutMs, ct);
         var control = probes.Take(ControlHosts.Length).ToArray();
         var direct = probes.Skip(ControlHosts.Length).ToArray();
 
-        foreach (var probe in control) lines.Add($"контроль {probe.Host}: {probe.DescribeKind()}");
-        foreach (var probe in direct) lines.Add($"напрямую {probe.Host}: {probe.DescribeKind()}");
+        foreach (var probe in control) lines.Add(L.F("S0458", probe.Host, probe.DescribeKind()));
+        foreach (var probe in direct) lines.Add(L.F("S0459", probe.Host, probe.DescribeKind()));
 
         // интернет есть, если ответил хотя бы кто-то — контрольный адрес или площадка
         var alive = probes.FirstOrDefault(p => p.Ok);
@@ -220,27 +222,27 @@ public static class DpiTester
         {
             // никто не ответил напрямую — сначала пробуем через обход, и только потом
             // говорим «интернета нет»
-            progress?.Invoke("проверяем через обход");
+            progress?.Invoke(L.T("S0460"));
             var viaAll = await ProbeAllAsync(everything, enginePort, ViaTimeoutMs, ct);
-            foreach (var probe in viaAll) lines.Add($"через обход {probe.Host}: {probe.DescribeKind()}");
+            foreach (var probe in viaAll) lines.Add(L.F("S0461", probe.Host, probe.DescribeKind()));
 
             alive = viaAll.FirstOrDefault(p => p.Ok);
-            if (alive is not null) lines.Add("напрямую не ответил никто — связь появилась только через обход");
+            if (alive is not null) lines.Add(L.T("S0462"));
         }
 
         if (alive is null)
         {
             var reasons = string.Join("; ", probes.Select(p => $"{p.Host}: {p.Describe()}"));
-            lines.Add("не ответил никто: ни контроль, ни площадки — ни напрямую, ни через обход");
+            lines.Add(L.T("S0463"));
             return new DpiTestResult
             {
                 Verdict = DpiTestVerdict.NoNetwork,
-                Detail = "интернета нет: " + reasons,
+                Detail = L.T("S0464") + reasons,
                 Lines = lines
             };
         }
 
-        lines.Add($"интернет есть: {alive.Host} — {alive.Describe()}");
+        lines.Add(L.F("S0465", alive.Host, alive.Describe()));
 
         // ----------------------------------------- 2. кто заблокирован и как именно
         var byContent = direct.Where(p => p.Kind == DpiProbeKind.Silent).ToList();
@@ -248,21 +250,21 @@ public static class DpiTester
 
         if (byContent.Count == 0 && byAddress.Count == 0)
         {
-            lines.Add("все площадки открываются и без обхода — DPI сейчас ничего не режет");
+            lines.Add(L.T("S0466"));
             return new DpiTestResult
             {
                 Verdict = DpiTestVerdict.Broken,
                 Host = direct[0].Host,
-                Detail = "блокировки нет: площадки открываются напрямую",
+                Detail = L.T("S0467"),
                 Lines = lines
             };
         }
 
         // -------------------------------------------- 3. текущие настройки обхода
-        progress?.Invoke("проверяем обход");
+        progress?.Invoke(L.T("S0468"));
         var blocked = byContent.Concat(byAddress).Select(p => p.Host).ToArray();
         var via = await ProbeAllAsync(blocked, enginePort, ViaTimeoutMs, ct);
-        foreach (var probe in via) lines.Add($"через обход {probe.Host}: {probe.DescribeKind()}");
+        foreach (var probe in via) lines.Add(L.F("S0461", probe.Host, probe.DescribeKind()));
 
         var opened = via.FirstOrDefault(p => p.Ok);
         if (opened is not null)
@@ -271,14 +273,14 @@ public static class DpiTester
             {
                 Verdict = DpiTestVerdict.Broken,
                 Host = opened.Host,
-                Detail = $"{opened.Host} отвечает ({opened.Describe()})",
+                Detail = L.F("S0469", opened.Host, opened.Describe()),
                 Lines = lines
             };
         }
 
         var perHost = via.Select(probe => probe.Kind == DpiProbeKind.NoRoute
-            ? $"{probe.Host}: провайдер не пускает до адреса — пакетами не помочь, нужен VPN"
-            : $"{probe.Host}: DPI режет ClientHello");
+            ? L.F("S0470", probe.Host)
+            : L.F("S0471", probe.Host));
         var detail = string.Join("; ", perHost);
 
         // ------------------------------------------------- 4. перебор вариантов
@@ -288,7 +290,7 @@ public static class DpiTester
 
         if (workable.Length == 0)
         {
-            lines.Add("TCP до площадок не поднимается — перебор вариантов бессмысленен");
+            lines.Add(L.T("S0472"));
             return new DpiTestResult
             {
                 Verdict = DpiTestVerdict.Covered,
@@ -301,7 +303,7 @@ public static class DpiTester
 
         if (!scan)
         {
-            lines.Add("перебор вариантов пропущен — нужен полный «DPI тест»");
+            lines.Add(L.T("S0473"));
             return new DpiTestResult
             {
                 Verdict = DpiTestVerdict.Covered,
@@ -313,13 +315,13 @@ public static class DpiTester
         }
 
         var variants = Variants(current);
-        lines.Add($"текущие настройки не помогают — перебираем {variants.Count} вариантов на {string.Join(", ", workable)}");
+        lines.Add(L.F("S0474", variants.Count, string.Join(", ", workable)));
 
         for (var i = 0; i < variants.Count; i++)
         {
             var variant = variants[i];
-            progress?.Invoke($"вариант {i + 1} из {variants.Count}: {Describe(variant)}");
-            lines.Add($"вариант {i + 1}/{variants.Count}: {Describe(variant)}");
+            progress?.Invoke(L.F("S0475", i + 1, variants.Count, Describe(variant)));
+            lines.Add(L.F("S0476", i + 1, variants.Count, Describe(variant)));
 
             try
             {
@@ -327,28 +329,28 @@ public static class DpiTester
             }
             catch (Exception ex)
             {
-                lines.Add("  движок не перезапустился: " + ex.Message);
+                lines.Add(L.T("S0477") + ex.Message);
                 continue;
             }
 
             var probeAll = await ProbeAllAsync(workable, enginePort, ScanTimeoutMs, ct);
-            foreach (var probe in probeAll) lines.Add($"  через обход {probe.Host}: {probe.DescribeKind()}");
+            foreach (var probe in probeAll) lines.Add(L.F("S0478", probe.Host, probe.DescribeKind()));
 
             var hit = probeAll.FirstOrDefault(p => p.Ok);
             if (hit is null) continue;
 
-            lines.Add($"подошёл вариант: {Describe(variant)}");
+            lines.Add(L.F("S0479", Describe(variant)));
             return new DpiTestResult
             {
                 Verdict = DpiTestVerdict.Broken,
                 Host = hit.Host,
-                Detail = $"{hit.Host} открылся на варианте «{Describe(variant)}»",
+                Detail = L.F("S0480", hit.Host, Describe(variant)),
                 Working = variant,
                 Lines = lines
             };
         }
 
-        lines.Add("ни один вариант не помог");
+        lines.Add(L.T("S0481"));
         return new DpiTestResult
         {
             Verdict = DpiTestVerdict.Covered,
@@ -366,8 +368,10 @@ public static class DpiTester
     }
 
     /// <summary>
-    /// Замер: подключаемся к площадке (напрямую или через обход) и ждём ответ сервера
-    /// на свой ClientHello. Дошёл ответ — значит блокировки нет или она обойдена.
+    /// Замер: подключаемся к площадке (напрямую или через обход) и доводим рукопожатие TLS
+    /// до конца. Успех — только поднятый канал до самого сайта: раньше за успех принимался
+    /// и alert, и один байт ответа, поэтому «подобранная» стратегия могла не работать
+    /// в браузере — ровно на это и была жалоба.
     /// </summary>
     public static async Task<DpiProbeResult> ProbeAsync(string host, int enginePort, int timeoutMs, CancellationToken ct)
     {
@@ -396,16 +400,16 @@ public static class DpiTester
                 var answer = Encoding.ASCII.GetString(reply);
                 if (!answer.StartsWith("HTTP/1.1 200", StringComparison.OrdinalIgnoreCase) &&
                     !answer.StartsWith("HTTP/1.0 200", StringComparison.OrdinalIgnoreCase))
-                    throw new IOException("прокси не открыл туннель: " + answer.Split("\r\n")[0]);
+                    throw new IOException(L.T("S0482") + answer.Split("\r\n")[0]);
             }
             else
             {
                 // адреса берём тем же резолвером, что и движок: если провайдер подменяет
                 // DNS, замер должен это видеть, а не мерить подставной адрес
                 var settings = App.Settings.Current.Dpi;
-                var lookup = await DnsResolver.ResolveAsync(host, settings.Doh, settings.DohUrl, timeout.Token);
+                var lookup = await ResolveAsync(host, settings, timeout.Token);
                 var address = lookup.InConnectOrder.FirstOrDefault();
-                if (address is null) throw new IOException("DNS не отдал адрес: " + host);
+                if (address is null) throw new IOException(L.T("S0483") + host);
 
                 result.Address = address.ToString();
                 await client.ConnectAsync(address, 443, timeout.Token);
@@ -414,58 +418,52 @@ public static class DpiTester
             result.Connected = true;
             result.ConnectMs = sw.ElapsedMilliseconds;
 
-            var hello = BuildClientHello(host);
-            await client.GetStream().WriteAsync(hello, timeout.Token);
-            await client.GetStream().FlushAsync(timeout.Token);
-
-            // ждём заголовок записи: 0x16 (handshake) или 0x15 (alert), дальше 0x03
-            var head = new byte[7];
-            var read = 0;
-            while (read < 5)
+            // сертификат не проверяем: важен сам факт рукопожатия с этим именем
+            using var ssl = new SslStream(client.GetStream(), leaveInnerStreamOpen: true, (_, _, _, _) => true);
+            await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
-                var n = await client.GetStream().ReadAsync(head.AsMemory(read, head.Length - read), timeout.Token);
-                if (n <= 0) break;
-                read += n;
-            }
+                TargetHost = host,
+                EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                ApplicationProtocols = new List<SslApplicationProtocol>
+                {
+                    SslApplicationProtocol.Http11,
+                    SslApplicationProtocol.Http2
+                }
+            }, timeout.Token);
 
             result.AnswerMs = sw.ElapsedMilliseconds;
-            result.RecordType = read > 0 ? head[0] : 0;
+            result.Answered = true;
+            result.RecordType = 0x16;
 
-            // Любая запись TLS в ответе — пакеты дошли: сервер мог прислать alert вместо
-            // ServerHello, но для проверки блокировки это всё равно ответ.
-            if (read >= 5 && head[1] == 0x03 && (head[0] == 0x16 || head[0] == 0x15))
-            {
-                result.Answered = true;
-
-                // alert дочитываем до конца: его код говорит, чем серверу не угодил ClientHello
-                if (head[0] == 0x15)
-                {
-                    while (read < head.Length)
-                    {
-                        var n = await client.GetStream().ReadAsync(head.AsMemory(read, head.Length - read), timeout.Token);
-                        if (n <= 0) break;
-                        read += n;
-                    }
-
-                    if (read >= 7) result.AlertCode = head[6];
-                }
-            }
-            else if (read > 0) result.Error = $"в ответе не TLS ({head[0]:X2} {head[1]:X2})";
-            else result.Error = "сервер молчит";
+            var alpn = ssl.NegotiatedApplicationProtocol.Protocol;
+            result.Tls = ssl.SslProtocol.ToString();
+            if (alpn.Length > 0) result.Tls += " / " + Encoding.ASCII.GetString(alpn.Span);
+        }
+        catch (AuthenticationException ex)
+        {
+            // до сайта дошли (TCP поднялся), но рукопожатие не прошло: это alert сервера
+            // или обрыв посреди рукопожатия — и то и другое не «работает»
+            result.Error = Short(ex.Message);
         }
         catch (OperationCanceledException)
         {
-            result.Error = "таймаут";
+            result.Error = L.T("S0440");
         }
         catch (SocketException ex)
         {
+            result.Reset = ex.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted;
             result.Error = ex.SocketErrorCode == SocketError.HostNotFound
-                ? "DNS не знает такого имени"
-                : "сеть: " + ex.SocketErrorCode;
+                ? L.T("S0485")
+                : L.T("S0445") + ex.SocketErrorCode;
+        }
+        catch (IOException ex) when (ex.InnerException is SocketException inner)
+        {
+            result.Reset = inner.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted;
+            result.Error = Short(ex.Message);
         }
         catch (Exception ex)
         {
-            result.Error = ex.Message;
+            result.Error = Short(ex.Message);
         }
         finally
         {
@@ -474,6 +472,118 @@ public static class DpiTester
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Проверка «открылся ли поток» нашим собственным ClientHello — ровно тем, который уходит
+    /// и в фейк-пакете. Полное рукопожатие здесь не нужно: достаточно ServerHello от сервера.
+    ///
+    /// Смысл в том, что проверка идёт браузерным «приветствием», а не тем, что строит .NET:
+    /// часть DPI разбирает ClientHello по виду, и тогда честнее мерить его же, а не чужой.
+    /// </summary>
+    public static async Task<DpiProbeResult> ProbeHelloAsync(
+        string host, int enginePort, int timeoutMs, CancellationToken ct)
+    {
+        var result = new DpiProbeResult { Host = host };
+        var sw = Stopwatch.StartNew();
+        TcpClient? client = null;
+
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(timeoutMs);
+
+            client = new TcpClient();
+
+            if (enginePort > 0)
+            {
+                result.ViaProxy = true;
+                await client.ConnectAsync(IPAddress.Loopback, enginePort, timeout.Token);
+                var connect = Encoding.ASCII.GetBytes($"CONNECT {host}:443 HTTP/1.1\r\nHost: {host}:443\r\n\r\n");
+                await client.GetStream().WriteAsync(connect, timeout.Token);
+                await client.GetStream().FlushAsync(timeout.Token);
+
+                var reply = await ReadUntilAsync(client.GetStream(), HeadEnd, 8192, timeout.Token);
+                var answer = Encoding.ASCII.GetString(reply);
+                if (!answer.StartsWith("HTTP/1.1 200", StringComparison.OrdinalIgnoreCase) &&
+                    !answer.StartsWith("HTTP/1.0 200", StringComparison.OrdinalIgnoreCase))
+                    throw new IOException(L.T("S0482") + answer.Split("\r\n")[0]);
+            }
+            else
+            {
+                var settings = App.Settings.Current.Dpi;
+                var lookup = await ResolveAsync(host, settings, timeout.Token);
+                var address = lookup.InConnectOrder.FirstOrDefault();
+                if (address is null) throw new IOException(L.T("S0483") + host);
+
+                result.Address = address.ToString();
+                await client.ConnectAsync(address, 443, timeout.Token);
+            }
+
+            result.Connected = true;
+            result.ConnectMs = sw.ElapsedMilliseconds;
+
+            var stream = client.GetStream();
+            var hello = BuildClientHello(host);
+            await stream.WriteAsync(hello, timeout.Token);
+            await stream.FlushAsync(timeout.Token);
+
+            // первый ответ: 0x16 — рукопожатие (ServerHello), 0x15 — alert
+            var head = new byte[5];
+            var read = 0;
+            while (read < head.Length)
+            {
+                var got = await stream.ReadAsync(head.AsMemory(read), timeout.Token);
+                if (got <= 0) break;
+                read += got;
+            }
+
+            if (read == 0) throw new IOException(L.T("dpi.hello.eof"));
+
+            result.AnswerMs = sw.ElapsedMilliseconds;
+            result.RecordType = head[0];
+
+            if (head[0] != 0x16) throw new IOException(L.F("S0427", head[0]));
+
+            result.Answered = true;
+            result.Tls = L.T("dpi.hello.serverHello");
+        }
+        catch (OperationCanceledException)
+        {
+            result.Error = L.T("S0440");
+        }
+        catch (SocketException ex)
+        {
+            result.Reset = ex.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted;
+            result.Error = ex.SocketErrorCode == SocketError.HostNotFound
+                ? L.T("S0485")
+                : L.T("S0445") + ex.SocketErrorCode;
+        }
+        catch (IOException ex) when (ex.InnerException is SocketException inner)
+        {
+            result.Reset = inner.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted;
+            result.Error = Short(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            result.Error = Short(ex.Message);
+        }
+        finally
+        {
+            try { client?.Dispose(); }
+            catch { /* ignore */ }
+        }
+
+        return result;
+    }
+
+    /// <summary>Сообщение об ошибке одной строкой: в журнале нужен смысл, а не стек.</summary>
+    private static string Short(string message)
+    {
+        var text = message.Replace("\r", " ").Replace("\n", " ").Trim();
+        var dot = text.IndexOf(" (.NET", StringComparison.Ordinal);
+        if (dot > 0) text = text[..dot];
+        return text.Length > 200 ? text[..200] : text;
     }
 
     private static async Task<byte[]> ReadUntilAsync(NetworkStream stream, byte[] pattern, int limit, CancellationToken ct)
@@ -511,54 +621,139 @@ public static class DpiTester
     }
 
     // --------------------------------------------------------------- варианты
+    /// <summary>
+    /// Набор приёмов для перебора — те же рецепты, что в стратегиях zapret и ByeDPI:
+    /// <c>split</c>/<c>multisplit</c> в разных позициях, <c>tlsrec</c>, <c>disorder</c>, <c>oob</c>,
+    /// <c>fake</c> с обманками (ttl/badsum/badseq), <c>split-seqovl</c> (фейк перед запросом),
+    /// фейк с чужим SNI и дробление по MSS.
+    ///
+    /// Порядок — по «семействам»: сначала по одному представителю каждого приёма (так первые
+    /// найденные стратегии будут разными по механике, а не вариантами одного и того же),
+    /// затем остальные настройки тех же семейств.
+    /// </summary>
+    public static List<DpiBypassSettings> Strategies(DpiBypassSettings current) => Variants(current);
+
     private static List<DpiBypassSettings> Variants(DpiBypassSettings current)
     {
         var list = new List<DpiBypassSettings>();
 
-        // основной рабочий приём для ТСПУ — фейк-пакет с TTL, которого хватит до DPI,
-        // но не до сайта; перебираем типичные значения
-        foreach (var ttl in new[] { 8, 5, 12, 3, 16 })
-            list.Add(Variant(current, ttl));
+        // --- 1. разрыв ClientHello: позиции как --dpi-desync-split-pos=1/2/midsld/sni
+        list.Add(Variant(current, DpiSplitPosition.Sni));
+        list.Add(Variant(current, DpiSplitPosition.FirstByte));
+        list.Add(Variant(current, DpiSplitPosition.MidSld));
+        list.Add(Variant(current, DpiSplitPosition.SecondByte));
 
-        // тот же фейк, но уже после настоящего ClientHello
-        list.Add(Variant(current, 8, after: true));
+        // --- 2. переупаковка в две записи TLS (--tlsrec у ByeDPI)
+        list.Add(Variant(current, DpiSplitPosition.Sni, tlsrec: true));
 
-        // два фейк-пакета подряд: некоторым DPI одного мало
-        list.Add(Variant(current, 8, count: 2));
+        // --- 3. мультисплит: много мелких сегментов с паузой
+        list.Add(Variant(current, DpiSplitPosition.FirstByte, multisplit: 8));
+        list.Add(Variant(current, DpiSplitPosition.FirstByte, multisplit: 2));
 
-        // один split без фейка
-        list.Add(Variant(current, 0, fake: false));
-        list.Add(Variant(current, 0, fake: false, recordSplit: false));
+        // --- 4. disorder: начало уходит с TTL=1 и до DPI не доходит
+        list.Add(Variant(current, DpiSplitPosition.FirstByte, disorder: true));
+        list.Add(Variant(current, DpiSplitPosition.Sni, disorder: true));
 
-        // фейк плюс дробление по MSS: система сама режет ClientHello на мелкие сегменты
-        list.Add(Variant(current, 8, mss: true));
-        list.Add(Variant(current, 0, fake: false, mss: true));
+        // --- 5. срочные данные (--oob у ByeDPI): байт в позиции разреза уходит urgent
+        list.Add(Variant(current, DpiSplitPosition.Sni, oob: true));
+        list.Add(Variant(current, DpiSplitPosition.FirstByte, oob: true));
 
-        // мультисплит: много мелких кусков с паузой. Срывает DPI, который собирает
-        // запись TLS по длине из заголовка и поэтому не боится разрыва на две части
-        list.Add(Variant(current, 0, fake: false, multisplit: 8));
-        list.Add(Variant(current, 8, multisplit: 8));
-        list.Add(Variant(current, 0, fake: false, multisplit: 2));
-        list.Add(Variant(current, 0, fake: false, multisplit: 24));
+        // --- 6. дробление по MSS: система сама режет ClientHello на мелкие сегменты
+        list.Add(Variant(current, DpiSplitPosition.Sni, mss: true));
+
+        // --- 7. фейк-пакет: главный приём zapret (--dpi-desync=fake --fooling=ttl, autottl)
+        list.Add(Fake(current));
+        list.Add(Fake(current, repeats: 6));                                        // --dpi-desync-repeats=6
+        list.Add(Fake(current, decoy: DpiServiceCatalog.DefaultFakeSni, repeats: 3)); // --fake-tls=sni=…
+        list.Add(Fake(current, repeats: 1, ahead: true, position: DpiSplitPosition.FirstByte));  // split-seqovl
+        list.Add(Fake(current, decoy: DpiServiceCatalog.DefaultFakeSni, ahead: true, position: DpiSplitPosition.FirstByte));
+        list.Add(Fake(current, fooling: DpiFooling.BadSum, repeats: 3));
+        list.Add(Fake(current, fooling: DpiFooling.BadSeq, repeats: 3));
+        list.Add(Fake(current, fooling: DpiFooling.DataNoAck, repeats: 3));
+        list.Add(Fake(current, fooling: DpiFooling.Ttl | DpiFooling.BadSum, repeats: 3));
+        // «fake,multidisorder» из general (FAKE TLS AUTO): повторов 11 и разрыв сразу после disorder
+        list.Add(Fake(current, fooling: DpiFooling.BadSeq, repeats: 11, disorder: true, position: DpiSplitPosition.FirstByte));
+        list.Add(Fake(current, decoy: DpiServiceCatalog.DefaultFakeSni, fooling: DpiFooling.BadSeq, repeats: 11,
+            disorder: true, position: DpiSplitPosition.MidSld));
+        // «fake,multisplit» из general (SIMPLE FAKE): фейк и мелкие куски записи
+        list.Add(Fake(current, fooling: DpiFooling.BadSeq, repeats: 6, multisplit: 1, position: DpiSplitPosition.FirstByte));
+
+        // --- 8. фейк с ручным TTL вместо авто-TTL (--dpi-desync-ttl=…)
+        foreach (var ttl in new[] { 5, 3, 12, 16 })
+            list.Add(Fake(current, ttl: ttl, autoTtl: false, repeats: 3));
+
+        // --- 9. фейк вместе с разрывом: fakedsplit у zapret
+        list.Add(Fake(current, position: DpiSplitPosition.Sni));
+        list.Add(Fake(current, position: DpiSplitPosition.FirstByte));
+        list.Add(Fake(current, position: DpiSplitPosition.MidSld, tlsrec: true));
+        list.Add(Fake(current, decoy: DpiServiceCatalog.DefaultFakeSni, position: DpiSplitPosition.Sni, tlsrec: true));
+        list.Add(Fake(current, decoy: DpiServiceCatalog.DefaultFakeSni, position: DpiSplitPosition.FirstByte, tlsrec: true));
+        list.Add(Fake(current, fooling: DpiFooling.BadSum, position: DpiSplitPosition.FirstByte, oob: true));
+
+        // --- 10. фейк вместе с мультисплитом и после настоящего ClientHello
+        list.Add(Fake(current, multisplit: 8));
+        list.Add(Fake(current, decoy: DpiServiceCatalog.DefaultFakeSni, multisplit: 2));
+        list.Add(Fake(current, after: true, repeats: 3));
+        list.Add(Fake(current, decoy: DpiServiceCatalog.DefaultFakeSni, after: true, repeats: 6));
+        list.Add(Fake(current, fooling: DpiFooling.BadSum, multisplit: 8));
+        list.Add(Fake(current, autoTtl: false, ttl: 8, repeats: 6, mss: true));
 
         return list;
     }
 
+    /// <summary>Вариант без фейка: только разрыв, disorder, срочные данные или MSS.</summary>
     private static DpiBypassSettings Variant(
-        DpiBypassSettings current, int ttl, bool fake = true, bool sniSplit = true,
-        bool recordSplit = true, bool after = false, int count = 1, bool mss = false,
-        int multisplit = 0)
+        DpiBypassSettings current, DpiSplitPosition position, bool tlsrec = false, bool disorder = false,
+        bool oob = false, int multisplit = 0, bool mss = false)
     {
         var clone = current.Clone();
-        clone.FakeTtl = fake;
-        clone.FakeTtlValue = ttl;
-        clone.SniSplit = sniSplit;
-        clone.TlsRecordSplit = recordSplit;
-        clone.FakeAfter = after;
-        clone.FakeCount = count;
-        clone.ClampMss = mss;
+        clone.SniSplit = true;
+        clone.SplitPosition = position;
+        clone.TlsRecordSplit = tlsrec;
+        clone.Disorder = disorder;
+        clone.OobSplit = oob;
         clone.Multisplit = multisplit > 0;
         clone.MultisplitSize = multisplit > 0 ? multisplit : current.MultisplitSize;
+        clone.ClampMss = mss;
+        clone.MssValue = 64;
+        clone.FakeTtl = false;
+        clone.FakeSni = "";
+        clone.SplitDelayMs = current.SplitDelayMs <= 0 ? 5 : current.SplitDelayMs;
+        return clone;
+    }
+
+    /// <summary>
+    /// Вариант с фейк-пакетом: <c>--dpi-desync=fake</c> плюс обманка (fooling), повторы,
+    /// чужое имя, размещение до/после запроса и необязательный разрыв рядом.
+    /// </summary>
+    private static DpiBypassSettings Fake(
+        DpiBypassSettings current, bool split = true, int repeats = 1, string decoy = "",
+        DpiFooling fooling = DpiFooling.Ttl, bool autoTtl = true, int ttl = 8, bool ahead = false,
+        bool after = false, bool tlsrec = false, int multisplit = 0, bool mss = false,
+        bool disorder = false, bool oob = false,
+        DpiSplitPosition position = DpiSplitPosition.Sni)
+    {
+        var clone = current.Clone();
+        clone.FakeTtl = true;
+        clone.InjectFake = true;
+        clone.FakeFooling = fooling;
+        clone.FakePlacement = ahead ? DpiFakePlacement.Ahead : DpiFakePlacement.Overlap;
+        clone.FakeAutoTtl = autoTtl;
+        clone.FakeTtlValue = ttl;
+        clone.FakeCount = Math.Clamp(repeats, 1, 10);
+        clone.FakeAfter = after;
+        clone.FakeSni = decoy;
+
+        clone.SniSplit = split;
+        clone.TlsRecordSplit = split && tlsrec;
+        clone.SplitPosition = position;
+        clone.Disorder = disorder;      // «fake,multidisorder» у zapret
+        clone.OobSplit = oob;
+        clone.Multisplit = multisplit > 0;
+        clone.MultisplitSize = multisplit > 0 ? multisplit : current.MultisplitSize;
+        clone.ClampMss = mss;
+        clone.MssValue = 64;
+        clone.SplitDelayMs = current.SplitDelayMs <= 0 ? 5 : current.SplitDelayMs;
         return clone;
     }
 
@@ -567,15 +762,34 @@ public static class DpiTester
         var parts = new List<string>();
         if (s.FakeTtl)
         {
-            var fake = $"fake TTL {s.FakeTtlValue}" + (s.FakeCount > 1 ? $" ×{s.FakeCount}" : "");
-            parts.Add(s.FakeAfter ? fake + " после разрыва" : fake);
+            var fake = s.FakeAutoTtl ? L.T("dpi.strategy.autottl") : $"fake TTL {s.FakeTtlValue}";
+            fake += " → " + DpiBypassEngine.FoolingText(s.FakeFooling);
+            if (s.FakePlacement == DpiFakePlacement.Ahead) fake += ", " + L.T("dpi.place.ahead");
+            if (s.FakeCount > 1) fake += $" ×{s.FakeCount}";
+            if (s.FakeAfter) fake += L.T("S0486");
+            if (s.FakeSni.Trim().Length > 0) fake += L.F("dpi.strategy.decoy", s.FakeSni.Trim());
+            if (!s.InjectFake) fake += ", " + L.T("dpi.strategy.noinject");
+            parts.Add(fake);
         }
-        parts.Add(s.SniSplit ? "SNI split" : "split 2 байта");
-        if (s.TlsRecordSplit) parts.Add("record split");
-        if (s.Multisplit) parts.Add($"мультисплит по {s.MultisplitSize} байт");
+
+        if (s.SniSplit) parts.Add(SplitLabel(s.SplitPosition));
+        if (s.TlsRecordSplit) parts.Add("tlsrec");
+        if (s.Disorder) parts.Add(L.T("dpi.strategy.disorder"));
+        if (s.OobSplit) parts.Add(L.T("dpi.strategy.oob"));
+        if (s.Multisplit) parts.Add(L.F("S0488", s.MultisplitSize));
         if (s.ClampMss) parts.Add($"MSS {s.MssValue}");
-        return parts.Count == 0 ? "без обхода" : string.Join(" · ", parts);
+        return parts.Count == 0 ? L.T("S0489") : string.Join(" · ", parts);
     }
+
+    /// <summary>Название позиции разрыва — как <c>--dpi-desync-split-pos</c> в zapret.</summary>
+    private static string SplitLabel(DpiSplitPosition position) => position switch
+    {
+        DpiSplitPosition.FirstByte => "split 1",
+        DpiSplitPosition.SecondByte => "split 2",
+        DpiSplitPosition.MidSld => "split midsld",
+        DpiSplitPosition.Mid => "split mid",
+        _ => "SNI split"
+    };
 
     // ------------------------------------------------------- свой ClientHello
     /// <summary>GREASE-расширение: браузеры вставляют такие, чтобы серверы не закрепляли формат.</summary>

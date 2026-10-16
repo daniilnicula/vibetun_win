@@ -1,7 +1,8 @@
 <Window x:Class="VibeTun.Views.Dialogs.PromptWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Ввод" Width="440" SizeToContent="Height"
+             xmlns:loc="clr-namespace:VibeTun.Services"
+        Title="{loc:Tr S0070}" Width="440" SizeToContent="Height"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource WindowBg}"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
@@ -30,8 +31,8 @@
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="18,14,18,16">
-            <Button Content="Отмена" Style="{StaticResource BtnGhost}" Click="OnCancel" />
-            <Button Content="ОК" Style="{StaticResource BtnPrimary}" Margin="8,0,0,0" Click="OnOk" IsDefault="True" />
+            <Button Content="{loc:Tr S0015}" Style="{StaticResource BtnGhost}" Click="OnCancel" />
+            <Button Content="{loc:Tr S0071}" Style="{StaticResource BtnPrimary}" Margin="8,0,0,0" Click="OnOk" IsDefault="True" />
         </StackPanel>
     </Grid>
 </Window>

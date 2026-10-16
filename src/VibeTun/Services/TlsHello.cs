@@ -1,3 +1,5 @@
+using VibeTun.Models;
+
 namespace VibeTun.Services;
 
 /// <summary>
@@ -120,6 +122,29 @@ public static class TlsHello
     }
 
     /// <summary>
+    /// Испортить имя в SNI прямо в буфере: длина остаётся прежней, буквы заменяются случайными.
+    /// Так делается фейк-пакет для faking: DPI видит настоящий ClientHello, но с чужим именем,
+    /// а сервер (если пакет до него дойдёт) ничего не получает — длины и структура целы
+    /// (аналог <c>--dpi-desync-fake-tls-mod=rnd</c> у zapret).
+    /// </summary>
+    public static bool TryGarbleSni(byte[] b, int len)
+    {
+        var offset = SniOffset(b, len, out var size);
+        if (offset < 0 || size <= 0 || offset + size > len) return false;
+
+        for (var i = 0; i < size; i++)
+        {
+            var c = b[offset + i];
+            // точку не трогаем: имя должно выглядеть как домен, иначе часть DPI просто
+            // не станет разбирать такое «имя» и разбор дойдёт до настоящего запроса
+            if (c == (byte)'.' || c == (byte)'-') continue;
+            b[offset + i] = (byte)Random.Shared.Next((byte)'a', (byte)'z' + 1);
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Где резать запись (абсолютное смещение от начала буфера): середина имени из SNI,
     /// либо <see cref="DefaultSplitBytes"/> байт от начала тела, если SNI нет.
     /// Возвращает -1, если резать некуда.
@@ -141,6 +166,59 @@ public static class TlsHello
         var fallback = RecordHeader + HandshakeHeader + DefaultSplitBytes;
         if (fallback >= len - 1) return -1;
         return fallback;
+    }
+
+    /// <summary>
+    /// Где резать ClientHello при выбранной позиции (<see cref="DpiSplitPosition"/> — аналог
+    /// <c>--dpi-desync-split-pos</c>). Возвращает абсолютное смещение от начала буфера или -1,
+    /// если резать негде: тогда вызывающий сам решает, чем заменить разрыв.
+    /// </summary>
+    public static int SplitPositionAt(byte[] b, int len, DpiSplitPosition mode)
+    {
+        if (len < RecordHeader + HandshakeHeader + 2) return -1;
+
+        var cut = mode switch
+        {
+            DpiSplitPosition.FirstByte => 1,
+            DpiSplitPosition.SecondByte => 2,
+            DpiSplitPosition.Mid => Math.Max(1, len / 2),
+            DpiSplitPosition.MidSld => MidSldOffset(b, len),
+            _ => -1
+        };
+
+        // позиция не нашлась или выбрана «по SNI» — режем как раньше, посередине имени
+        if (cut <= 0) cut = SplitPosition(b, len, true);
+        return cut > 0 && cut < len - 1 ? cut : -1;
+    }
+
+    /// <summary>
+    /// Смещение в середине домена второго уровня: «www.google.com» → середина «google»,
+    /// «google.com» → середина «google». Не вышло разобрать имя — режем посередине SNI.
+    /// </summary>
+    private static int MidSldOffset(byte[] b, int len)
+    {
+        var sni = SniOffset(b, len, out var sniLength);
+        if (sni <= 0 || sniLength <= 0) return -1;
+
+        var lastDot = -1;
+        var prevDot = -1;
+        for (var i = sniLength - 1; i >= 0; i--)
+        {
+            if (b[sni + i] != (byte)'.') continue;
+            if (lastDot < 0) lastDot = i;
+            else
+            {
+                prevDot = i;
+                break;
+            }
+        }
+
+        if (lastDot < 0) return sni + Math.Max(1, sniLength / 2);   // имён без точек не бывает, но на всякий случай
+
+        var start = prevDot + 1;
+        var length = lastDot - start;
+        if (length <= 0) return sni + Math.Max(1, sniLength / 2);
+        return sni + start + Math.Max(1, length / 2);
     }
 
     /// <summary>

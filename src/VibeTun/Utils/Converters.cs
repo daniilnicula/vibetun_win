@@ -413,12 +413,12 @@ public sealed class RouteKindTextConv : IValueConverter
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         => value switch
         {
-            RouteKind.Domain => "домен",
-            RouteKind.DomainSuffix => "суффикс",
-            RouteKind.DomainKeyword => "ключ",
+            RouteKind.Domain => L.T("S0270"),
+            RouteKind.DomainSuffix => L.T("S0564"),
+            RouteKind.DomainKeyword => L.T("S0272"),
             RouteKind.DomainRegex => "regex",
             RouteKind.Ip => "IP",
-            RouteKind.IpCidr => "подсеть",
+            RouteKind.IpCidr => L.T("S0565"),
             _ => "—"
         };
 
@@ -431,9 +431,9 @@ public sealed class MatchKindTextConv : IValueConverter
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         => value switch
         {
-            MatchKind.Domain => "Домен",
-            MatchKind.Ip => "IP / подсеть",
-            MatchKind.Keyword => "Ключевое слово",
+            MatchKind.Domain => L.T("S0566"),
+            MatchKind.Ip => L.T("S0271"),
+            MatchKind.Keyword => L.T("S0567"),
             MatchKind.Regex => "Regex",
             _ => "—"
         };

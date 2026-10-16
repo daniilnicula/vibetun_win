@@ -73,7 +73,7 @@ public static class CoreInstaller
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
 
         if (!doc.RootElement.TryGetProperty("assets", out var assets))
-            throw new InvalidOperationException("В релизе нет файлов");
+            throw new InvalidOperationException(L.T("S0285"));
 
         var candidates = assets.EnumerateArray()
             .Select(a => new
@@ -86,7 +86,7 @@ public static class CoreInstaller
             .ToList();
 
         if (candidates.Count == 0)
-            throw new InvalidOperationException("Не найден архив для Windows в последнем релизе");
+            throw new InvalidOperationException(L.T("S0286"));
 
         var arch = GoArch();
         bool Plain(string n) => !n.Contains("purego", StringComparison.OrdinalIgnoreCase);
@@ -106,9 +106,9 @@ public static class CoreInstaller
     public static async Task<CoreInfo?> InstallLatestAsync(CoreService core, CoreFlavor flavor,
         IProgress<string>? progress = null, CancellationToken ct = default, string? repo = null)
     {
-        progress?.Report("Поиск последней версии на GitHub…");
+        progress?.Report(L.T("S0287"));
         var (url, name) = await ResolveWindowsAssetAsync(flavor, ct, repo);
-        progress?.Report($"Скачивание {name}…");
+        progress?.Report(L.F("S0288", name));
         return await InstallFromUrlAsync(core, url, progress, ct, flavor);
     }
 
@@ -128,7 +128,7 @@ public static class CoreInstaller
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TaskCanceledException)
         {
-            progress?.Report($"Форк {AwgRepo} недоступен ({ex.Message}), пробую {ExtendedRepo}…");
+            progress?.Report(L.F("S0289", AwgRepo, ex.Message, ExtendedRepo));
         }
 
         return await InstallLatestAsync(core, CoreFlavor.SingBoxExtended, progress, ct, ExtendedRepo);
@@ -143,7 +143,7 @@ public static class CoreInstaller
         var available = flavor == CoreFlavor.SingBoxExtended ? BundledCores.HasExtended : BundledCores.HasOfficial;
         if (!available) return null;
 
-        progress?.Report("Распаковка встроенного ядра…");
+        progress?.Report(L.T("S0290"));
 
         // перезаписываем поверх, чтобы гарантированно восстановить рабочую копию
         var target = TargetFor(flavor);
@@ -167,7 +167,7 @@ public static class CoreInstaller
             await resp.Content.CopyToAsync(fs, ct);
         }
 
-        progress?.Report("Распаковка…");
+        progress?.Report(L.T("S0291"));
         var info = await InstallFromZipAsync(core, tempZip, progress, ct, flavor);
         try { File.Delete(tempZip); } catch { /* ignore */ }
         return info;
@@ -187,7 +187,7 @@ public static class CoreInstaller
                 .FirstOrDefault(f => Path.GetFileName(f).Contains("sing-box", StringComparison.OrdinalIgnoreCase))
                 ?? Directory.EnumerateFiles(tempDir, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
 
-            if (exe is null) throw new InvalidOperationException("В архиве не найден исполняемый файл ядра");
+            if (exe is null) throw new InvalidOperationException(L.T("S0292"));
 
             var target = TargetFor(flavor ?? core.Info.Flavor());
 
@@ -207,7 +207,7 @@ public static class CoreInstaller
             // теряет часть функций, поэтому переносим все соседние файлы в каталог ядра.
             CopySiblings(exe, target);
 
-            progress?.Report("Проверка версии ядра…");
+            progress?.Report(L.T("S0293"));
             return await core.DetectAsync(target, flavor);
         }
         finally
@@ -237,7 +237,7 @@ public static class CoreInstaller
 
     /// <summary>Текст для инструкции по ручной установке.</summary>
     public static string ManualHint =>
-        $"Скачайте архив ядра с https://github.com/{UpstreamRepo}/releases и положите sing-box.exe в {AppPaths.CoreDir}, " +
-        $"а для AmneziaWG — с https://github.com/{AwgRepo}/releases (файл назвать sing-box-extended.exe, " +
-        "и положить рядом libcronet.dll из того же архива), либо укажите путь к ядру в настройках.";
+        L.F("S0294", UpstreamRepo, AppPaths.CoreDir) +
+        L.F("S0295", AwgRepo) +
+        L.T("S0296");
 }

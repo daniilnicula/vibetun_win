@@ -55,10 +55,10 @@ public sealed class ProfileEditorViewModel : ObservableObject
 
     public string ProtocolHint => Profile.Protocol.ToLowerInvariant() switch
     {
-        ProtocolIds.MtProto => "MTProto применяется только внутри Telegram — после сохранения нажмите «Открыть в Telegram».",
-        ProtocolIds.AmneziaWg => "AmneziaWG требует расширенную сборку ядра (Настройки → Ядро).",
-        ProtocolIds.ShadowsocksR => "SSR не поддерживается ядром sing-box.",
-        ProtocolIds.Tunnel => "Tunnel (Custom) — вставьте JSON ядра в поле «JSON ядра» внизу редактора: сервер/порт сверху не заполняются.",
+        ProtocolIds.MtProto => L.T("S0794"),
+        ProtocolIds.AmneziaWg => L.T("S0795"),
+        ProtocolIds.ShadowsocksR => L.T("S0796"),
+        ProtocolIds.Tunnel => L.T("S0797"),
         _ => ""
     };
 
@@ -136,7 +136,7 @@ public sealed class ProfileEditorViewModel : ObservableObject
         }
     }
 
-    public string PingText => _ping < 0 ? "не измерялось" : _ping == 0 ? "<1 ms" : $"{_ping} ms";
+    public string PingText => _ping < 0 ? L.T("S0798") : _ping == 0 ? "<1 ms" : $"{_ping} ms";
 
     public async Task TestPingAsync()
     {

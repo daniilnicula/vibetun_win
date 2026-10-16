@@ -24,7 +24,8 @@ public static partial class LinkParser
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(text)) return new ParseResult(profiles, errors);
 
-        var trimmed = text.Trim();
+        // Normalize every common newline form before processing subscription/config entries.
+        var trimmed = text.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
 
         // 0) ссылка AmneziaVPN: vpn://<base64 от .conf или JSON>
         if (trimmed.StartsWith("vpn://", StringComparison.OrdinalIgnoreCase))
@@ -34,7 +35,7 @@ public static partial class LinkParser
                 var decoded = DecodeVpnLink(chunk);
                 if (decoded is null)
                 {
-                    errors.Add("Не удалось декодировать ссылку vpn:// (ожидается base64 от конфига WireGuard/AmneziaWG)");
+                    errors.Add(L.T("S0583"));
                     continue;
                 }
 
@@ -65,12 +66,12 @@ public static partial class LinkParser
                 {
                     var profile = JsonConfigConverter.Convert(doc.RootElement, trimmed, out var err);
                     if (profile is not null) profiles.Add(profile);
-                    else errors.Add(err ?? "Не удалось разобрать JSON-конфиг");
+                    else errors.Add(err ?? L.T("S0584"));
                 }
             }
             catch (JsonException ex)
             {
-                errors.Add("Ошибка JSON: " + ex.Message);
+                errors.Add(L.T("S0585") + ex.Message);
             }
 
             if (profiles.Count > 0) return new ParseResult(profiles, errors);
@@ -83,7 +84,7 @@ public static partial class LinkParser
         {
             var p = WgConfParser.Parse(trimmed, out var err);
             if (p is not null) profiles.Add(p);
-            else errors.Add(err ?? "Не удалось разобрать WireGuard-конфиг");
+            else errors.Add(err ?? L.T("S0586"));
             return new ParseResult(profiles, errors);
         }
 
@@ -111,7 +112,7 @@ public static partial class LinkParser
 
             var profile = ParseSingle(line, out var error);
             if (profile is not null) profiles.Add(profile);
-            else errors.Add(error ?? $"Не распознано: {Shorten(line)}");
+            else errors.Add(error ?? L.F("S0587", Shorten(line)));
         }
 
         return new ParseResult(profiles, errors);
@@ -238,7 +239,7 @@ public static partial class LinkParser
                 profile.Protocol = ProtocolIds.Vmess;
                 return profile;
             }
-            error = "VMess-ссылка не в формате base64(JSON)";
+            error = L.T("S0588");
             return null;
         }
 
@@ -282,7 +283,7 @@ public static partial class LinkParser
         if (S("v").Length > 0) node.Extra["v"] = S("v");
         if (node.Server.Length == 0)
         {
-            error = "В VMess-конфиге не указан адрес сервера";
+            error = L.T("S0589");
             return null;
         }
 
@@ -381,7 +382,7 @@ public static partial class LinkParser
             }
             else
             {
-                error = "Не удалось разобрать логин/пароль Shadowsocks";
+                error = L.T("S0590");
                 return null;
             }
 
@@ -397,7 +398,7 @@ public static partial class LinkParser
         }
         else
         {
-            error = "Неверный формат ss:// ссылки";
+            error = L.T("S0591");
             return null;
         }
 
@@ -437,7 +438,7 @@ public static partial class LinkParser
         var body = line["ssr://".Length..].Trim();
         if (!Text.TryBase64(body, out var decoded))
         {
-            error = "SSR: не удалось декодировать base64";
+            error = L.T("S0592");
             return null;
         }
 
@@ -445,7 +446,7 @@ public static partial class LinkParser
         var parts = main.Split(':');
         if (parts.Length < 6)
         {
-            error = "SSR: неверный формат";
+            error = L.T("S0593");
             return null;
         }
 
@@ -795,7 +796,7 @@ public static partial class LinkParser
         var p = Text.ParseQuery(query);
         if (!p.TryGetValue("server", out var server) || !p.TryGetValue("port", out var portStr))
         {
-            error = "MTProto-ссылка без server/port";
+            error = L.T("S0594");
             return null;
         }
 
@@ -840,7 +841,7 @@ public static partial class LinkParser
             };
         }
 
-        error = "Неизвестный протокол ссылки";
+        error = L.T("S0595");
         return null;
     }
 
@@ -863,7 +864,7 @@ public static partial class LinkParser
         var decoded = DecodeVpnLink(line);
         if (decoded is null)
         {
-            error = "Ссылка vpn:// не декодируется — вероятно, скопирована не полностью";
+            error = L.T("S0596");
             return null;
         }
 
@@ -874,7 +875,7 @@ public static partial class LinkParser
             return nested.Profiles[0];
         }
 
-        error = nested.Errors.FirstOrDefault() ?? "Внутри ссылки vpn:// не найден конфиг WireGuard/AmneziaWG";
+        error = nested.Errors.FirstOrDefault() ?? L.T("S0597");
         return null;
     }
 
@@ -884,17 +885,32 @@ public static partial class LinkParser
         var index = line.IndexOf("://", StringComparison.Ordinal);
         if (index < 0) return null;
         var payload = line[(index + 3)..].Trim().Trim('"');
+        if (payload.StartsWith("base64:", StringComparison.OrdinalIgnoreCase)) payload = payload[7..];
+
+        // Some exporters append an ordinary URI fragment/query after the encoded config.
+        // Neither '#' nor '?' belongs to the Base64/Base64URL alphabets.
+        var metadataStart = payload.IndexOfAny(new[] { '?', '#' });
+        if (metadataStart >= 0) payload = payload[..metadataStart];
         if (payload.Length == 0) return null;
 
-        if (Text.TryBase64(payload, out var decoded)) return decoded;
-
-        // Amnezia иногда отдаёт ссылку с URL-кодированием
-        try
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            var unescaped = Uri.UnescapeDataString(payload);
-            if (Text.TryBase64(unescaped, out var second)) return second;
+            payload = new string(payload.Where(ch => !char.IsWhiteSpace(ch)).ToArray());
+            if (Text.TryBase64(payload, out var decoded)) return decoded;
+
+            // Amnezia and subscription relays may URL-encode the Base64URL payload;
+            // try repeated decoding for links that were escaped more than once.
+            try
+            {
+                var unescaped = Uri.UnescapeDataString(payload);
+                if (string.Equals(unescaped, payload, StringComparison.Ordinal)) break;
+                payload = unescaped;
+                var suffix = payload.IndexOfAny(new[] { '?', '#' });
+                if (suffix >= 0) payload = payload[..suffix];
+                if (payload.StartsWith("base64:", StringComparison.OrdinalIgnoreCase)) payload = payload[7..];
+            }
+            catch (UriFormatException) { break; }
         }
-        catch { /* ignore */ }
 
         return null;
     }

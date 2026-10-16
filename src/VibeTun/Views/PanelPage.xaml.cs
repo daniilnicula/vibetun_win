@@ -141,8 +141,8 @@ public partial class PanelPage : UserControl
             _browser = null;
             var hint = new TextBlock
             {
-                Text = "Не удалось запустить браузер: " + ex.Message + Environment.NewLine +
-                       "Нужен Microsoft Edge WebView2 Runtime (обычно уже установлен в Windows 11).",
+                Text = L.T("S0935") + ex.Message + Environment.NewLine +
+                       L.T("S0936"),
                 TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,
                 Margin = new Thickness(24),

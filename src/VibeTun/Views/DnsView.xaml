@@ -1,6 +1,7 @@
 <UserControl x:Class="VibeTun.Views.DnsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:VibeTun.Services"
              xmlns:ctl="clr-namespace:VibeTun.Views.Controls"
              PreviewKeyDown="OnPreviewKeyDown">
     <UserControl.Resources>
@@ -195,17 +196,17 @@
                            FontFamily="Cascadia Mono, Consolas" FontSize="12" HorizontalAlignment="Right"
                            ToolTip="{Binding PingTip}"
                            Visibility="{Binding ShowPingValue, Converter={StaticResource BoolToVis}}" />
-                <TextBlock Text="нет ответа" FontSize="12" Foreground="{DynamicResource Danger}" HorizontalAlignment="Right"
+                <TextBlock Text="{loc:Tr S0078}" FontSize="12" Foreground="{DynamicResource Danger}" HorizontalAlignment="Right"
                            ToolTip="{Binding PingTip}"
                            Visibility="{Binding PingFailed, Converter={StaticResource BoolToVis}}" />
-                <TextBlock Text="измерение…" Style="{StaticResource TxtMuted}" HorizontalAlignment="Right"
+                <TextBlock Text="{loc:Tr S0079}" Style="{StaticResource TxtMuted}" HorizontalAlignment="Right"
                            Visibility="{Binding IsPinging, Converter={StaticResource BoolToVis}}" />
             </Grid>
         </DataTemplate>
 
         <!-- ======================= сервер провайдера ======================= -->
         <DataTemplate x:Key="ServerTemplate">
-            <Button Style="{StaticResource DnsServerButton}" ToolTip="Использовать этот DNS-сервер"
+            <Button Style="{StaticResource DnsServerButton}" ToolTip="{loc:Tr S0080}"
                     Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     CommandParameter="{Binding}">
                 <Grid Height="34">
@@ -286,7 +287,7 @@
 
                         <!-- ручка перетаскивания: ярче при наведении на строку -->
                         <Border Grid.Column="0" Background="Transparent" Cursor="SizeNS"
-                                ToolTip="Перетащите, чтобы изменить порядок">
+                                ToolTip="{loc:Tr S0081}">
                             <Path Width="8" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                   Fill="{DynamicResource TextMuted}"
                                   Data="M1.5,0.8 A1.2,1.2 0 1 1 1.5,3.2 A1.2,1.2 0 1 1 1.5,0.8 Z M6.5,0.8 A1.2,1.2 0 1 1 6.5,3.2 A1.2,1.2 0 1 1 6.5,0.8 Z M1.5,5.8 A1.2,1.2 0 1 1 1.5,8.2 A1.2,1.2 0 1 1 1.5,5.8 Z M6.5,5.8 A1.2,1.2 0 1 1 6.5,8.2 A1.2,1.2 0 1 1 6.5,5.8 Z M1.5,10.8 A1.2,1.2 0 1 1 1.5,13.2 A1.2,1.2 0 1 1 1.5,10.8 Z M6.5,10.8 A1.2,1.2 0 1 1 6.5,13.2 A1.2,1.2 0 1 1 6.5,10.8 Z">
@@ -340,7 +341,7 @@
 
                         <!-- справа, как у профилей: правка и удаление (только свои DNS), раскрытие (провайдеры), звезда -->
                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                            <Button Style="{StaticResource BtnIcon}" ToolTip="Редактировать"
+                            <Button Style="{StaticResource BtnIcon}" ToolTip="{loc:Tr S0082}"
                                     Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"
                                     Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}">
@@ -348,7 +349,7 @@
                                       Fill="{DynamicResource TextSecondary}"
                                       Data="M 8.9,1.4 L 10.6,3.1 L 4.1,9.6 L 1.6,10.4 L 2.4,7.9 Z" />
                             </Button>
-                            <Button Style="{StaticResource BtnIcon}" Margin="2,0,0,0" ToolTip="Удалить"
+                            <Button Style="{StaticResource BtnIcon}" Margin="2,0,0,0" ToolTip="{loc:Tr S0083}"
                                     Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"
                                     Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}">
@@ -357,7 +358,7 @@
                                       Stroke="{DynamicResource Warning}"
                                       Data="M 2.6,2.6 L 9.4,9.4 M 9.4,2.6 L 2.6,9.4" />
                             </Button>
-                            <Button Style="{StaticResource BtnIcon}" ToolTip="Серверы провайдера"
+                            <Button Style="{StaticResource BtnIcon}" ToolTip="{loc:Tr S0084}"
                                     Visibility="{Binding IsProvider, Converter={StaticResource BoolToVis}}"
                                     Command="{Binding DataContext.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}">
@@ -379,7 +380,7 @@
                                     </Path.Style>
                                 </Path>
                             </Button>
-                            <Button Style="{StaticResource BtnIcon}" Margin="2,0,0,0" ToolTip="В избранное"
+                            <Button Style="{StaticResource BtnIcon}" Margin="2,0,0,0" ToolTip="{loc:Tr S0085}"
                                     Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}">
                                 <Path Data="M 6,0.6 L 7.6,4.2 L 11.5,4.6 L 8.6,7.2 L 9.4,11 L 6,9 L 2.6,11 L 3.4,7.2 L 0.5,4.6 L 4.4,4.2 Z"
@@ -413,7 +414,7 @@
                         <Border Padding="12,9" CornerRadius="8" Background="{DynamicResource CardBgAlt}" Margin="0,0,0,4"
                                 Visibility="{Binding NoServers, Converter={StaticResource BoolToVis}}">
                             <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap"
-                                       Text="Адресов серверов пока нет — нажмите «Обновить», чтобы спросить их у провайдера." />
+                                       Text="{loc:Tr S0086}" />
                         </Border>
 
                         <Grid Margin="0,6,0,0">
@@ -434,13 +435,13 @@
                                 </TextBlock.Style>
                             </TextBlock>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
-                                <Button Content="Сайт" Style="{StaticResource BtnGhost}" Padding="10,4" FontSize="12"
+                                <Button Content="{loc:Tr S0087}" Style="{StaticResource BtnGhost}" Padding="10,4" FontSize="12"
                                         ToolTip="{Binding Site}"
                                         Visibility="{Binding HasSite, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding DataContext.OpenSiteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}" />
                                 <Button Content="{Binding RefreshText}" Style="{StaticResource BtnGhost}" Padding="10,4" FontSize="12"
-                                        Margin="6,0,0,0" ToolTip="Ещё раз спросить у провайдера адреса его серверов"
+                                        Margin="6,0,0,0" ToolTip="{loc:Tr S0088}"
                                         Visibility="{Binding IsDynamic, Converter={StaticResource BoolToVis}}"
                                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvBool}}"
                                         Command="{Binding DataContext.RefreshCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -487,11 +488,11 @@
 
                     <!-- DNS ещё не выбран -->
                     <TextBlock Style="{StaticResource TxtMuted}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                               Text="DNS не выбран" ToolTip="Пока DNS не выбран, работает основной"
+                               Text="{loc:Tr S0089}" ToolTip="{loc:Tr S0090}"
                                Visibility="{Binding HasDns, Converter={StaticResource InvBoolToVis}}" />
-                    <Button Grid.Column="1" Content="Выбрать DNS" Style="{StaticResource BtnPrimary}"
+                    <Button Grid.Column="1" Content="{loc:Tr S0091}" Style="{StaticResource BtnPrimary}"
                             Padding="10,4" FontSize="12" Margin="8,4,0,4" VerticalAlignment="Center"
-                            ToolTip="Откроются «Основные» — нажмите там на DNS"
+                            ToolTip="{loc:Tr S0092}"
                             Visibility="{Binding HasDns, Converter={StaticResource InvBoolToVis}}"
                             Command="{Binding DataContext.PickDnsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}" />
@@ -508,9 +509,9 @@
                         </TextBlock.ToolTip>
                         <Run Text="DNS:" Foreground="{DynamicResource TextMuted}" /> <Run Text="{Binding DnsText, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource Accent}" />
                     </TextBlock>
-                    <Button Grid.Column="1" Content="Изменить" Style="{StaticResource BtnGhost}"
+                    <Button Grid.Column="1" Content="{loc:Tr S0093}" Style="{StaticResource BtnGhost}"
                             Padding="10,4" FontSize="12" Margin="8,4,0,4" VerticalAlignment="Center"
-                            ToolTip="Выбрать другой DNS в «Основных»"
+                            ToolTip="{loc:Tr S0094}"
                             Visibility="{Binding HasDns, Converter={StaticResource BoolToVis}}"
                             Command="{Binding DataContext.PickDnsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}" />
@@ -540,7 +541,7 @@
                         </Grid.ColumnDefinitions>
 
                         <CheckBox Style="{StaticResource Check}" VerticalAlignment="Center"
-                                  IsChecked="{Binding Enabled}" ToolTip="Свой DNS для домена включён" />
+                                  IsChecked="{Binding Enabled}" ToolTip="{loc:Tr S0095}" />
 
                         <Border Grid.Column="1" Width="30" Height="30" CornerRadius="8" Margin="10,0,0,0"
                                 Background="{DynamicResource CardBgAlt}">
@@ -554,7 +555,7 @@
 
                         <TextBox Grid.Column="2" Style="{StaticResource InputBox}" Margin="10,0,0,0" VerticalAlignment="Center"
                                  Text="{Binding Pattern, UpdateSourceTrigger=LostFocus}"
-                                 ToolTip="Запись можно поправить прямо здесь" />
+                                 ToolTip="{loc:Tr S0096}" />
 
                         <TextBlock Grid.Column="3" Text="{Binding KindLabel}" MinWidth="44" Margin="10,0,0,0"
                                    VerticalAlignment="Center" ToolTip="{Binding MatchHint}">
@@ -571,7 +572,7 @@
 
                         <Button Grid.Column="4" Style="{StaticResource BtnIcon}" Margin="6,0,0,0" VerticalAlignment="Center"
                                 Command="{Binding DataContext.RemoveDomainCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}" ToolTip="Убрать домен">
+                                CommandParameter="{Binding}" ToolTip="{loc:Tr S0097}">
                             <Path Data="M 0,0 L 9,9 M 9,0 L 0,9" Stroke="{DynamicResource TextMuted}" StrokeThickness="1.3" />
                         </Button>
                     </Grid>
@@ -600,7 +601,7 @@
                         </Grid.ColumnDefinitions>
 
                         <CheckBox Style="{StaticResource Check}" VerticalAlignment="Center"
-                                  IsChecked="{Binding Enabled}" ToolTip="Свой DNS для приложения включён" />
+                                  IsChecked="{Binding Enabled}" ToolTip="{loc:Tr S0098}" />
 
                         <Border Grid.Column="1" Width="30" Height="30" CornerRadius="8" Margin="10,0,0,0"
                                 Background="{DynamicResource CardBgAlt}">
@@ -627,7 +628,7 @@
 
                         <Button Grid.Column="3" Style="{StaticResource BtnIcon}" Margin="6,0,0,0" VerticalAlignment="Center"
                                 Command="{Binding DataContext.RemoveAppCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}" ToolTip="Убрать приложение">
+                                CommandParameter="{Binding}" ToolTip="{loc:Tr S0099}">
                             <Path Data="M 0,0 L 9,9 M 9,0 L 0,9" Stroke="{DynamicResource TextMuted}" StrokeThickness="1.3" />
                         </Button>
                     </Grid>
@@ -656,10 +657,10 @@
                 Background="{DynamicResource CardBgAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
             <Grid ctl:SegmentGroup.IsGroup="True" ctl:SegmentGroup.Radius="8">
                 <StackPanel Orientation="Horizontal">
-                <ToggleButton Style="{StaticResource TabToggle}" Content="Основные" IsChecked="{Binding IsMainTab}" />
-                <ToggleButton Style="{StaticResource TabToggle}" Content="Домены" Margin="3,0,0,0"
+                <ToggleButton Style="{StaticResource TabToggle}" Content="{loc:Tr S0100}" IsChecked="{Binding IsMainTab}" />
+                <ToggleButton Style="{StaticResource TabToggle}" Content="{loc:Tr S0101}" Margin="3,0,0,0"
                               IsChecked="{Binding IsDomainsTab}" />
-                <ToggleButton Style="{StaticResource TabToggle}" Content="Приложения" Margin="3,0,0,0"
+                <ToggleButton Style="{StaticResource TabToggle}" Content="{loc:Tr S0102}" Margin="3,0,0,0"
                               IsChecked="{Binding IsAppsTab}" />
             </StackPanel>
             </Grid>
@@ -704,8 +705,8 @@
                     <TextBlock Text="{Binding PickingHint}" Style="{StaticResource TxtMuted}" Margin="0,2,0,0" TextWrapping="Wrap" />
                 </StackPanel>
 
-                <Button Grid.Column="2" Content="Отмена" Style="{StaticResource BtnGhost}" Padding="10,4" FontSize="12"
-                        VerticalAlignment="Center" ToolTip="Не менять DNS и вернуться (Esc)"
+                <Button Grid.Column="2" Content="{loc:Tr S0015}" Style="{StaticResource BtnGhost}" Padding="10,4" FontSize="12"
+                        VerticalAlignment="Center" ToolTip="{loc:Tr S0103}"
                         Command="{Binding CancelPickCommand}" />
             </Grid>
         </Border>
@@ -724,18 +725,18 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel>
-                            <TextBlock Text="Основные" Style="{StaticResource TxtH2}" />
+                            <TextBlock Text="{loc:Tr S0100}" Style="{StaticResource TxtH2}" />
                             <TextBlock Style="{StaticResource TxtMuted}" Margin="0,3,0,0" TextWrapping="Wrap"
-                                       Text="DNS для всех: через него ядро узнаёт адреса сайтов, если у домена или приложения нет своего. Выбор сохраняется и применяется сразу: активное подключение перезапускается автоматически." />
+                                       Text="{loc:Tr S0104}" />
                             <TextBlock Style="{StaticResource TxtMuted}" Margin="0,6,0,0" TextWrapping="Wrap">
-                                <Run Text="Сейчас:" /> <Run Text="{Binding SelectionText, Mode=OneWay}" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" /><Run Text="{Binding RulesSummaryText, Mode=OneWay}" />
+                                <Run Text="{loc:Tr S0105}" /> <Run Text="{Binding SelectionText, Mode=OneWay}" Foreground="{DynamicResource Accent}" FontWeight="SemiBold" /><Run Text="{Binding RulesSummaryText, Mode=OneWay}" />
                             </TextBlock>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Top" Height="27">
                             <!-- пинг всех серверов — та же кнопка, что «Пинг всех профилей» -->
                             <Button Style="{StaticResource BtnGhost}" Command="{Binding PingAllCommand}" Height="27" Width="34"
-                                    Padding="0" ToolTip="Пинг всех DNS-серверов"
+                                    Padding="0" ToolTip="{loc:Tr S0106}"
                                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
                                 <Path Width="15" Height="15" Stretch="Uniform" Data="M1,8 H4.2 L6,3 L8.5,12.5 L10.3,8 H14"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
@@ -743,12 +744,12 @@
                             </Button>
                             <Button Style="{StaticResource BtnPrimary}" Command="{Binding AddCustomCommand}"
                                     Height="27" Padding="10,0,12,0" Margin="8,0,0,0"
-                                    ToolTip="Добавить свой DNS-сервер: IP-адрес и название">
+                                    ToolTip="{loc:Tr S0107}">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Width="11" Height="11" Stretch="Uniform" Data="M8,2.5 V13.5 M2.5,8 H13.5" VerticalAlignment="Center"
                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                           StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                    <TextBlock Text="Добавить свой" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{loc:Tr S0108}" Margin="7,0,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -758,8 +759,8 @@
                     <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding Pinned}" ItemTemplate="{StaticResource PinnedTemplate}" />
 
                     <Grid Margin="2,8,2,8">
-                        <TextBlock Text="Провайдеры и свои DNS" Style="{StaticResource TxtCaption}" VerticalAlignment="Center" />
-                        <TextBlock Text="порядок меняется перетаскиванием" Style="{StaticResource TxtMuted}" FontSize="11"
+                        <TextBlock Text="{loc:Tr S0109}" Style="{StaticResource TxtCaption}" VerticalAlignment="Center" />
+                        <TextBlock Text="{loc:Tr S0110}" Style="{StaticResource TxtMuted}" FontSize="11"
                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
 
@@ -771,7 +772,7 @@
 
                     <!-- ======================= DNS обхода DPI ======================= -->
                     <!-- раньше было в «Настройках» → «Обход DPI»: движок обхода резолвит сам, без ядра -->
-                    <TextBlock Text="Обход DPI" Style="{StaticResource TxtCaption}" Margin="2,8,2,8" />
+                    <TextBlock Text="{loc:Tr S0111}" Style="{StaticResource TxtCaption}" Margin="2,8,2,8" />
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -794,28 +795,28 @@
                                 </Border>
 
                                 <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
-                                    <TextBlock Text="Откуда брать адреса" Style="{StaticResource Txt}" FontWeight="SemiBold"
+                                    <TextBlock Text="{loc:Tr S0112}" Style="{StaticResource Txt}" FontWeight="SemiBold"
                                                TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="Движок обхода узнаёт адреса сайтов сам, без ядра" Style="{StaticResource TxtMuted}"
+                                    <TextBlock Text="{loc:Tr S0113}" Style="{StaticResource TxtMuted}"
                                                Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
                                 <ComboBox Grid.Column="2" Style="{StaticResource Combo}" Width="230" VerticalAlignment="Center"
                                           SelectedValuePath="Tag" SelectedValue="{Binding DpiDoh}">
-                                    <ComboBoxItem Content="Системный DNS провайдера" Tag="Off" />
+                                    <ComboBoxItem Content="{loc:Tr S0114}" Tag="Off" />
                                     <ComboBoxItem Content="DoH: Cloudflare" Tag="Cloudflare" />
                                     <ComboBoxItem Content="DoH: Google" Tag="Google" />
-                                    <ComboBoxItem Content="DoH: свой URL" Tag="Custom" />
+                                    <ComboBoxItem Content="{loc:Tr S0115}" Tag="Custom" />
                                 </ComboBox>
                             </Grid>
 
                             <StackPanel Margin="68,0,14,14">
                                 <TextBox Style="{StaticResource InputBox}" Margin="0,0,0,8" Tag="https://cloudflare-dns.com/dns-query"
-                                         ToolTip="DoH-сервер с JSON-ответом (application/dns-json), как у Cloudflare и Google"
+                                         ToolTip="{loc:Tr S0116}"
                                          Text="{Binding DpiDohUrl}"
                                          Visibility="{Binding DpiDohIsCustom, Converter={StaticResource BoolToVis}}" />
                                 <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap"
-                                           Text="Провайдерский DNS часто подменяет адреса заблокированных сайтов и отдаёт адрес заглушки. DoH идёт поверх HTTPS: провайдер запроса не видит и подменить ответ не может. Выбор действует, когда обход идёт «Напрямую»; «Через профиль» адреса узнаёт ядро — по DNS, выбранному выше. Совпадают ли адреса от DoH и от системного DNS, видно в «Диагностике» на вкладке «DPI bypass»." />
+                                           Text="{loc:Tr S0117}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -825,9 +826,9 @@
             <!-- ============================== Домены ============================== -->
             <ScrollViewer ctl:SlideHost.Key="domains" VerticalScrollBarVisibility="Auto">
                 <StackPanel MaxWidth="760" Margin="0,0,0,16">
-                    <TextBlock Text="Домены" Style="{StaticResource TxtH2}" />
+                    <TextBlock Text="{loc:Tr S0101}" Style="{StaticResource TxtH2}" />
                     <TextBlock Style="{StaticResource TxtMuted}" Margin="0,3,0,10" TextWrapping="Wrap"
-                               Text="Свой DNS для отдельных сайтов: запросы адресов этих доменов и прямые подключения к ним идут через выбранный DNS вместо основного. Запись — домен (youtube.com, .ru, *.example.org) или regex (youtube, regex:^ads\.); можно несколько через запятую." />
+                               Text="{loc:Tr S0118}" />
 
                     <!-- добавление записи — как во вкладке «Домены и IP» маршрутизации -->
                     <Grid>
@@ -857,7 +858,7 @@
                             </TextBlock.Style>
                         </TextBlock>
 
-                        <Button Grid.Column="2" Content="Добавить" Style="{StaticResource BtnPrimary}" Margin="8,0,0,0"
+                        <Button Grid.Column="2" Content="{loc:Tr S0029}" Style="{StaticResource BtnPrimary}" Margin="8,0,0,0"
                                 Command="{Binding AddDomainCommand}" />
                     </Grid>
 
@@ -885,9 +886,9 @@
                             </Border>
 
                             <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                <TextBlock Text="Свой DNS для сайта" Style="{StaticResource Txt}" FontWeight="SemiBold" />
+                                <TextBlock Text="{loc:Tr S0119}" Style="{StaticResource Txt}" FontWeight="SemiBold" />
                                 <TextBlock Style="{StaticResource TxtMuted}" Margin="0,4,0,0" TextWrapping="Wrap"
-                                           Text="Введите домен выше и нажмите «Добавить». Под записью нажмите «Выбрать DNS» — откроются «Основные»: нажмите там на DNS, и вы вернётесь сюда. Остальные сайты продолжат работать через основной." />
+                                           Text="{loc:Tr S0120}" />
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -896,7 +897,7 @@
 
                     <!-- какая запись важнее и где свой DNS действует -->
                     <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="2,6,2,0"
-                               Text="Если сайт подходит под несколько записей, действует более точная: music.youtube.com важнее youtube.com, домен важнее regex. Записи доменов важнее записей приложений. Свой DNS действует там же, где основной: в запросах адресов через ядро (в TUN-режиме — у всех программ) и в прямых подключениях; через прокси адрес сайта по-прежнему узнаёт сервер прокси." />
+                               Text="{loc:Tr S0121}" />
                 </StackPanel>
             </ScrollViewer>
 
@@ -905,18 +906,18 @@
                 <StackPanel MaxWidth="760" Margin="0,0,0,16">
                     <!-- как во вкладке «Приложения» маршрутизации -->
                     <Grid>
-                        <TextBlock Text="Приложения" Style="{StaticResource TxtH2}" VerticalAlignment="Center" />
+                        <TextBlock Text="{loc:Tr S0102}" Style="{StaticResource TxtH2}" VerticalAlignment="Center" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Height="27">
-                            <Button Content="Добавить .exe" Style="{StaticResource BtnGhost}" Height="27" Padding="10,0"
-                                    ToolTip="Выбрать .exe файл приложения"
+                            <Button Content="{loc:Tr S0122}" Style="{StaticResource BtnGhost}" Height="27" Padding="10,0"
+                                    ToolTip="{loc:Tr S0123}"
                                     Command="{Binding AddAppFromExeCommand}" />
-                            <Button Content="Из процессов" Style="{StaticResource BtnPrimary}" Height="27" Padding="10,0"
-                                    Margin="6,0,0,0" ToolTip="Выбрать среди запущенных приложений"
+                            <Button Content="{loc:Tr S0124}" Style="{StaticResource BtnPrimary}" Height="27" Padding="10,0"
+                                    Margin="6,0,0,0" ToolTip="{loc:Tr S0125}"
                                     Command="{Binding AddAppsFromProcessesCommand}" />
                         </StackPanel>
                     </Grid>
                     <TextBlock Style="{StaticResource TxtMuted}" Margin="0,3,0,10" TextWrapping="Wrap"
-                               Text="Свой DNS для отдельных программ: их запросы адресов и прямые подключения идут через выбранный DNS вместо основного." />
+                               Text="{loc:Tr S0126}" />
 
                     <!-- приложений ещё нет — как пользоваться -->
                     <Border Style="{StaticResource Card}" Padding="14,12" Margin="0,2,0,6"
@@ -938,9 +939,9 @@
                             </Border>
 
                             <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                <TextBlock Text="Свой DNS для приложения" Style="{StaticResource Txt}" FontWeight="SemiBold" />
+                                <TextBlock Text="{loc:Tr S0127}" Style="{StaticResource Txt}" FontWeight="SemiBold" />
                                 <TextBlock Style="{StaticResource TxtMuted}" Margin="0,4,0,0" TextWrapping="Wrap"
-                                           Text="Добавьте приложение — «Добавить .exe» или «Из процессов». Под ним нажмите «Выбрать DNS» — откроются «Основные»: нажмите там на DNS, и вы вернётесь сюда. Остальные приложения продолжат работать через основной." />
+                                           Text="{loc:Tr S0128}" />
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -949,7 +950,7 @@
 
                     <!-- где свой DNS действует, а где нет -->
                     <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="2,6,2,0"
-                               Text="DNS приложения заменяет основной там же, где работает основной: в DNS-запросах самого приложения и в его прямых подключениях. В TUN-режиме многие программы спрашивают адреса через службу DNS Windows (svchost.exe) — для них остаётся основной DNS. Если сайт есть во вкладке «Домены», действует его запись." />
+                               Text="{loc:Tr S0129}" />
                 </StackPanel>
             </ScrollViewer>
         </ctl:SlideHost>

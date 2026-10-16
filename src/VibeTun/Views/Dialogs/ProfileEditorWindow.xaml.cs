@@ -18,7 +18,7 @@ public partial class ProfileEditorWindow : Window
         _target = profile;
         _vm = new ProfileEditorViewModel(profile, latencyService);
         DataContext = _vm;
-        Title = "Профиль — " + profile.Name;
+        Title = L.T("S0919") + profile.Name;
     }
 
     private void OnDrag(object sender, MouseButtonEventArgs e)
@@ -36,13 +36,13 @@ public partial class ProfileEditorWindow : Window
     {
         if (string.IsNullOrWhiteSpace(_vm.Profile.Name))
         {
-            MessageBox.Show(this, "Укажите название профиля.", "VibeTun", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, L.T("S0920"), "VibeTun", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_vm.Node.Server) && _vm.Profile.Protocol != ProtocolIds.MtProto)
         {
-            MessageBox.Show(this, "Укажите адрес сервера.", "VibeTun", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, L.T("S0921"), "VibeTun", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 

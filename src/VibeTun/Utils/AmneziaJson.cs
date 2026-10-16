@@ -43,7 +43,7 @@ public static class AmneziaJson
         if (conf is not null)
         {
             var fromConf = WgConfParser.Parse(conf, out var err);
-            if (fromConf is null) notes.Add(err ?? "Не удалось разобрать вложенный .conf");
+            if (fromConf is null) notes.Add(err ?? L.T("S0557"));
             return new Result(fromConf, notes);
         }
 
@@ -97,22 +97,22 @@ public static class AmneziaJson
             AwgDisableCookies = awg.DisableCookies
         };
 
-        if (node.Server.Length == 0) notes.Add("в конфиге не найден адрес сервера — впишите его в профиле");
-        if (string.IsNullOrWhiteSpace(node.WgPrivateKey)) notes.Add("нет приватного ключа клиента — впишите его в профиле");
-        if (string.IsNullOrWhiteSpace(node.WgPeerPublicKey)) notes.Add("нет публичного ключа сервера");
+        if (node.Server.Length == 0) notes.Add(L.T("S0558"));
+        if (string.IsNullOrWhiteSpace(node.WgPrivateKey)) notes.Add(L.T("S0559"));
+        if (string.IsNullOrWhiteSpace(node.WgPeerPublicKey)) notes.Add(L.T("S0560"));
         if (string.IsNullOrWhiteSpace(node.WgAddress))
         {
             var hint = subnetIp is not null ? $"{subnetIp}{(subnetCidr is not null ? "/" + subnetCidr : "")}" : null;
             notes.Add(hint is null
-                ? "нет адреса интерфейса (Address) — обычно 10.8.1.X/32"
-                : $"нет адреса интерфейса (Address) — в конфиге задана подсеть {hint}, адрес клиента впишите вручную (например 10.8.1.2/32)");
+                ? L.T("S0561")
+                : L.F("S0562", hint));
         }
 
         var isAwg = node.HasAwgParams || serverPrivateKey is not null;
         var prefix = isAwg ? "AmneziaWG" : "WG";
         var name = node.Server.Length > 0
             ? $"{prefix} · {node.Server}"
-            : $"{prefix} (нужно дополнить)";
+            : L.F("S0563", prefix);
 
         var profile = new ProxyProfile
         {

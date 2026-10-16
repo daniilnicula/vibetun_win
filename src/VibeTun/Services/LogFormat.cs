@@ -28,7 +28,7 @@ public readonly record struct LogSegment(string Text, LogTone Tone);
 /// </summary>
 public static partial class LogFormat
 {
-    /// <summary>Сокращает строку для журнала и файла. Пустую строку (остались одни управляющие коды) возвращает пустой.</summary>
+    /// <summary>Сокращает строку только для отображения; файл хранит исходную запись. Пустую строку (остались одни управляющие коды) возвращает пустой.</summary>
     public static string Shorten(string raw)
     {
         var text = AnsiRegex().Replace(raw, string.Empty).TrimEnd();

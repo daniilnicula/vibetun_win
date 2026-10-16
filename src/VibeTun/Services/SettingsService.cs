@@ -27,6 +27,8 @@ public sealed class SettingsService
     public void Load()
     {
         _settings = Json.Read<AppSettings>(AppPaths.SettingsFile) ?? new AppSettings();
+        _settings.LogLimit = Math.Max(1, _settings.LogLimit);
+        if (_settings.Language != "en") _settings.Language = "ru";
     }
 
     public void SaveSoon()

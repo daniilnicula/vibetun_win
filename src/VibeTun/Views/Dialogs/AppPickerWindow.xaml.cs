@@ -51,7 +51,7 @@ public partial class AppPickerWindow : Window
     private void UpdateCounter()
     {
         var selected = _all.Count(e => e.IsSelected);
-        Counter.Text = selected == 0 ? "Ничего не выбрано" : $"Выбрано: {selected}";
+        Counter.Text = selected == 0 ? L.T("S0912") : L.F("S0913", selected);
     }
 
     private void OnSearchChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => ApplyFilter();
@@ -62,7 +62,7 @@ public partial class AppPickerWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*",
+            Filter = L.T("S0665"),
             Multiselect = true
         };
         if (dialog.ShowDialog(this) != true) return;
@@ -112,7 +112,7 @@ public partial class AppPickerWindow : Window
 
         public int Pid { get; }
 
-        public string PidLabel => Pid > 0 ? "PID " + Pid : "файл";
+        public string PidLabel => Pid > 0 ? "PID " + Pid : L.T("S0914");
         public string Name { get; }
         public string Path { get; }
         public string Title { get; }

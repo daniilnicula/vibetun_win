@@ -1,6 +1,7 @@
 <UserControl x:Class="VibeTun.Views.PanelPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:VibeTun.Services"
              Loaded="OnLoaded">
     <Grid>
         <Grid.RowDefinitions>
@@ -19,13 +20,13 @@
                      KeyDown="OnUrlKeyDown" LostFocus="OnUrlLostFocus" />
             <Button Grid.Column="1" Margin="8,0,0,0" Padding="14,0"
                     Style="{StaticResource BtnGhost}" Click="OnRefreshClick"
-                    ToolTip="Открыть адрес и обновить страницу">
+                    ToolTip="{loc:Tr S0149}">
                 <StackPanel Orientation="Horizontal">
                     <Path Width="11" Height="11" Stretch="Uniform" StrokeThickness="1.4"
                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
                           Stroke="{DynamicResource TextSecondary}"
                           Data="M10.4,5.6 A4.7,4.7 0 1 1 8.1,1.7 M10.4,5.6 L10.4,2.1 M10.4,5.6 L7,5.6" />
-                    <TextBlock Text="Обновить" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{loc:Tr S0013}" Margin="6,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
         </Grid>

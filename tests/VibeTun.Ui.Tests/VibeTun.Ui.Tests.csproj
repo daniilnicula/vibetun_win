@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <!-- Exercise the actual UI services without downloading the application's core/browser/SSH dependencies. -->
+  <ItemGroup>
+    <Compile Include="../../src/VibeTun/GlobalUsings.cs" Link="GlobalUsings.cs" />
+    <Compile Include="../../src/VibeTun/ViewModels/ViewModelBase.cs" Link="ViewModelBase.cs" />
+    <Compile Include="../../src/VibeTun/Models/Enums.cs" Link="Enums.cs" />
+    <Compile Include="../../src/VibeTun/Services/Localization.cs" Link="Localization.cs" />
+    <Compile Include="../../src/VibeTun/Services/LogFeed.cs" Link="LogFeed.cs" />
+    <Compile Include="../../src/VibeTun/Services/LogFormat.cs" Link="LogFormat.cs" />
+    <Compile Include="../../src/VibeTun/Services/ThemeService.cs" Link="ThemeService.cs" />
+    <Compile Include="../../src/VibeTun/Views/Controls/Motion.cs" Link="Motion.cs" />
+    <Resource Include="../../src/VibeTun/Themes/Dark.xaml" Link="Themes/Dark.xaml" />
+    <Resource Include="../../src/VibeTun/Themes/Light.xaml" Link="Themes/Light.xaml" />
+    <Resource Include="../../src/VibeTun/Themes/Black.xaml" Link="Themes/Black.xaml" />
+    <EmbeddedResource Include="../../src/VibeTun/Localization/strings.json" LogicalName="VibeTun.Localization.strings.json" />
+  </ItemGroup>
+</Project>

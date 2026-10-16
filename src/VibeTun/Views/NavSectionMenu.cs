@@ -18,23 +18,34 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
 {
     private readonly Panel _host;
     private readonly Func<List<T>> _items;
+    private readonly Dictionary<string, (Grid Row, TextBlock Name)> _rows = new(StringComparer.Ordinal);
+    private bool _built;
     private readonly Func<string, T> _create;
     private readonly Action<T> _open;
     private readonly Action<T> _deleted;
     private readonly Action _persist;
     private readonly IDialogService _dialogs;
-    private readonly string _title;
-    private readonly string _addLabel;
+    private readonly string _titleText;
+    private string _title => L.Text(_titleText);
+    private readonly string _addLabelText;
+    private string _addLabel => L.Text(_addLabelText);
     private readonly Action<T>? _configure;
-    private readonly string _configureLabel;
+    private readonly string _configureLabelText;
+    private string _configureLabel => L.Text(_configureLabelText);
 
     // перетаскивание строк мышью
     private T? _dragItem;
     private bool _dragging;
     private Point _pressPoint;
 
-    /// <summary>Запись, открытая сейчас (подсвечивается в списке).</summary>
+    /// <summary>Запись, открытая сейчас.</summary>
     public string? SelectedId { get; private set; }
+
+    /// <summary>Строка текущей записи — цель общей анимированной подсветки навигации.</summary>
+    public FrameworkElement? SelectedElement { get; private set; }
+
+    /// <summary>Открытая запись сменилась или была удалена.</summary>
+    public event Action? EntrySelectionChanged;
 
     public NavSectionMenu(Panel host, Func<List<T>> items, Func<string, T> create,
         Action<T> open, Action<T> deleted, Action persist,
@@ -48,31 +59,66 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         _deleted = deleted;
         _persist = persist;
         _dialogs = dialogs;
-        _title = title;
-        _addLabel = addLabel;
+        _titleText = title;
+        _addLabelText = addLabel;
         _configure = configure;
-        _configureLabel = configureLabel;
+        _configureLabelText = configureLabel;
     }
 
     /// <summary>Перерисовать список, оставив текущий выбор.</summary>
     public void Rebuild() => Rebuild(SelectedId);
 
-    /// <summary>Перерисовать список с подсветкой выбранной записи (null — выбора нет).</summary>
+    /// <summary>Перерисовать список с выбранной записью (null — выбора нет).</summary>
     public void Rebuild(string? selectedId)
     {
         SelectedId = selectedId;
+        SelectedElement = null;
+        _built = false;
+        _rows.Clear();
         _host.Children.Clear();
         foreach (var item in _items())
-            _host.Children.Add(BuildRow(item));
+        {
+            var visual = BuildRow(item);
+            _rows[item.Id] = visual;
+            _host.Children.Add(visual.Row);
+        }
         _host.Children.Add(BuildAddRow());
+        _built = true;
+        ApplySelection(selectedId);
+
+        // При добавлении строки она должна получить координаты до того, как общий маркер начнёт к ней ехать.
+        if (_host.IsLoaded && _host.IsVisible) _host.UpdateLayout();
+    }
+
+    /// <summary>Выбрать строку без пересоздания визуального дерева.</summary>
+    public void Select(string? selectedId)
+    {
+        if (!_built)
+        {
+            Rebuild(selectedId);
+            return;
+        }
+
+        ApplySelection(selectedId);
+    }
+
+    private void ApplySelection(string? selectedId)
+    {
+        SelectedId = selectedId;
+        SelectedElement = null;
+        foreach (var (id, visual) in _rows)
+        {
+            var selected = string.Equals(id, selectedId, StringComparison.Ordinal);
+            visual.Name.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
+            visual.Name.SetResourceReference(TextBlock.ForegroundProperty, selected ? "Accent" : "TextSecondary");
+            if (selected) SelectedElement = visual.Row;
+        }
     }
 
     // ------------------------------------------------------------- строки
 
-    private UIElement BuildRow(T item)
+    private (Grid Row, TextBlock Name) BuildRow(T item)
     {
-        var selected = string.Equals(item.Id, SelectedId, StringComparison.Ordinal);
-
         var row = new Grid
         {
             Height = 30,
@@ -86,27 +132,19 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        if (selected)
-        {
-            var bg = new Border { CornerRadius = new CornerRadius(7) };
-            bg.SetResourceReference(Border.BackgroundProperty, "AccentSoft");
-            Grid.SetColumnSpan(bg, 4);
-            row.Children.Add(bg);
-        }
-
         var name = new TextBlock
         {
             Text = item.Name,
             Margin = new Thickness(10, 0, 6, 0),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
-            FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal,
+            FontWeight = FontWeights.Normal,
         };
-        name.SetResourceReference(TextBlock.ForegroundProperty, selected ? "Accent" : "TextSecondary");
+        name.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondary");
         row.Children.Add(name);
 
         var column = 1;
-        var edit = IconButton("Переименовать", "M2,10 L2.4,7.6 L8.2,1.8 L10.2,3.8 L4.4,9.6 Z M2.4,7.6 L4.4,9.6",
+        var edit = IconButton(L.T("S0934"), "M2,10 L2.4,7.6 L8.2,1.8 L10.2,3.8 L4.4,9.6 Z M2.4,7.6 L4.4,9.6",
             () => Rename(item));
         Grid.SetColumn(edit, column++);
         row.Children.Add(edit);
@@ -119,7 +157,7 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
             row.Children.Add(gear);
         }
 
-        var delete = IconButton("Удалить", "M2,2 L10,10 M10,2 L2,10", () => Delete(item));
+        var delete = IconButton(L.T("S0083"), "M2,2 L10,10 M10,2 L2,10", () => Delete(item));
         Grid.SetColumn(delete, column);
         row.Children.Add(delete);
 
@@ -128,7 +166,7 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         row.MouseLeftButtonDown += (_, e) => OnRowDown(row, item, e);
         row.MouseMove += (_, e) => OnRowMove(row, e);
         row.MouseLeftButtonUp += (_, e) => OnRowUp(row, item, e);
-        return row;
+        return (row, name);
     }
 
     private UIElement BuildAddRow()
@@ -275,19 +313,20 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         var item = _create(NextName());
         _items().Add(item);
         _persist();
+        Rebuild();
         Open(item);
     }
 
     private void Open(T item)
     {
-        SelectedId = item.Id;
         _open(item);
-        Rebuild();
+        Select(item.Id);
+        EntrySelectionChanged?.Invoke();
     }
 
     private void Rename(T item)
     {
-        var name = _dialogs.PromptText(_title, "Название", item.Name);
+        var name = _dialogs.PromptText(_title, L.T("S0027"), item.Name);
         if (string.IsNullOrWhiteSpace(name)) return;
         item.Name = name.Trim();
         _persist();
@@ -296,12 +335,13 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
 
     private void Delete(T item)
     {
-        if (!_dialogs.Confirm(_title, $"Удалить «{item.Name}»?", "Удалить")) return;
+        if (!_dialogs.Confirm(_title, L.F("S0823", item.Name), L.T("S0083"))) return;
         _items().Remove(item);
         _persist();
         if (string.Equals(SelectedId, item.Id, StringComparison.Ordinal)) SelectedId = null;
         _deleted(item);
         Rebuild();
+        EntrySelectionChanged?.Invoke();
     }
 
     private string NextName()

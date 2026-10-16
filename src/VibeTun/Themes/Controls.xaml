@@ -327,6 +327,7 @@
 
     <!-- переключатель вкладок внутри раздела: как сегмент, но крупнее; выбранная вкладка — общая подсветка группы -->
     <Style x:Key="TabToggle" TargetType="ToggleButton">
+        <Setter Property="Padding" Value="18,6" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
@@ -336,7 +337,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="18,6"
+                    <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}"
                             RenderTransformOrigin="0.5,0.5">
                         <Border.RenderTransform>
                             <ScaleTransform x:Name="sc" />
@@ -420,16 +421,16 @@
                 <ControlTemplate TargetType="ToggleButton">
                     <Border x:Name="track" Background="{DynamicResource BorderStrong}" CornerRadius="11">
                         <Ellipse x:Name="knob" Width="16" Height="16" Fill="White" HorizontalAlignment="Left"
-                                 Margin="3,0,0,0">
-                            <Ellipse.RenderTransform>
-                                <TranslateTransform x:Name="tr" X="0" />
-                            </Ellipse.RenderTransform>
-                        </Ellipse>
+                                 Margin="3,0,0,0" />
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- Положение шарика задаётся выравниванием, а не переездом-анимацией: анимация,
+                             запущенная при создании уже включённой строки, могла не доехать, и включённый
+                             сервис выглядел выключенным (подсветка строки была при этом верной). -->
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="track" Property="Background" Value="{DynamicResource Accent}" />
-                            <Setter TargetName="knob" Property="ctl:MotionProps.OffsetX" Value="18" />
+                            <Setter TargetName="knob" Property="HorizontalAlignment" Value="Right" />
+                            <Setter TargetName="knob" Property="Margin" Value="0,0,3,0" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="track" Property="Opacity" Value="0.4" />

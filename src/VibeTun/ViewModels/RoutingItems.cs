@@ -62,9 +62,9 @@ public sealed class RuleItemVm : ObservableObject
 
     public string KindLabel => Kind switch
     {
-        MatchKind.Domain => "домен",
-        MatchKind.Ip => "IP/подсеть",
-        MatchKind.Keyword => "ключ",
+        MatchKind.Domain => L.T("S0270"),
+        MatchKind.Ip => L.T("S0818"),
+        MatchKind.Keyword => L.T("S0272"),
         MatchKind.Regex => "regex",
         _ => "—"
     };
@@ -413,7 +413,7 @@ public sealed class RouteProfileItemVm : ObservableObject
                 _ => "http"
             });
             if (_model.TunEnabled) parts.Add("TUN");
-            if (_model.UseSystemProxy) parts.Add("системный прокси");
+            if (_model.UseSystemProxy) parts.Add(L.T("S0819"));
             return string.Join(" · ", parts);
         }
     }
@@ -427,8 +427,8 @@ public sealed class RouteSetItemVm : ObservableObject
     public RouteSet Model { get; }
 
     public string Id => Model.Id;
-    public string Name => Model.Name;
-    public string? Description => Model.Description;
+    public string Name => Model.BuiltIn ? L.Text(Model.Name) : Model.Name;
+    public string? Description => Model.BuiltIn && Model.Description is { } text ? L.Text(text) : Model.Description;
     public bool BuiltIn => Model.BuiltIn;
     public string FileName => Model.FileName;
     public string RulesSummary => Model.RulesSummary;

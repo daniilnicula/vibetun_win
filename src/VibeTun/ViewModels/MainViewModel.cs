@@ -27,7 +27,8 @@ public sealed class MainViewModel : ObservableObject
     private string _statusMessage = "";
     private bool _statusIsError;
     private int _activePing = -1;
-    private string _trafficText = "—";
+    private string _trafficUploadText = "—";
+    private string _trafficDownloadText = "";
     private int _connectionCount;
     private readonly DateTime _startedAt = DateTime.Now;
     private DateTime? _proxyStartedAt;
@@ -52,12 +53,15 @@ public sealed class MainViewModel : ObservableObject
         Core = new CoreService();
         Latency = new LatencyService(Core);
         Tray = new TrayService();
-        Logs = new LogFeed();
+        Logs = new LogFeed(App.Settings.Current.LogLimit);
+        App.Settings.Changed += () => Logs.MaxLines = App.Settings.Current.LogLimit;
 
         Profiles = new ProfilesViewModel(ProfileStore, Latency, _dialogs, Logs);
         Routing = new RoutingViewModel(RouteStore, _dialogs);
         // пинг DNS при активном TUN бессмыслен: ядро перехватывает DNS-запросы (hijack-dns)
         Dns = new DnsViewModel(_dialogs, () => Core.TunActive);
+        // пинг сервиса в разделе «DPI» идёт через поднятый обход, если он есть
+        Dpi = new DpiViewModel(_dialogs, () => _dpi.Port);
         Preferences = new SettingsViewModel(App.Settings, Core, _dialogs);
         Updates = new UpdatesViewModel(_dialogs);
 
@@ -73,6 +77,16 @@ public sealed class MainViewModel : ObservableObject
         Routing.RulesPersisted += () => _ = ReapplyRoutingAsync();
         Dns.Notify += (text, error) => ShowStatus(text, error);
         Dns.DnsChanged += what => _ = ReapplyDnsAsync(what);
+        Dpi.Notify += (text, error) => ShowStatus(text, error);
+        // Сервисы и профили раздела «DPI» читаются движком на каждом соединении (StrategyResolver),
+        // поэтому перезапуск не нужен: уже открытые соединения живут, новые берут новый набор приёмов.
+        Dpi.Changed += () =>
+        {
+            RaiseDpiStats();   // у сервисов свой набор приёмов — подпись на карточке подключения меняется
+            ShowStatus(L.F("dpi.log.servicesChanged", Dpi.Services.Count), false);
+        };
+        // «Выбрать DNS» в окне сервиса: уводим пользователя в раздел «DNS», выбор возвращает его обратно
+        Dpi.DnsPickRequested += service => _ = PickDnsForServiceAsync(service);
         Preferences.Notify += (text, error) => ShowStatus(text, error);
         Preferences.ThemeChanged += () => Raise(nameof(IsDark));
         Preferences.RestartRequested += () => RestartRequested?.Invoke();
@@ -80,9 +94,9 @@ public sealed class MainViewModel : ObservableObject
         Updates.RestartRequested += () => RestartRequested?.Invoke();
         Updates.ExitRequested += () => ExitRequested?.Invoke();
 
-        // правки стратегий в настройках и DNS обхода в разделе «DNS» применяются сразу:
+        // правки «Общих» в разделе «DPI», выбор DNS в разделе «DNS» и DNS обхода применяются сразу:
         // движок перезапускаем, если он поднят
-        Preferences.DpiSettingsChanged += () => _ = RestartDpiIfRunningAsync();
+        Dpi.GeneralChanged += () => _ = RestartDpiIfRunningAsync();
         Dns.DpiDnsChanged += () => _ = RestartDpiIfRunningAsync();
 
         // «Сбросить настройки» заменил весь settings.json — раздел «DNS» перечитывает свой блок;
@@ -93,6 +107,14 @@ public sealed class MainViewModel : ObservableObject
         };
 
         _dpi.Logged += line => AppendLog("DPI: " + line);
+        // Домен соединения → профиль сервиса из раздела «DPI»; null — общий набор из настроек.
+        // Настройки читаются на каждом соединении, поэтому правки применяются без перезапуска.
+        _dpi.StrategyResolver = host => DpiServiceCatalog.StrategyFor(App.Settings.Current, host);
+
+        // Запасные стратегии сервиса (то, что нашла кнопка «Подобрать»): если первая не откроет
+        // поток, движок попробует следующую. Список тоже читается на каждом соединении.
+        _dpi.StrategyListResolver = host => DpiServiceCatalog.StrategyListFor(App.Settings.Current, host);
+        _dpi.RouteLabelResolver = host => DpiServiceCatalog.RouteLabelFor(App.Settings.Current, host);
 
         // BeginInvoke, а не Invoke: событие может прийти из потока пула, который в этот момент держит
         // блокировку процесса ядра (обработчик Exited). Ждать UI-поток там нельзя: получится взаимная блокировка.
@@ -108,11 +130,8 @@ public sealed class MainViewModel : ObservableObject
         Tray.ExitRequested += () => ExitRequested?.Invoke();
 
         ToggleProxyCommand = new AsyncRelayCommand(ToggleProxyAsync, () => !Busy);
-        ToggleThemeCommand = new RelayCommand(() => IsDark = !IsDark);
         TestPingCommand = new AsyncRelayCommand(TestActivePingAsync, () => ActiveProfile is not null && !Busy);
         ToggleDpiCommand = new AsyncRelayCommand(ToggleDpiAsync, () => !Busy);
-        TestDpiCommand = new AsyncRelayCommand(TestDpiAsync, () => !Busy);
-        DiagnoseDpiCommand = new AsyncRelayCommand(DiagnoseDpiAsync, () => !Busy);
         InstallCoreCommand = new AsyncRelayCommand(InstallCoreAsync, () => !Busy);
         RestartElevatedCommand = new RelayCommand(_ => RestartElevated());
         TelegramProxyCommand = new RelayCommand(_ => OpenTelegramProxy(), _ => ActiveProfile?.IsTelegramOnly == true);
@@ -142,22 +161,19 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Раздел «DNS»: выбранный DNS ядра, провайдеры и свои серверы.</summary>
     public DnsViewModel Dns { get; }
 
+    /// <summary>Раздел «DPI»: сервисы со своим набором приёмов обхода и профили настроек.</summary>
+    public DpiViewModel Dpi { get; }
+
     public SettingsViewModel Preferences { get; }
     public UpdatesViewModel Updates { get; }
 
     public AsyncRelayCommand ToggleProxyCommand { get; }
-    public RelayCommand ToggleThemeCommand { get; }
     public AsyncRelayCommand TestPingCommand { get; }
     public AsyncRelayCommand InstallCoreCommand { get; }
 
     /// <summary>Включить / выключить обход DPI.</summary>
     public AsyncRelayCommand ToggleDpiCommand { get; }
 
-    /// <summary>DPI-тест: проверяем, открывается ли заблокированная площадка.</summary>
-    public AsyncRelayCommand TestDpiCommand { get; }
-
-    /// <summary>Диагностика: таблица «на каком этапе умирает домен» в журнал.</summary>
-    public AsyncRelayCommand DiagnoseDpiCommand { get; }
     public RelayCommand RestartElevatedCommand { get; }
     public RelayCommand TelegramProxyCommand { get; }
     public RelayCommand ShowLogCommand { get; }
@@ -187,6 +203,8 @@ public sealed class MainViewModel : ObservableObject
                 _ = Updates.EnsureLoadedAsync();
             if (string.Equals(value, "dns", StringComparison.Ordinal))
                 Dns.OnOpened();
+            if (string.Equals(value, "dpi", StringComparison.Ordinal))
+                Dpi.OnOpened();
         }
     }
 
@@ -251,7 +269,7 @@ public sealed class MainViewModel : ObservableObject
     }
 
     /// <summary>Подпись главной кнопки вкладки «DPI bypass».</summary>
-    public string DpiToggleText => DpiEnabled ? "Выключить" : "Включить";
+    public string DpiToggleText => DpiEnabled ? L.T("S0675") : L.T("S0676");
 
     public DpiBypassState DpiState
     {
@@ -267,13 +285,14 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Текст там, где на вкладке «Proxy» написано «Подключено».</summary>
     public string DpiStateText => DpiState switch
     {
-        DpiBypassState.Broken => "Сломано",
-        DpiBypassState.Covered => "Накрыт",
-        DpiBypassState.Checking => "Проверка…",
-        DpiBypassState.Starting => "Запуск…",
-        DpiBypassState.NoNetwork => "Нет сети",
-        DpiBypassState.Error => "Ошибка",
-        _ => "Выключено"
+        DpiBypassState.Broken => L.T("S0677"),
+        DpiBypassState.Covered => L.T("S0678"),
+        DpiBypassState.Checking => L.T("S0679"),
+        DpiBypassState.Starting => L.T("S0680"),
+        DpiBypassState.NoNetwork => L.T("S0681"),
+        DpiBypassState.Error => L.T("S0682"),
+        DpiBypassState.On => L.T("S1000"),
+        _ => L.T("S0683")
     };
 
     /// <summary>Цвет кружочка слева: зелёный — сломано, красный — накрыт.</summary>
@@ -285,31 +304,24 @@ public sealed class MainViewModel : ObservableObject
         DpiBypassState.Checking => "Warning",
         DpiBypassState.Starting => "Warning",
         DpiBypassState.NoNetwork => "Warning",
+        DpiBypassState.On => "Accent",
         _ => "TextMuted"
     };
 
     /// <summary>Адрес локального прокси обхода (показываем, чтобы можно было настроить браузер вручную).</summary>
     public string DpiPortText => "127.0.0.1:" + App.Settings.Current.Dpi.ListenPort;
 
-    /// <summary>Какие стратегии сейчас включены.</summary>
+    /// <summary>
+    /// Какие стратегии сейчас включены: общий набор из настроек плюс число сервисов, у которых
+    /// свой набор приёмов (он описан на вкладке «DPI»).
+    /// </summary>
     public string DpiStrategiesText
     {
         get
         {
-            var s = App.Settings.Current.Dpi;
-            var parts = new List<string>();
-            if (s.SniSplit) parts.Add("SNI split");
-            if (s.TlsRecordSplit) parts.Add("record split");
-            if (s.FakeTtl)
-            {
-                var fake = $"fake TTL {s.FakeTtlValue}";
-                if (s.FakeCount > 1) fake += $" ×{s.FakeCount}";
-                if (s.FakeAfter) fake += " (после)";
-                parts.Add(fake);
-            }
-            if (s.Multisplit) parts.Add($"мультисплит {s.MultisplitSize} байт");
-            if (s.ClampMss) parts.Add($"MSS {s.MssValue}");
-            return parts.Count == 0 ? "стратегии выключены — трафик идёт как есть" : string.Join(" · ", parts);
+            var text = DpiTester.Describe(App.Settings.Current.Dpi);
+            var count = App.Settings.Current.DpiServices.Services.Count(s => s.Enabled);
+            return count == 0 ? text : text + " · " + L.F("dpi.servicesCount", count);
         }
     }
 
@@ -326,24 +338,11 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             var count = _dpi.SessionCount;
-            return count == 0 ? "нет соединений" : count + " соединений";
+            return count == 0 ? L.T("S0685") : count + L.T("S0686");
         }
     }
 
-    public bool IsDark
-    {
-        get => App.Settings.Current.Theme == ThemeMode.Dark;
-        set
-        {
-            if (value == IsDark) return;
-            App.Settings.Current.Theme = value ? ThemeMode.Dark : ThemeMode.Light;
-            App.Settings.SaveSoon();
-            ThemeService.Apply(App.Settings.Current.Theme);
-            Raise();
-            Raise(nameof(ThemeIcon));
-            Preferences.RaiseTheme();
-        }
-    }
+    public bool IsDark => ThemeService.EffectiveMode != ThemeMode.Light;
 
     public string ThemeIcon => IsDark ? "🌙" : "☀";
 
@@ -358,7 +357,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    public string ProxyToggleText => IsProxyOn ? "Отключить" : "Подключить";
+    public string ProxyToggleText => IsProxyOn ? L.T("S0687") : L.T("S0688");
 
     /// <summary>Активный профиль — Telegram-прокси (MTProto).</summary>
     public bool IsTelegramProfile => ActiveProfile?.IsTelegramOnly == true;
@@ -373,26 +372,24 @@ public sealed class MainViewModel : ObservableObject
             InstallCoreCommand.RaiseCanExecuteChanged();
             TestPingCommand.RaiseCanExecuteChanged();
             ToggleDpiCommand.RaiseCanExecuteChanged();
-            TestDpiCommand.RaiseCanExecuteChanged();
-            DiagnoseDpiCommand.RaiseCanExecuteChanged();
         }
     }
 
     public ProxyProfile? ActiveProfile => _activeProfile;
     private ProxyProfile? _activeProfile;
 
-    public string ActiveProfileName => ActiveProfile?.Name ?? "Профиль не выбран";
+    public string ActiveProfileName => ActiveProfile?.Name ?? L.T("S0689");
     public string ActiveProfileSubtitle
     {
         get
         {
-            if (ActiveProfile is null) return "Добавьте профиль во вкладке «Профили»";
+            if (ActiveProfile is null) return L.T("S0690");
             var route = Routing.ActiveProfile;
             return $"{ActiveProfile.ProtocolLabel} · {ActiveProfile.AddressLabel} · {route.ListenAddress}:{route.ListenPort}";
         }
     }
 
-    public string StateText { get; private set; } = "Отключено";
+    public string StateText { get; private set; } = L.T("S0691");
     public string StatusBrushKey { get; private set; } = "TextMuted";
 
     public int ActivePing
@@ -406,13 +403,19 @@ public sealed class MainViewModel : ObservableObject
 
     public string ActivePingText => _activePing < 0 ? "— ms" : _activePing == 0 ? "<1 ms" : $"{_activePing} ms";
 
-    public string TrafficText
+    public string TrafficUploadText
     {
-        get => _trafficText;
-        private set => SetProperty(ref _trafficText, value);
+        get => _trafficUploadText;
+        private set => SetProperty(ref _trafficUploadText, value);
     }
 
-    public string ConnectionCountText => _connectionCount == 0 ? "—" : _connectionCount + " соединений";
+    public string TrafficDownloadText
+    {
+        get => _trafficDownloadText;
+        private set => SetProperty(ref _trafficDownloadText, value);
+    }
+
+    public string ConnectionCountText => _connectionCount == 0 ? "—" : _connectionCount + L.T("S0686");
 
     public string UptimeText => _proxyStartedAt is null
         ? "—"
@@ -476,19 +479,19 @@ public sealed class MainViewModel : ObservableObject
         UpdateTrayStatus();
 
         // первая строка app.log: по ней видно, какая сборка приложения и какое ядро запущены
-        AppendLog($"VibeTun {AppInfo.Full} · ядро: " +
-                  (Core.Info.Exists ? Core.Info.Path + ", " + Core.Info.Version : "не найдено"));
+        AppendLog(L.F("S0692", AppInfo.Full) +
+                  (Core.Info.Exists ? Core.Info.Path + ", " + Core.Info.Version : L.T("S0275")));
 
         // что сообщить о месте хранения данных: перенос или причину, по которой взята другая папка
         if (App.StartupNotice is { } storageNotice)
             ShowStatus(storageNotice, StorageLocation.FallbackReason is not null);
 
         if (!Core.Info.Exists)
-            ShowStatus("Ядро не найдено — установите его в настройках", true);
+            ShowStatus(L.T("S0693"), true);
 
         if (App.Settings.Current.RememberState && App.Settings.Current.ProxyWasActive && _activeProfile is not null)
         {
-            ShowStatus("Восстановление подключения…", false);
+            ShowStatus(L.T("S0694"), false);
             await StartProxyAsync(autoRestore: true);
         }
 
@@ -531,7 +534,7 @@ public sealed class MainViewModel : ObservableObject
             await Task.Delay(1200, cts.Token);
             if (cts.IsCancellationRequested) return;
 
-            ShowStatus("Маршруты изменены — переподключение…", false);
+            ShowStatus(L.T("S0695"), false);
             await StopProxyAsync();
             await StartProxyAsync();
         }
@@ -549,7 +552,7 @@ public sealed class MainViewModel : ObservableObject
     {
         if (!IsProxyOn || _activeProfile is null)
         {
-            ShowStatus($"{what} — применится при подключении", false);
+            ShowStatus(L.F("S0696", what), false);
             return;
         }
 
@@ -566,7 +569,7 @@ public sealed class MainViewModel : ObservableObject
                 await Task.Delay(200, cts.Token);
             if (!IsProxyOn || _activeProfile is null || Busy) return;
 
-            ShowStatus($"{what} — переподключение…", false);
+            ShowStatus(L.F("S0697", what), false);
             await StopProxyAsync();
             await StartProxyAsync();
         }
@@ -603,13 +606,13 @@ public sealed class MainViewModel : ObservableObject
         if (Busy) return;
         if (_activeProfile is null)
         {
-            ShowStatus("Сначала выберите профиль", true);
+            ShowStatus(L.T("S0698"), true);
             return;
         }
 
         if (_activeProfile.IsTelegramOnly)
         {
-            ShowStatus("MTProto работает только внутри Telegram — нажмите «Открыть в Telegram»", true);
+            ShowStatus(L.T("S0699"), true);
             return;
         }
 
@@ -617,7 +620,7 @@ public sealed class MainViewModel : ObservableObject
 
         if (!Core.Info.Exists)
         {
-            ShowStatus("Ядро не найдено — установите его в настройках", true);
+            ShowStatus(L.T("S0693"), true);
             ActiveTab = "settings";
             return;
         }
@@ -628,18 +631,18 @@ public sealed class MainViewModel : ObservableObject
             // сообщаем в статус, а права запрашиваем только при ручном подключении.
             if (autoRestore)
             {
-                ShowStatus("Подключение не восстановлено: для TUN-режима нужны права администратора — нажмите «Подключить»", true);
+                ShowStatus(L.T("S0700"), true);
                 return;
             }
-            var agree = _dialogs.ConfirmElevate("Требуются права администратора",
-                "Для TUN-режима и маршрутизации приложений нужно перезапустить приложение с правами администратора. " +
-                "Перезапустить сейчас?");
+            var agree = _dialogs.ConfirmElevate(L.T("S0701"),
+                L.T("S0702") +
+                L.T("S0703"));
             if (agree)
             {
                 App.Settings.Current.ProxyWasActive = true;
                 App.Settings.SaveNow();
                 if (!AdminHelper.RestartElevated())
-                    ShowStatus("Не удалось перезапустить с правами администратора", true);
+                    ShowStatus(L.T("S0704"), true);
                 else
                     ExitRequested?.Invoke();
             }
@@ -662,20 +665,20 @@ public sealed class MainViewModel : ObservableObject
                 App.Settings.Current, Core.Info, clashPort, Path.Combine(AppPaths.LogsDir, "core.log"),
                 Dns.AppRoutes(), Dns.DomainRoutes());
 
-            foreach (var warning in build.Warnings) AppendLog("Конфиг: " + warning);
+            foreach (var warning in build.Warnings) AppendLog(L.T("S0705") + warning);
 
             if (build.Errors.Count > 0)
             {
-                foreach (var problem in build.Errors) AppendLog("Конфиг (ошибка): " + problem);
+                foreach (var problem in build.Errors) AppendLog(L.T("S0706") + problem);
                 ShowStatus(build.Errors[0], true);
-                _dialogs.Error("Подключение невозможно", string.Join("\n\n", build.Errors));
+                _dialogs.Error(L.T("S0707"), string.Join("\n\n", build.Errors));
                 return;
             }
 
             var check = await Core.ValidateAsync(build.Json);
             if (!check.Ok)
             {
-                ShowStatus("Ядро отклонило конфигурацию", true);
+                ShowStatus(L.T("S0708"), true);
                 _dialogs.ShowCoreLog(check.Message);
                 return;
             }
@@ -687,12 +690,12 @@ public sealed class MainViewModel : ObservableObject
             _dpiOwnsSystemProxy = false;
             if (route.UseSystemProxy && !route.TunEnabled) SystemProxy.CaptureSnapshot();
 
-            ShowStatus("Запуск ядра…", false);
+            ShowStatus(L.T("S0709"), false);
             await Core.StartAsync(build.Json, clashPort);
 
             if (Core.State != ConnectionState.Running)
             {
-                ShowStatus("Ядро не запустилось", true);
+                ShowStatus(L.T("S0710"), true);
                 _dialogs.ShowCoreLog(Core.RecentLogText());
                 return;
             }
@@ -716,8 +719,8 @@ public sealed class MainViewModel : ObservableObject
             var statusNote = build.Warnings.Count > 0 ? build.Warnings[0] : null;
             if (statusNote is { Length: > 160 }) statusNote = statusNote[..160] + "…";
             ShowStatus(statusNote is null
-                ? $"Подключено: {_activeProfile.Name}"
-                : $"Подключено: {_activeProfile.Name} — {statusNote}",
+                ? L.F("S0711", _activeProfile.Name)
+                : L.F("S0712", _activeProfile.Name, statusNote),
                 statusNote is not null);
             _ = VerifyTunnelAsync();
 
@@ -730,7 +733,7 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ShowStatus("Ошибка запуска: " + ex.Message, true);
+            ShowStatus(L.T("S0713") + ex.Message, true);
         }
         finally
         {
@@ -762,9 +765,9 @@ public sealed class MainViewModel : ObservableObject
         if (Core.Info.SupportsAmnezia && (!needsAwg31 || Core.Info.SupportsAwgTrailers)) return true;
 
         var reason = Core.Info.SupportsAmnezia
-            ? "текущее ядро не поддерживает RandomTrailers/DisableCookies (AmneziaWG 3.1)"
+            ? L.T("S0714")
             : string.IsNullOrWhiteSpace(Core.Info.EndpointError)
-                ? "текущее ядро не поддерживает обфускацию AmneziaWG"
+                ? L.T("S0715")
                 : Core.Info.EndpointError!;
 
         // 1) расширенная сборка уже лежит в каталоге ядра
@@ -774,19 +777,19 @@ public sealed class MainViewModel : ObservableObject
             (needsAwg31 && !Core.Info.SupportsAwgTrailers && !Core.Info.SupportsAwgEndpoint))
         {
             if (!alreadyExtendedFile && File.Exists(AppPaths.CoreExtendedBinary))
-                ShowStatus("Переключение на расширенное ядро (AmneziaWG)…", false);
+                ShowStatus(L.T("S0716"), false);
 
             // 2) если файла нет, но ядро вшито в приложение — распаковываем его
             if (!File.Exists(AppPaths.CoreExtendedBinary) && BundledCores.HasExtended)
             {
-                ShowStatus("Подготовка расширенного ядра (AmneziaWG)…", false);
+                ShowStatus(L.T("S0717"), false);
                 try
                 {
                     await BundledCores.EnsureExtractedAsync(CoreFlavor.SingBoxExtended);
                 }
                 catch (Exception ex)
                 {
-                    reason = "не удалось распаковать встроенное ядро: " + ex.Message;
+                    reason = L.T("S0718") + ex.Message;
                 }
             }
 
@@ -797,25 +800,25 @@ public sealed class MainViewModel : ObservableObject
             }
 
             reason = string.IsNullOrWhiteSpace(Core.Info.EndpointError)
-                ? "расширенное ядро не подтвердило поддержку AmneziaWG"
+                ? L.T("S0719")
                 : Core.Info.EndpointError;
         }
 
         // 3) скачиваем с GitHub
-        var ask = _dialogs.Confirm("Нужно ядро с поддержкой AmneziaWG",
-            "AmneziaWG не работает на официальном sing-box: без параметров обфускации (Jc, S1–S4, H1–H4, I1–I5) " +
-            "сервер не примет хендшейк, и прокси окажется «подключён, но ничего не грузит».\n\n" +
-            "Сейчас: " + reason + ".\n\n" +
-            $"Скачать ядро с AmneziaWG (github.com/{CoreInstaller.AwgRepo})?",
-            "Скачать", danger: false);
+        var ask = _dialogs.Confirm(L.T("S0720"),
+            L.T("S0721") +
+            L.T("S0722") +
+            L.T("S0723") + reason + ".\n\n" +
+            L.F("S0724", CoreInstaller.AwgRepo),
+            L.T("S0725"), danger: false);
 
         if (!ask)
         {
-            ShowStatus("Без расширенного ядра AmneziaWG не подключить", true);
+            ShowStatus(L.T("S0726"), true);
             return false;
         }
 
-        ShowStatus("Скачивание ядра с AmneziaWG…", false);
+        ShowStatus(L.T("S0727"), false);
         try
         {
             IProgress<string> progress = new Progress<string>(text => ShowStatus(text, false));
@@ -823,30 +826,30 @@ public sealed class MainViewModel : ObservableObject
             if (info is { Exists: true } && await TrySwitchToExtendedAsync(needsAwg31))
             {
                 RememberCoreSwitch();
-                ShowStatus("Расширенное ядро установлено: " + Core.Info.VersionNumber, false);
+                ShowStatus(L.T("S0728") + Core.Info.VersionNumber, false);
                 return true;
             }
 
             reason = string.IsNullOrWhiteSpace(Core.Info.EndpointError)
-                ? "скачанное ядро не подтвердило поддержку AmneziaWG"
+                ? L.T("S0729")
                 : Core.Info.EndpointError;
         }
         catch (Exception ex)
         {
-            reason = "не удалось скачать ядро: " + ex.Message;
+            reason = L.T("S0730") + ex.Message;
         }
 
         // needsAwg31 уже посчитан выше: RandomTrailers/DisableCookies из профиля
-        _dialogs.Error("AmneziaWG недоступен",
+        _dialogs.Error(L.T("S0731"),
             reason + "\n\n" + CoreInstaller.ManualHint +
-            $"\n\nФорк с AmneziaWG 3.x: https://github.com/{CoreInstaller.AwgRepo}/releases " +
-            $"\nРасширенная сборка: https://github.com/{CoreInstaller.ExtendedRepo}/releases " +
-            "(архив sing-box-…-windows-amd64.zip, файл положить в каталог ядра как sing-box-extended.exe)." +
+            L.F("S0732", CoreInstaller.AwgRepo) +
+            L.F("S0733", CoreInstaller.ExtendedRepo) +
+            L.T("S0734") +
             (needsAwg31
-                ? "\n\nВ профиле включены RandomTrailers/DisableCookies (AmneziaWG 3.1). Их понимает форк " +
-                  $"{CoreInstaller.AwgRepo} (сборка с тегом with_awg) и форк Amnezia " +
-                  "(https://github.com/hoaxisr/amnezia-box, эндпоинт type=\"awg\" — только сборки под Linux). " +
-                  "Если скачать не удалось, выключите RandomTrailers на сервере и пересохраните профиль."
+                ? L.T("S0735") +
+                  L.F("S0736", CoreInstaller.AwgRepo) +
+                  L.T("S0737") +
+                  L.T("S0738")
                 : ""));
         return false;
     }
@@ -888,7 +891,7 @@ public sealed class MainViewModel : ObservableObject
         App.Settings.SaveSoon();
         Preferences.RaiseCoreFlavor();
         Preferences.RefreshCoreInfo();
-        ShowStatus("Для AmneziaWG включена расширенная сборка ядра", false);
+        ShowStatus(L.T("S0739"), false);
     }
 
     public async Task StopProxyAsync(bool keepStateFlag = false)
@@ -921,7 +924,7 @@ public sealed class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                AppendLog("Ошибка остановки ядра: " + ex.Message);
+                AppendLog(L.T("S0327") + ex.Message);
             }
 
             // страховка: если системный прокси всё же указывает на порт нашего ядра (снимок не сохранился,
@@ -934,7 +937,8 @@ public sealed class MainViewModel : ObservableObject
             }
 
             _proxyStartedAt = null;
-            TrafficText = "—";
+            TrafficUploadText = "—";
+            TrafficDownloadText = "";
             _connectionCount = 0;
             Raise(nameof(ConnectionCountText));
             Raise(nameof(UptimeText));
@@ -951,7 +955,7 @@ public sealed class MainViewModel : ObservableObject
 
             UpdateStateText();
             UpdateTrayStatus();
-            ShowStatus("Прокси отключён", false);
+            ShowStatus(L.T("S0740"), false);
         }
         finally
         {
@@ -971,7 +975,7 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            AppendLog("Не удалось вернуть системный прокси: " + ex.Message);
+            AppendLog(L.T("S0741") + ex.Message);
         }
     });
 
@@ -1006,7 +1010,7 @@ public sealed class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                AppendLog("Не удалось настроить системный прокси: " + ex.Message);
+                AppendLog(L.T("S0742") + ex.Message);
             }
         });
     }
@@ -1039,7 +1043,10 @@ public sealed class MainViewModel : ObservableObject
         {
             var traffic = await _api.GetTrafficAsync(Core.ClashApiPort);
             if (traffic is not null)
-                TrafficText = $"↑ {Text.Bytes(traffic.Upload)}   ↓ {Text.Bytes(traffic.Download)}";
+            {
+                TrafficUploadText = $"↑ {Text.Bytes(traffic.Upload)}";
+                TrafficDownloadText = $"↓ {Text.Bytes(traffic.Download)}";
+            }
 
             _connectionCount = await _api.GetActiveConnectionsAsync(Core.ClashApiPort);
             Raise(nameof(ConnectionCountText));
@@ -1127,23 +1134,23 @@ public sealed class MainViewModel : ObservableObject
                    _activeProfile.Protocol.Equals(ProtocolIds.AmneziaWg, StringComparison.OrdinalIgnoreCase));
 
         var message = awg
-            ? "Туннель запущен, но трафик через него не идёт. Для AmneziaWG так бывает, когда параметры " +
-              "обфускации не совпадают с серверными или ядро собрано без поддержки AWG."
-            : "Туннель запущен, но трафик через него не идёт: сервер не отвечает или профиль настроен неверно.";
+            ? L.T("S0743") +
+              L.T("S0744")
+            : L.T("S0745");
 
         // Самая частая конкретная причина у AWG 3.1: сервер дописывает к хендшейку случайный
         // трейлер, а ядро клиента флаг random_trailers передать не может — ответы отбрасываются.
         if (node?.AwgRandomTrailers == true && !Core.Info.SupportsAwgTrailers)
-            message = "Туннель запущен, но трафик не идёт. В профиле включены RandomTrailers (AmneziaWG 3.1), " +
-                      "а это ядро их не поддерживает: сервер присылает хендшейк со случайным хвостом, клиент " +
-                      "считает пакет нераспознанным и отбрасывает. Выключите RandomTrailers на сервере и " +
-                      $"пересохраните профиль — либо установите ядро с AWG 3.1 (github.com/{CoreInstaller.AwgRepo}): " +
-                      "Настройки → Ядро → «Расширенная (AmneziaWG)» → «Скачать».";
+            message = L.T("S0746") +
+                      L.T("S0747") +
+                      L.T("S0748") +
+                      L.F("S0749", CoreInstaller.AwgRepo) +
+                      L.T("S0750");
 
         AppendLog(message);
-        AppendLog($"Ядро: {Core.Info.Version} · AmneziaWG: {(Core.Info.SupportsAmnezia ? "да" : "нет")} · " +
-                  $"AWG 3.1 (random_trailers): {(Core.Info.SupportsAwgTrailers ? "да" : "нет")} · " +
-                  $"проверка ядра: {(Core.Info.AmneziaProbed?.ToString() ?? "не выполнялась")}");
+        AppendLog(L.F("S0751", Core.Info.Version, (Core.Info.SupportsAmnezia ? L.T("Extra952") : L.T("Extra953"))) +
+                  L.F("S0752", (Core.Info.SupportsAwgTrailers ? L.T("Extra952") : L.T("Extra953"))) +
+                  L.F("S0753", (Core.Info.AmneziaProbed?.ToString() ?? L.T("Extra954"))));
         AppendLog(Core.RecentLogText());
         ShowStatus(message, true);
     }
@@ -1161,9 +1168,9 @@ public sealed class MainViewModel : ObservableObject
         Busy = true;
         try
         {
-            ShowStatus("Проверка задержки…", false);
+            ShowStatus(L.T("S0754"), false);
             await RefreshActivePingAsync();
-            ShowStatus(ActivePing < 0 ? "Сервер не ответил" : "Задержка: " + ActivePingText, ActivePing < 0);
+            ShowStatus(ActivePing < 0 ? L.T("S0755") : L.T("S0756") + ActivePingText, ActivePing < 0);
         }
         finally
         {
@@ -1193,6 +1200,40 @@ public sealed class MainViewModel : ObservableObject
         };
     }
 
+    /// <summary>
+    /// «Выбрать DNS» в окне сервиса или «Общих»: переносим пользователя в раздел «DNS» — там он
+    /// выбирает сервер так же, как для домена и приложения. После выбора раздел вернётся в «DPI»
+    /// (нажимаем именно на сохранённый выбор: правки окна к этому моменту уже в настройках).
+    /// </summary>
+    private Task PickDnsForServiceAsync(DpiService service)
+    {
+        var section = App.Settings.Current.DpiServices;
+        var isGeneral = service.Id == DpiServices.GeneralId;
+
+        var choice = isGeneral
+            ? section.GeneralDns
+            : section.Services.FirstOrDefault(s => s.Id == service.Id)?.Dns;
+
+        if (choice is null) return Task.CompletedTask;
+
+        choice.Id = isGeneral ? DpiServices.GeneralId : service.Id;
+
+        var name = isGeneral
+            ? L.T("dpi.general")
+            : service.Name.Length > 0 ? service.Name : L.T("dpi.noName");
+
+        // ActiveTab выставляет вкладку и вызывает OnOpened раздела; выбор начинаем после этого,
+        // иначе «DNS» отменил бы его как начатый до входа в раздел
+        ActiveTab = "dns";
+        Dns.StartPickForDpi(choice, name, () =>
+        {
+            ActiveTab = "dpi";
+            Dpi.OnDnsPicked(service.Id);
+        });
+
+        return Task.CompletedTask;
+    }
+
     private async Task ToggleDpiAsync()
     {
         if (DpiEnabled) await StopDpiAsync();
@@ -1215,6 +1256,9 @@ public sealed class MainViewModel : ObservableObject
             await _dpi.StartAsync(BuildDpiOptions(), BuildDpiUpstream());
 
             DpiEnabled = true;
+            // Никаких проверок при включении и во время работы: обход сразу пропускает трафик, а
+            // проверяют его кнопки «Тест» и «Подобрать» в окне сервиса, когда это нужно пользователю.
+            DpiState = DpiBypassState.On;
             _dpiStartedAt = DateTime.Now;
             _dpiOwnsSystemProxy = ownSystemProxy;
             App.Settings.Current.Dpi.Enabled = true;
@@ -1225,16 +1269,14 @@ public sealed class MainViewModel : ObservableObject
             RaiseDpiStats();
             UpdateTrayStatus();
             _statsTimer.Start();
-            ShowStatus($"Обход DPI включён: {DpiPortText} · {DpiStrategiesText}", false);
-
-            _ = VerifyDpiAsync();
+            ShowStatus(L.F("S0757", DpiPortText, DpiStrategiesText), false);
         }
         catch (Exception ex)
         {
             DpiEnabled = false;
             _dpiStartedAt = null;
             DpiState = DpiBypassState.Error;
-            ShowStatus("Обход DPI не запустился: " + ex.Message, true);
+            ShowStatus(L.T("S0758") + ex.Message, true);
         }
         finally
         {
@@ -1263,197 +1305,7 @@ public sealed class MainViewModel : ObservableObject
             RaiseDpiStats();
             UpdateTrayStatus();
             MaybeStopStatsTimer();
-            ShowStatus("Обход DPI выключен", false);
-        }
-        finally
-        {
-            Busy = false;
-        }
-    }
-
-    /// <summary>
-    /// DPI-тест: подключаемся к площадкам, которые в РФ режет DPI, и смотрим, дошли ли.
-    /// Если обход выключен, движок поднимается только на время проверки.
-    /// </summary>
-    private async Task TestDpiAsync()
-    {
-        if (Busy) return;
-        Busy = true;
-
-        var wasRunning = DpiEnabled;
-        try
-        {
-            DpiState = DpiBypassState.Checking;
-            ShowStatus("DPI-тест…", false);
-
-            if (!wasRunning)
-            {
-                await _dpi.StartAsync(BuildDpiOptions(), BuildDpiUpstream());
-                _dpiStartedAt = DateTime.Now;
-            }
-
-            IProgress<string> progress = new Progress<string>(text => ShowStatus("DPI-тест: " + text, false));
-
-            // тест сам перебирает варианты (TTL фейк-пакета, место разрыва, MSS), если
-            // текущие настройки не помогают; движок на время перебора перезапускается
-            var result = await DpiTester.TestAsync(
-                _dpi.Port,
-                RestartDpiEngineAsync,
-                BuildDpiOptions(),
-                text => progress.Report(text));
-
-            foreach (var line in result.Lines) AppendLog("DPI: " + line);
-
-            if (result.Working is { } working)
-            {
-                // тест нашёл рабочую комбинацию — запоминаем её как настройку
-                ApplyWorkingDpiSettings(working);
-                if (wasRunning) await RestartDpiEngineAsync(BuildDpiOptions());
-            }
-            else if (wasRunning)
-            {
-                // ничего не подошло — возвращаем движок к настройкам пользователя
-                await RestartDpiEngineAsync(BuildDpiOptions());
-            }
-
-            ApplyDpiTestResult(result);
-        }
-        catch (Exception ex)
-        {
-            DpiState = wasRunning ? DpiBypassState.Covered : DpiBypassState.Error;
-            ShowStatus("DPI-тест не прошёл: " + ex.Message, true);
-        }
-        finally
-        {
-            if (!wasRunning)
-            {
-                await _dpi.StopAsync();
-                _dpiStartedAt = null;
-                if (DpiState == DpiBypassState.Checking) DpiState = DpiBypassState.Off;
-            }
-
-            RaiseDpiStats();
-            Busy = false;
-        }
-    }
-
-    /// <summary>Первый тест сразу после включения: чтобы состояние в карточке было честным.</summary>
-    private async Task VerifyDpiAsync()
-    {
-        try
-        {
-            await Task.Delay(400);
-            if (!DpiEnabled) return;
-
-            DpiState = DpiBypassState.Checking;
-
-            // быстрая проверка без перебора вариантов: он долгий и прерывает соединения,
-            // поэтому запускается только по кнопке «DPI тест»
-            var result = await DpiTester.TestAsync(
-                _dpi.Port,
-                RestartDpiEngineAsync,
-                BuildDpiOptions(),
-                scan: false);
-
-            foreach (var line in result.Lines) AppendLog("DPI: " + line);
-
-            if (DpiEnabled) ApplyDpiTestResult(result);
-        }
-        catch (Exception ex)
-        {
-            AppendLog("DPI-тест: " + ex.Message);
-            if (DpiState == DpiBypassState.Checking) DpiState = DpiBypassState.Broken;
-        }
-    }
-
-    /// <summary>Записать подобранные тестом настройки обхода (и обновить их в окне настроек).</summary>
-    private void ApplyWorkingDpiSettings(DpiBypassSettings working)
-    {
-        var settings = App.Settings.Current.Dpi;
-        settings.FakeTtl = working.FakeTtl;
-        settings.FakeTtlValue = working.FakeTtlValue;
-        settings.SniSplit = working.SniSplit;
-        settings.TlsRecordSplit = working.TlsRecordSplit;
-    settings.ClampMss = working.ClampMss;
-    settings.MssValue = working.MssValue;
-    settings.Multisplit = working.Multisplit;
-    settings.MultisplitSize = working.MultisplitSize;
-    App.Settings.SaveSoon();
-
-        RaiseDpiStats();
-        Preferences.RaiseDpiSettings();
-        AppendLog("DPI: настройки обхода подобраны автоматически — " + DpiTester.Describe(working));
-    }
-
-    private void ApplyDpiTestResult(DpiTestResult result)
-    {
-        switch (result.Verdict)
-        {
-            case DpiTestVerdict.NoNetwork:
-                DpiState = DpiBypassState.NoNetwork;
-                ShowStatus("Интернет недоступен — DPI-тест ничего не показал", true);
-                break;
-
-            case DpiTestVerdict.Broken:
-                DpiState = DpiBypassState.Broken;
-                ShowStatus($"DPI сломан: {result.Detail}" +
-                           (DpiEnabled ? "" : " — но обход сейчас выключен"), false);
-                break;
-
-        default:
-            DpiState = DpiBypassState.Covered;
-
-            // «накрыт» бывает разный: нельзя пустить под одну гребёнку площадку, которую
-            // рвут по содержимому, и площадку, до которой провайдер не пускает вообще
-            var hint = result.AddressBlocked
-                ? " — разрыв пакетов тут не поможет, нужен VPN: включите профиль и режим «через профиль»"
-                : result.NeedsScan
-                    ? " — нажмите «DPI тест», чтобы подобрать вариант"
-                    : "";
-
-            ShowStatus("Накрыт: " + result.Detail + hint, true);
-            break;
-        }
-    }
-
-    /// <summary>
-    /// Диагностика: по каждому домену пишем в журнал, на каком этапе соединение умирает —
-    /// DNS (и отличается ли ответ DoH от провайдерского), TCP, TLS, HTTP напрямую и через обход.
-    /// Ничего не меняет и не подбирает: только измерения.
-    /// </summary>
-    private async Task DiagnoseDpiAsync()
-    {
-        if (Busy) return;
-        Busy = true;
-
-        try
-        {
-            ShowStatus("Диагностика DPI…", false);
-
-            var settings = App.Settings.Current.Dpi;
-            var port = _dpi.IsRunning ? _dpi.Port : 0;
-
-            AppendLog($"диагностика DPI · DNS: {(settings.Doh == DohMode.Off ? "системный" : "DoH " + settings.Doh)}" +
-                      $" · обход: {(port > 0 ? "127.0.0.1:" + port : "выключен")}");
-
-            var rows = await DpiDiagnostics.RunAsync(
-                DpiDiagnostics.DefaultDomains,
-                port,
-                settings.Doh,
-                settings.DohUrl,
-                domain => ShowStatus("Диагностика DPI: " + domain, false));
-
-            foreach (var row in rows)
-                foreach (var line in row.Lines())
-                    AppendLog(line);
-
-            var summary = DpiDiagnostics.Summary(rows);
-            AppendLog(summary);
-            ShowStatus("Диагностика DPI: " + summary, !rows.All(r => r.OpenedDirect || r.OpenedVia));
-        }
-        catch (Exception ex)
-        {
-            ShowStatus("Диагностика не прошла: " + ex.Message, true);
+            ShowStatus(L.T("S0759"), false);
         }
         finally
         {
@@ -1480,7 +1332,7 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            AppendLog("Обход DPI: не удалось обновить выход — " + ex.Message);
+            AppendLog(L.T("S0775") + ex.Message);
         }
     }
 
@@ -1494,12 +1346,12 @@ public sealed class MainViewModel : ObservableObject
         {
             await RestartDpiEngineAsync(BuildDpiOptions());
             RaiseDpiStats();
-            ShowStatus("Настройки обхода DPI применены", false);
+            ShowStatus(L.T("S0776"), false);
         }
         catch (Exception ex)
         {
             DpiState = DpiBypassState.Error;
-            ShowStatus("Не удалось перезапустить обход DPI: " + ex.Message, true);
+            ShowStatus(L.T("S0777") + ex.Message, true);
         }
     }
 
@@ -1523,7 +1375,7 @@ public sealed class MainViewModel : ObservableObject
     {
         if (AdminHelper.IsElevated)
         {
-            ShowStatus("Приложение уже запущено с правами администратора", false);
+            ShowStatus(L.T("S0778"), false);
             return;
         }
 
@@ -1533,7 +1385,7 @@ public sealed class MainViewModel : ObservableObject
         App.Settings.SaveNow();
 
         if (AdminHelper.RestartElevated()) ExitRequested?.Invoke();
-        else ShowStatus("Перезапуск с правами администратора отклонён", true);
+        else ShowStatus(L.T("S0779"), true);
     }
 
     private void OpenTelegramProxy()
@@ -1547,14 +1399,14 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             Process.Start(new ProcessStartInfo { FileName = link, UseShellExecute = true });
-            ShowStatus("Ссылка отправлена в Telegram", false);
+            ShowStatus(L.T("S0780"), false);
         }
         catch
         {
             try
             {
                 System.Windows.Clipboard.SetText(link);
-                ShowStatus("Ссылка скопирована в буфер — вставьте её в Telegram", false);
+                ShowStatus(L.T("S0781"), false);
             }
             catch { /* ignore */ }
         }
@@ -1564,16 +1416,17 @@ public sealed class MainViewModel : ObservableObject
     {
         var text =
             $"VibeTun{Environment.NewLine}" +
-            $"Ядро: {Core.Info.VersionShort}{Environment.NewLine}Путь: {Core.Info.Path}{Environment.NewLine}" +
-            $"Профиль: {ActiveProfileName}{Environment.NewLine}Состояние: {StateText}{Environment.NewLine}" +
+            L.F("S0782", Core.Info.VersionShort, Environment.NewLine, Core.Info.Path, Environment.NewLine) +
+            L.F("S0783", ActiveProfileName, Environment.NewLine, StateText, Environment.NewLine) +
             $"TUN: {Routing.ActiveProfile.TunEnabled}{Environment.NewLine}" +
             $"DNS: {Dns.SelectionText}{Dns.RulesSummaryText}{Environment.NewLine}" +
-            $"Админ: {AdminHelper.IsElevated}{Environment.NewLine}" +
+            Dpi.DiagnosticsText() +
+            L.F("S0784", AdminHelper.IsElevated, Environment.NewLine) +
             new string('-', 40) + Environment.NewLine + Core.RecentLogText();
         try
         {
             System.Windows.Clipboard.SetText(text);
-            ShowStatus("Диагностика скопирована", false);
+            ShowStatus(L.T("S0785"), false);
         }
         catch { /* ignore */ }
     }
@@ -1602,11 +1455,11 @@ public sealed class MainViewModel : ObservableObject
     {
         (StateText, StatusBrushKey) = Core.State switch
         {
-            ConnectionState.Running => ("Подключено", "Success"),
-            ConnectionState.Starting => ("Запуск…", "Warning"),
-            ConnectionState.Stopping => ("Остановка…", "Warning"),
-            ConnectionState.Error => ("Ошибка ядра", "Danger"),
-            _ => ("Отключено", "TextMuted")
+            ConnectionState.Running => (L.T("S0786"), "Success"),
+            ConnectionState.Starting => (L.T("S0680"), "Warning"),
+            ConnectionState.Stopping => (L.T("S0787"), "Warning"),
+            ConnectionState.Error => (L.T("S0788"), "Danger"),
+            _ => (L.T("S0691"), "TextMuted")
         };
         Raise(nameof(StateText));
         Raise(nameof(StatusBrushKey));
@@ -1615,12 +1468,12 @@ public sealed class MainViewModel : ObservableObject
 
     private void UpdateTrayStatus()
     {
-        var profile = _activeProfile?.Name ?? "профиль не выбран";
+        var profile = _activeProfile?.Name ?? L.T("S0789");
 
         // обход DPI и прокси могут работать одновременно — в подписи трея говорим про оба
         var mode = Core.State == ConnectionState.Running
-            ? DpiEnabled ? "прокси + обход DPI" : null
-            : DpiEnabled ? "обход DPI" : null;
+            ? DpiEnabled ? L.T("S0790") : null
+            : DpiEnabled ? L.T("S0791") : null;
 
         Tray.SetStatus($"VibeTun — {profile} · {StateText}" + (mode is null ? "" : $" · {mode}"));
 
@@ -1628,13 +1481,29 @@ public sealed class MainViewModel : ObservableObject
         Tray.SetProxyOn(Core.State == ConnectionState.Running || DpiEnabled);
     }
 
+    internal override void RefreshLanguage()
+    {
+        UpdateStateText();
+        base.RefreshLanguage();
+    }
+
+    private readonly object _logFileGate = new();
+
+    /// <summary>Предел файла журнала: столько на диске держать бессмысленно, а место он ест.</summary>
+    private const long LogFileLimitBytes = 4 * 1024 * 1024;
+
     private void AppendLog(string line)
     {
-        Logs.Add(line);   // панель «Логи» на вкладке «Профили»
+        Logs.Add(LogFormat.Shorten(line));   // only the on-screen copy is shortened/limited
         try
         {
             var path = Path.Combine(AppPaths.LogsDir, "app.log");
-            File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {line}{Environment.NewLine}");
+            lock (_logFileGate)
+            {
+                // журнал на диске ограничен: без этого фон из повторов забивал место и тормозил записью
+                if (File.Exists(path) && new FileInfo(path).Length > LogFileLimitBytes) File.Delete(path);
+                File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {line}{Environment.NewLine}");
+            }
         }
         catch { /* ignore */ }
     }
@@ -1665,7 +1534,7 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            AppendLog("Обход DPI не остановлен при выходе: " + ex.Message);
+            AppendLog(L.T("S0792") + ex.Message);
         }
 
         // сначала возвращаем системный прокси: даже если ядро не ответит, интернет у пользователя останется
@@ -1678,7 +1547,7 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            AppendLog("Ядро не остановлено при выходе: " + ex.Message);
+            AppendLog(L.T("S0793") + ex.Message);
         }
 
         var settings = App.Settings.Current;

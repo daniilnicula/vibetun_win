@@ -46,13 +46,8 @@ public sealed class DnsViewModel : ObservableObject
         _dialogs = dialogs;
         _tunActive = tunActive ?? (() => false);
 
-        Pinned.Add(new DnsPinnedVm(DnsModes.System, "Системный",
-            "Резолвер Windows — обычно DNS провайдера",
-            "Адреса сайтов узнаёт Windows — обычно через DNS провайдера. В TUN-режиме запросы идут на 1.1.1.1 напрямую. " +
-            "Для WireGuard/AmneziaWG берётся DNS из конфига профиля (например 8.8.8.8): запросы идут внутри туннеля, как в клиенте Amnezia."));
-        Pinned.Add(new DnsPinnedVm(DnsModes.Proxy, "Через Proxy",
-            "DNS-over-TLS 1.1.1.1 через активный профиль",
-            "Запросы уходят через подключённый профиль по DNS-over-TLS (1.1.1.1): провайдер их не видит и не может подменить ответ."));
+        Pinned.Add(new DnsPinnedVm(DnsModes.System));
+        Pinned.Add(new DnsPinnedVm(DnsModes.Proxy));
 
         SelectPinnedCommand = new RelayCommand(p => SelectPinned(p as DnsPinnedVm));
         SelectServerCommand = new RelayCommand(p => SelectServer(p as DnsServerVm));
@@ -220,12 +215,12 @@ public sealed class DnsViewModel : ObservableObject
     public bool IsPicking => _picking is not null;
 
     /// <summary>Заголовок плашки над основным списком, пока выбирают DNS для записи.</summary>
-    public string PickingTitle => _picking is null ? "" : $"Выберите DNS для «{_picking.Name}»";
+    public string PickingTitle => _picking is null ? "" : L.F("S0631", _picking.Name);
 
     /// <summary>Вторая строка плашки: что нажимать и куда потом вернёмся.</summary>
     public string PickingHint => _picking is null
         ? ""
-        : $"Нажмите на «Системный», «Через Proxy», сервер провайдера или свой DNS — после выбора вернёмся во вкладку «{_picking.TabTitle}»";
+        : L.F("S0632", _picking.TabTitle);
 
     /// <summary>Значок в плашке: «domain» — глобус, «icon» — значок приложения, «app» — общий значок окна.</summary>
     public string PickingKind => _picking switch
@@ -233,6 +228,7 @@ public sealed class DnsViewModel : ObservableObject
         DnsDomainVm => "domain",
         DnsAppVm { Icon: not null } => "icon",
         DnsAppVm => "app",
+        DpiDnsVm => "app",   // у сервиса «DPI» значок сайта не нужен: глобус понятнее
         _ => ""
     };
 
@@ -271,8 +267,8 @@ public sealed class DnsViewModel : ObservableObject
         get
         {
             var s = Current;
-            if (s.Mode == DnsModes.Proxy) return "через Proxy (DNS-over-TLS 1.1.1.1)";
-            if (s.Mode != DnsModes.Server || string.IsNullOrWhiteSpace(s.SelectedServer)) return "системный DNS";
+            if (s.Mode == DnsModes.Proxy) return L.T("S0633");
+            if (s.Mode != DnsModes.Server || string.IsNullOrWhiteSpace(s.SelectedServer)) return L.T("S0386");
             return ServerText(s.SelectedEntryId, s.SelectedServer);
         }
     }
@@ -285,9 +281,9 @@ public sealed class DnsViewModel : ObservableObject
             var domains = Domains.Count(d => d.Enabled && d.HasDns && d.IsUsable);
             var apps = Apps.Count(a => a.Enabled && a.HasDns);
             var parts = new List<string>();
-            if (domains > 0) parts.Add($"{domains} {(OneOf(domains) ? "домена" : "доменов")}");
-            if (apps > 0) parts.Add($"{apps} {(OneOf(apps) ? "приложения" : "приложений")}");
-            return parts.Count == 0 ? "" : " · свой DNS у " + string.Join(" и ", parts);
+            if (domains > 0) parts.Add(L.F("S0634", domains, (OneOf(domains) ? L.T("Extra956") : L.T("Extra957"))));
+            if (apps > 0) parts.Add(L.F("S0634", apps, (OneOf(apps) ? L.T("Extra958") : L.T("Extra959"))));
+            return parts.Count == 0 ? "" : L.T("S0635") + string.Join(L.T("S0636"), parts);
         }
     }
 
@@ -420,7 +416,7 @@ public sealed class DnsViewModel : ObservableObject
         }
         else if (mode == "custom" && server.Length > 0)
         {
-            var entry = new DnsEntry { Name = "Свой DNS", Address = server };
+            var entry = new DnsEntry { Name = L.T("S0637"), Address = server };
             s.Entries.Add(entry);
             s.Mode = DnsModes.Server;
             s.SelectedEntryId = entry.Id;
@@ -593,8 +589,8 @@ public sealed class DnsViewModel : ObservableObject
             }
             else
             {
-                entry.Error = lookup.Error.Length > 0 ? lookup.Error : "провайдер не вернул адресов";
-                if (force) Notify?.Invoke($"{entry.Name}: не удалось получить адреса — {entry.Error}", true);
+                entry.Error = lookup.Error.Length > 0 ? lookup.Error : L.T("S0384");
+                if (force) Notify?.Invoke(L.F("S0638", entry.Name, entry.Error), true);
             }
         }
         catch (Exception ex)
@@ -617,7 +613,7 @@ public sealed class DnsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Notify?.Invoke("Не удалось открыть сайт: " + ex.Message, true);
+            Notify?.Invoke(L.T("S0639") + ex.Message, true);
         }
     }
 
@@ -630,8 +626,8 @@ public sealed class DnsViewModel : ObservableObject
     {
         if (_tunActive())
         {
-            Notify?.Invoke("Пинг DNS недоступен, пока работает TUN: ядро перехватывает DNS-запросы, и замер " +
-                           "показал бы не те серверы. Отключитесь или выключите TUN и повторите.", true);
+            Notify?.Invoke(L.T("S0640") +
+                           L.T("S0641"), true);
             return;
         }
 
@@ -645,7 +641,7 @@ public sealed class DnsViewModel : ObservableObject
                 .ToList();
             if (targets.Count == 0)
             {
-                Notify?.Invoke("Пинговать нечего: в списке нет серверов", false);
+                Notify?.Invoke(L.T("S0642"), false);
                 return;
             }
 
@@ -680,7 +676,7 @@ public sealed class DnsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Notify?.Invoke("Пинг DNS не удался: " + ex.Message, true);
+            Notify?.Invoke(L.T("S0643") + ex.Message, true);
         }
         finally
         {
@@ -704,7 +700,7 @@ public sealed class DnsViewModel : ObservableObject
 
         if (answered.Count == 0)
         {
-            Notify?.Invoke("Пинг DNS: ни один сервер не ответил — проверьте подключение к интернету", true);
+            Notify?.Invoke(L.T("S0644"), true);
             return;
         }
 
@@ -713,7 +709,7 @@ public sealed class DnsViewModel : ObservableObject
         var name = owner is null || string.Equals(owner.Name, best.Address, StringComparison.OrdinalIgnoreCase)
             ? best.Address
             : owner.Name + " " + best.Address;
-        Notify?.Invoke($"Пинг DNS: ответили {answered.Count} из {targets.Count}, быстрее всех — {name} " +
+        Notify?.Invoke(L.F("S0645", answered.Count, targets.Count, name) +
                        $"({DnsPingBoard.Format(best.Ms)})", false);
     }
 
@@ -727,7 +723,7 @@ public sealed class DnsViewModel : ObservableObject
 
     private void AddCustom()
     {
-        var result = _dialogs.EditDnsServer("Свой DNS", "Добавить");
+        var result = _dialogs.EditDnsServer(L.T("S0637"), L.T("S0029"));
         if (result is not { } added) return;
 
         var model = new DnsEntry { Name = added.Name, Address = added.Address };
@@ -737,14 +733,14 @@ public sealed class DnsViewModel : ObservableObject
         Entries.Add(entry);
         entry.SyncSelection(s);
         App.Settings.SaveSoon();
-        Notify?.Invoke($"DNS «{model.Name}» добавлен — нажмите на него в списке, чтобы выбрать", false);
+        Notify?.Invoke(L.F("S0646", model.Name), false);
     }
 
     private void Edit(DnsEntryVm? entry)
     {
         if (entry is null || !entry.IsCustom) return;
 
-        var result = _dialogs.EditDnsServer("Изменить DNS", "Сохранить", entry.Name, entry.Address);
+        var result = _dialogs.EditDnsServer(L.T("S0647"), L.T("S0069"), entry.Name, entry.Address);
         if (result is not { } edited) return;
 
         var addressChanged = !string.Equals(entry.Address, edited.Address, StringComparison.OrdinalIgnoreCase);
@@ -766,7 +762,7 @@ public sealed class DnsViewModel : ObservableObject
         // поменяли адрес DNS, который сейчас используется, — ядру нужен новый
         if (!addressChanged) return;
         if (inUse) DnsChanged?.Invoke("DNS: " + SelectionText);
-        else if (targets.Any(t => t.Enabled && t.IsUsable)) DnsChanged?.Invoke($"DNS «{entry.Name}»: новый адрес {edited.Address}");
+        else if (targets.Any(t => t.Enabled && t.IsUsable)) DnsChanged?.Invoke(L.F("S0648", entry.Name, edited.Address));
     }
 
     private void Remove(DnsEntryVm? entry)
@@ -774,10 +770,10 @@ public sealed class DnsViewModel : ObservableObject
         if (entry is null || !entry.IsCustom) return;
 
         var targets = TargetsUsing(entry);
-        var question = $"Удалить «{entry.Name}» из списка?";
+        var question = L.F("S0649", entry.Name);
         if (targets.Count > 0)
-            question += $"\n\nЭтот DNS выбран у {TargetNames(targets)}. Они вернутся на основной DNS.";
-        if (!_dialogs.Confirm("Удалить DNS", question, "Удалить")) return;
+            question += L.F("S0650", TargetNames(targets));
+        if (!_dialogs.Confirm(L.T("S0651"), question, L.T("S0083"))) return;
 
         var s = Current;
         var inUse = s.Mode == DnsModes.Server && s.SelectedEntryId == entry.Id;
@@ -800,7 +796,7 @@ public sealed class DnsViewModel : ObservableObject
         }
         else if (targets.Any(t => t.Enabled && t.IsUsable))
         {
-            DnsChanged?.Invoke($"Удалён DNS «{entry.Name}»: у {TargetNames(targets)} снова основной");
+            DnsChanged?.Invoke(L.F("S0652", entry.Name, TargetNames(targets)));
         }
         App.Settings.SaveSoon();
     }
@@ -831,12 +827,12 @@ public sealed class DnsViewModel : ObservableObject
         {
             if (DnsPattern.TryParse(_newDomainParts[0], out var parsed, out var error))
             {
-                label = parsed.IsRegex ? "regex" : "домен";
+                label = parsed.IsRegex ? "regex" : L.T("S0270");
             }
             else
             {
                 problem = error;
-                label = Text.NormalizeUserPattern(_newDomainParts[0]).kind == MatchKind.Ip ? "IP" : "ошибка";
+                label = Text.NormalizeUserPattern(_newDomainParts[0]).kind == MatchKind.Ip ? "IP" : L.T("S0417");
             }
         }
         else if (_newDomainParts.Count > 1)
@@ -848,7 +844,7 @@ public sealed class DnsViewModel : ObservableObject
                 break;
             }
             var count = _newDomainParts.Count;
-            label = problem is not null ? "ошибка" : count + " " + Plural(count, "запись", "записи", "записей");
+            label = problem is not null ? L.T("S0417") : count + " " + Plural(count, L.T("S0653"), L.T("S0654"), L.T("S0655"));
         }
 
         NewDomainKindLabel = label;
@@ -900,14 +896,14 @@ public sealed class DnsViewModel : ObservableObject
 
         var already = duplicates.Count == 0
             ? ""
-            : "уже в списке: " + string.Join(", ", duplicates.Take(3).Select(d => $"«{d}»")) +
-              (duplicates.Count > 3 ? " и ещё " + (duplicates.Count - 3) : "");
+            : L.T("S0656") + string.Join(", ", duplicates.Take(3).Select(d => $"«{d}»")) +
+              (duplicates.Count > 3 ? L.T("S0657") + (duplicates.Count - 3) : "");
         if (added.Count == 0)
-            Notify?.Invoke("Уже в списке: " + already["уже в списке: ".Length..], false);
+            Notify?.Invoke(L.T("S0658") + already[L.T("S0656").Length..], false);
         else if (added.Count == 1)
-            Notify?.Invoke($"«{added[0].Name}» добавлен — нажмите «Выбрать DNS»" + (already.Length > 0 ? "; " + already : ""), false);
+            Notify?.Invoke(L.F("S0659", added[0].Name) + (already.Length > 0 ? "; " + already : ""), false);
         else
-            Notify?.Invoke($"Добавлено записей: {added.Count} — у каждой нажмите «Выбрать DNS»" + (already.Length > 0 ? "; " + already : ""), false);
+            Notify?.Invoke(L.F("S0660", added.Count) + (already.Length > 0 ? "; " + already : ""), false);
     }
 
     private void RemoveDomain(DnsDomainVm? rule)
@@ -923,8 +919,8 @@ public sealed class DnsViewModel : ObservableObject
         Raise(nameof(RulesSummaryText));
 
         // у домена работал свой DNS — без него ядру нужен новый конфиг
-        if (rule.Enabled && rule.HasDns && rule.IsUsable) DnsChanged?.Invoke($"DNS для «{rule.Name}» убран: домен снова на основном");
-        else Notify?.Invoke($"«{rule.Name}» убран из списка доменов", false);
+        if (rule.Enabled && rule.HasDns && rule.IsUsable) DnsChanged?.Invoke(L.F("S0661", rule.Name));
+        else Notify?.Invoke(L.F("S0662", rule.Name), false);
     }
 
     /// <summary>Запись домена поправили в карточке: сохраняем и, если ядру уходит другое, переподключаемся.</summary>
@@ -934,8 +930,8 @@ public sealed class DnsViewModel : ObservableObject
         Raise(nameof(RulesSummaryText));
         if (!changed || !rule.Enabled || !rule.HasDns) return;
 
-        if (rule.IsUsable) DnsChanged?.Invoke($"DNS для «{rule.Name}»: {rule.DnsText}");
-        else DnsChanged?.Invoke($"Запись «{rule.Name}» с ошибкой — свой DNS для неё не действует");
+        if (rule.IsUsable) DnsChanged?.Invoke(L.F("S0663", rule.Name, rule.DnsText));
+        else DnsChanged?.Invoke(L.F("S0664", rule.Name));
     }
 
     private DnsDomainVm CreateDomainVm(DnsDomainRule model)
@@ -957,7 +953,7 @@ public sealed class DnsViewModel : ObservableObject
     // -------------------------------------------------------------- приложения
     private void AddAppFromExe()
     {
-        var path = _dialogs.OpenFile("Приложения (*.exe)|*.exe|Все файлы (*.*)|*.*");
+        var path = _dialogs.OpenFile(L.T("S0665"));
         if (path is not null) AddAppPath(path);
     }
 
@@ -975,7 +971,7 @@ public sealed class DnsViewModel : ObservableObject
         var existing = Apps.FirstOrDefault(a => string.Equals(a.Model.Path, exePath, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
-            Notify?.Invoke($"«{existing.Name}» уже в списке приложений", false);
+            Notify?.Invoke(L.F("S0666", existing.Name), false);
             return;
         }
 
@@ -992,7 +988,7 @@ public sealed class DnsViewModel : ObservableObject
         RefreshTargetText(app);
         App.Settings.SaveSoon();
         Raise(nameof(HasApps));
-        Notify?.Invoke($"Приложение «{app.Name}» добавлено — нажмите «Выбрать DNS»", false);
+        Notify?.Invoke(L.F("S0667", app.Name), false);
     }
 
     private void RemoveApp(DnsAppVm? app)
@@ -1008,8 +1004,8 @@ public sealed class DnsViewModel : ObservableObject
         Raise(nameof(RulesSummaryText));
 
         // у приложения работал свой DNS — без него ядру нужен новый конфиг
-        if (app.Enabled && app.HasDns) DnsChanged?.Invoke($"DNS для «{app.Name}» убран: приложение снова на основном");
-        else Notify?.Invoke($"Приложение «{app.Name}» убрано", false);
+        if (app.Enabled && app.HasDns) DnsChanged?.Invoke(L.F("S0668", app.Name));
+        else Notify?.Invoke(L.F("S0669", app.Name), false);
     }
 
     private DnsAppVm CreateAppVm(DnsAppRule model)
@@ -1051,6 +1047,22 @@ public sealed class DnsViewModel : ObservableObject
     /// <summary>Передумали выбирать DNS для записи: назад во вкладку, откуда пришли.</summary>
     public void CancelPick() => EndPick(restoreTab: true);
 
+    /// <summary>
+    /// Начать выбор DNS для сервиса раздела «DPI» (кнопка «Выбрать DNS» в его окне): показываем
+    /// «Основные» с плашкой «Выберите DNS для …», а выбранный сервер достаётся сервису —
+    /// так же, как домену и приложению. После выбора <paramref name="done"/> возвращает в «DPI».
+    /// </summary>
+    public void StartPickForDpi(DpiDnsChoice choice, string name, Action done)
+    {
+        var target = new DpiDnsVm(choice, name, done);
+        RefreshTargetText(target);
+        StartPick(target);
+
+        // у сервиса нет своей вкладки в этом разделе: после выбора его вернёт раздел «DPI»
+        _returnTab = null;
+        RaisePicking();
+    }
+
     /// <summary>Закончить выбор: нажатия в основном списке снова меняют основной DNS.</summary>
     private void EndPick(bool restoreTab)
     {
@@ -1086,7 +1098,7 @@ public sealed class DnsViewModel : ObservableObject
             string.Equals(choice.Server?.Trim(), isServer ? server?.Trim() : null, StringComparison.OrdinalIgnoreCase))
         {
             target.Highlight(HighlightTime);
-            Notify?.Invoke($"У «{target.Name}» уже этот DNS: {target.DnsText}", false);
+            Notify?.Invoke(L.F("S0670", target.Name, target.DnsText), false);
             return;
         }
 
@@ -1096,12 +1108,22 @@ public sealed class DnsViewModel : ObservableObject
         Raise(nameof(RulesSummaryText));
         target.Highlight(HighlightTime);
 
+        if (target is DpiDnsVm dpi)
+        {
+            // сервис раздела «DPI»: DNS ядра не меняется — движок обхода будет спрашивать адреса
+            // его доменов у выбранного сервера (см. DpiServiceCatalog.ApplyDns)
+            DpiDnsChanged?.Invoke();
+            Notify?.Invoke(L.F("dpi.dns.picked", dpi.Name, dpi.DnsText), false);
+            dpi.Done();
+            return;
+        }
+
         if (!target.Enabled)
-            Notify?.Invoke($"DNS для «{target.Name}»: {target.DnsText} — заработает, когда включите галочку", false);
+            Notify?.Invoke(L.F("S0671", target.Name, target.DnsText), false);
         else if (!target.IsUsable)
-            Notify?.Invoke($"DNS для «{target.Name}»: {target.DnsText} — заработает, когда исправите запись", false);
+            Notify?.Invoke(L.F("S0672", target.Name, target.DnsText), false);
         else
-            DnsChanged?.Invoke($"DNS для «{target.Name}»: {target.DnsText}");
+            DnsChanged?.Invoke(L.F("S0663", target.Name, target.DnsText));
     }
 
     private void OnTargetEnabledChanged(DnsTargetVm target)
@@ -1110,8 +1132,8 @@ public sealed class DnsViewModel : ObservableObject
         Raise(nameof(RulesSummaryText));
         if (!target.HasDns || !target.IsUsable) return;
         DnsChanged?.Invoke(target.Enabled
-            ? $"DNS для «{target.Name}» включён: {target.DnsText}"
-            : $"DNS для «{target.Name}» выключен: {target.Noun} снова на основном");
+            ? L.F("S0673", target.Name, target.DnsText)
+            : L.F("S0674", target.Name, target.Noun));
     }
 
     /// <summary>Карточку убрали из списка — отписываемся от её событий.</summary>
@@ -1132,7 +1154,16 @@ public sealed class DnsViewModel : ObservableObject
     private static string TargetNames(IReadOnlyList<DnsTargetVm> targets)
     {
         var names = string.Join(", ", targets.Take(3).Select(t => $"«{t.Name}»"));
-        return targets.Count > 3 ? names + " и ещё " + (targets.Count - 3) : names;
+        return targets.Count > 3 ? names + L.T("S0657") + (targets.Count - 3) : names;
+    }
+
+    internal override void RefreshLanguage()
+    {
+        CheckNewDomain();
+        RefreshTargetTexts();
+        if (_picking is DpiDnsVm dpi) RefreshTargetText(dpi);
+        RaisePicking();
+        base.RefreshLanguage();
     }
 
     private void RefreshTargetTexts()

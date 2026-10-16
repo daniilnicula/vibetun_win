@@ -41,12 +41,12 @@ public partial class ImportWindow : Window
 
         foreach (var profile in result.Profiles) _parsed.Add(profile);
         if (result.Profiles.Count == 0 && Input.Text?.Length > 0)
-            _parsed.Add(new ProxyProfile { Name = "Ничего не распознано", Protocol = "" });
+            _parsed.Add(new ProxyProfile { Name = L.T("S0915"), Protocol = "" });
 
         Errors.Text = string.Join(Environment.NewLine, result.Errors.Take(4));
-        PreviewTitle.Text = $"Распознанные профили: {result.Profiles.Count}";
+        PreviewTitle.Text = L.F("S0916", result.Profiles.Count);
         AddButton.IsEnabled = result.Profiles.Count > 0;
-        AddButton.Content = result.Profiles.Count > 1 ? $"Добавить {result.Profiles.Count}" : "Добавить";
+        AddButton.Content = result.Profiles.Count > 1 ? L.F("S0917", result.Profiles.Count) : L.T("S0029");
     }
 
     private void OnPaste(object sender, RoutedEventArgs e)
@@ -67,7 +67,7 @@ public partial class ImportWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "Текст и конфиги (*.txt;*.json;*.conf;*.vpn;*.wg)|*.txt;*.json;*.conf;*.vpn;*.wg|Все файлы (*.*)|*.*"
+            Filter = L.T("S0918")
         };
         if (dialog.ShowDialog(this) != true) return;
         try

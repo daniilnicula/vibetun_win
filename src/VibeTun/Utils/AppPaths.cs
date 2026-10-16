@@ -17,6 +17,7 @@ public static class AppPaths
     public static void SetDataRoot(string root) => _dataRoot = root;
 
     public static string ProfilesDir => Path.Combine(DataRoot, "profiles");
+    public static string ProfileLayoutFile => Path.Combine(DataRoot, "profile-layout.json");
     public static string RoutesDir => Path.Combine(DataRoot, "routes");
     public static string RouteProfilesFile => Path.Combine(DataRoot, "routing-profiles.json");
     public static string SettingsFile => Path.Combine(DataRoot, "settings.json");

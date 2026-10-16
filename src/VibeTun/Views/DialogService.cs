@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Windows;
 using VibeTun.Models;
 using VibeTun.Services;
@@ -36,21 +37,40 @@ public sealed class DialogService : IDialogService
         return window.ShowDialog() == true ? (window.ServerName, window.Address) : null;
     }
 
-    public bool Confirm(string title, string text, string okText = "Удалить", bool danger = true)
+    public DpiServiceEditResult? EditDpiService(DpiServiceEditRequest request)
     {
-        var window = new ConfirmWindow(title, text, okText, danger, okOnly: false) { Owner = _owner };
+        var window = new DpiServiceWindow(request, this) { Owner = _owner };
+        return window.ShowDialog() == true ? window.Result : null;
+    }
+
+    public bool Confirm(string title, string text, string? okText = null, bool danger = true)
+    {
+        var window = new ConfirmWindow(title, text, okText ?? L.T("S0083"), danger, okOnly: false) { Owner = _owner };
         return window.ShowDialog() == true;
+    }
+
+    public ProfileGroupDeleteChoice ChooseProfileGroupDeletion(string groupName, int profileCount)
+    {
+        var window = new ProfileGroupDeleteWindow(groupName, profileCount) { Owner = _owner };
+        return window.ShowDialog() == true ? window.Choice : ProfileGroupDeleteChoice.Cancel;
+    }
+
+    public SubscriptionImportChoice ChooseSubscriptionImport(
+        string subscriptionName, int profileCount, IReadOnlyList<SubscriptionGroupOption> groups)
+    {
+        var window = new SubscriptionImportWindow(subscriptionName, profileCount, groups) { Owner = _owner };
+        return window.ShowDialog() == true ? window.Choice : new SubscriptionImportChoice(SubscriptionImportAction.Cancel);
     }
 
     public void Info(string title, string text)
     {
-        var window = new ConfirmWindow(title, text, "Понятно", danger: false, okOnly: true) { Owner = _owner };
+        var window = new ConfirmWindow(title, text, L.T("S0909"), danger: false, okOnly: true) { Owner = _owner };
         window.ShowDialog();
     }
 
     public void Error(string title, string text)
     {
-        var window = new ConfirmWindow(title, text, "Закрыть", danger: false, okOnly: true) { Owner = _owner };
+        var window = new ConfirmWindow(title, text, L.T("S0017"), danger: false, okOnly: true) { Owner = _owner };
         window.ShowDialog();
     }
 
@@ -94,13 +114,13 @@ public sealed class DialogService : IDialogService
 
     public bool ConfirmElevate(string title, string text)
     {
-        var window = new ConfirmWindow(title, text, "Перезапустить", danger: false, okOnly: false) { Owner = _owner };
+        var window = new ConfirmWindow(title, text, L.T("S0243"), danger: false, okOnly: false) { Owner = _owner };
         return window.ShowDialog() == true;
     }
 
     public void ShowCoreLog(string logText)
     {
-        var window = new CoreLogWindow("Сообщения ядра", string.IsNullOrWhiteSpace(logText) ? "Лог пуст." : logText)
+        var window = new CoreLogWindow(L.T("S0910"), string.IsNullOrWhiteSpace(logText) ? L.T("S0911") : logText)
         {
             Owner = _owner
         };

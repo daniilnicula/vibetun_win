@@ -1,7 +1,8 @@
 <Window x:Class="VibeTun.Views.Dialogs.ProfileEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Профиль" Width="640" Height="720" MinWidth="560" MinHeight="480"
+             xmlns:loc="clr-namespace:VibeTun.Services"
+        Title="{loc:Tr S0036}" Width="640" Height="720" MinWidth="560" MinHeight="480"
         WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Background="Transparent" AllowsTransparency="True"
@@ -20,10 +21,10 @@
         <!-- заголовок -->
         <Border Grid.Row="0" Background="{DynamicResource WindowBg}" MouseLeftButtonDown="OnDrag">
             <Grid>
-                <TextBlock Text="Профиль подключения" FontWeight="SemiBold" Margin="18,0,0,0"
+                <TextBlock Text="{loc:Tr S0037}" FontWeight="SemiBold" Margin="18,0,0,0"
                            VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" />
                 <Button Style="{StaticResource BtnCaptionClose}" HorizontalAlignment="Right" Click="OnCancel"
-                        ToolTip="Закрыть">
+                        ToolTip="{loc:Tr S0017}">
                     <Path Data="M 0,0 L 10.5,10.5 M 10.5,0 L 0,10.5" Stroke="{DynamicResource TextSecondary}"
                           StrokeThickness="1.2" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
@@ -40,12 +41,12 @@
                         <ColumnDefinition Width="200" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="Название" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0027}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                  Text="{Binding Profile.Name, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                        <TextBlock Text="Протокол" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0038}" Style="{StaticResource TxtMuted}" />
                         <ComboBox Style="{StaticResource Combo}" Margin="0,4,0,0" ItemsSource="{Binding ProtocolList}"
                                   SelectedItem="{Binding Protocol}" />
                     </StackPanel>
@@ -62,17 +63,17 @@
                         <ColumnDefinition Width="130" />
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="Сервер / адрес" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0039}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                  Text="{Binding Node.Server, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                        <TextBlock Text="Порт" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0008}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                  Text="{Binding Node.Port, UpdateSourceTrigger=LostFocus}" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" Margin="10,0,0,0">
-                        <TextBlock Text="Группа (необязательно)" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0040}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                  Text="{Binding Profile.Group, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
@@ -88,12 +89,12 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="UUID / логин" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0041}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.Uuid, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Пароль" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0042}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.Password, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
@@ -102,14 +103,14 @@
 
                 <StackPanel Margin="0,14,0,0"
                             Visibility="{Binding Protocol, Converter={StaticResource InListVis}, ConverterParameter='trojan,shadowsocks,hysteria2,hysteria,anytls'}">
-                    <TextBlock Text="Пароль" Style="{StaticResource TxtMuted}" />
+                    <TextBlock Text="{loc:Tr S0042}" Style="{StaticResource TxtMuted}" />
                     <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                              Text="{Binding Node.Password, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
 
                 <StackPanel Margin="0,14,0,0"
                             Visibility="{Binding Protocol, Converter={StaticResource StrEqualsVis}, ConverterParameter=shadowsocks}">
-                    <TextBlock Text="Метод шифрования" Style="{StaticResource TxtMuted}" />
+                    <TextBlock Text="{loc:Tr S0043}" Style="{StaticResource TxtMuted}" />
                     <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0" Tag="aes-256-gcm, chacha20-ietf-poly1305, 2022-blake3-aes-256-gcm"
                              Text="{Binding Node.Method, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
@@ -118,7 +119,7 @@
                 <StackPanel Margin="0,16,0,0" Visibility="{Binding IsTlsCapable, Converter={StaticResource BoolToVis}}">
                     <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,12" />
                     <Grid>
-                        <TextBlock Text="Шифрование соединения (TLS)" Style="{StaticResource TxtH2}" VerticalAlignment="Center" />
+                        <TextBlock Text="{loc:Tr S0044}" Style="{StaticResource TxtH2}" VerticalAlignment="Center" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <TextBlock Text="TLS" VerticalAlignment="Center" />
                             <ToggleButton Style="{StaticResource Switch}" Margin="8,0,0,0" IsChecked="{Binding Tls}" />
@@ -133,12 +134,12 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="SNI / маскировочный домен" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0045}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.Sni, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="ALPN (через запятую)" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0046}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0" Tag="h2, http/1.1"
                                      Text="{Binding Node.Alpn, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
@@ -150,12 +151,12 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Отпечаток (uTLS fingerprint)" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0047}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0" Tag="chrome / firefox / safari"
                                      Text="{Binding Node.Fingerprint, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="12,0,0,0" Orientation="Horizontal">
-                            <TextBlock Text="Разрешить недействительный сертификат" VerticalAlignment="Center" />
+                            <TextBlock Text="{loc:Tr S0048}" VerticalAlignment="Center" />
                             <ToggleButton Style="{StaticResource Switch}" Margin="8,0,0,0" IsChecked="{Binding Insecure}" />
                         </StackPanel>
                     </Grid>
@@ -190,7 +191,7 @@
                 <!-- ============ транспорт ============ -->
                 <StackPanel Margin="0,16,0,0" Visibility="{Binding IsTransportable, Converter={StaticResource BoolToVis}}">
                     <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,12" />
-                    <TextBlock Text="Транспорт" Style="{StaticResource TxtH2}" />
+                    <TextBlock Text="{loc:Tr S0049}" Style="{StaticResource TxtH2}" />
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150" />
@@ -198,7 +199,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Сеть" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0050}" Style="{StaticResource TxtMuted}" />
                             <ComboBox Style="{StaticResource Combo}" Margin="0,4,0,0" SelectedValuePath="Tag"
                                       SelectedValue="{Binding Node.Network}">
                                 <ComboBoxItem Content="tcp" Tag="tcp" />
@@ -216,7 +217,7 @@
                                      Text="{Binding Node.Path, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Margin="10,0,0,0">
-                            <TextBlock Text="Host / SNI заголовок" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0051}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.Host, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
@@ -238,12 +239,12 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Скорость отдачи, Mbps" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0052}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.UpMbps, UpdateSourceTrigger=LostFocus}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Скорость загрузки, Mbps" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0053}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.DownMbps, UpdateSourceTrigger=LostFocus}" />
                         </StackPanel>
@@ -254,12 +255,12 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Obfs (salamander / тип)" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0054}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.Obfs, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Obfs-пароль" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0055}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.ObfsPassword, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
@@ -287,20 +288,20 @@
                     <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,12" />
                     <TextBlock Text="WireGuard / AmneziaWG" Style="{StaticResource TxtH2}" />
                     <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                               Text="Проще всего вставить готовый .conf целиком в поле «Исходный конфиг» ниже — параметры заполнятся автоматически." />
+                               Text="{loc:Tr S0056}" />
 
                     <StackPanel Margin="0,12,0,0">
-                        <TextBlock Text="Приватный ключ клиента" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0057}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBoxMono}" Margin="0,4,0,0" Height="52"
                                  Text="{Binding Node.WgPrivateKey, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Margin="0,10,0,0">
-                        <TextBlock Text="Публичный ключ сервера" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0058}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBoxMono}" Margin="0,4,0,0" Height="52"
                                  Text="{Binding Node.WgPeerPublicKey, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                     <StackPanel Margin="0,10,0,0">
-                        <TextBlock Text="Preshared key (необязательно)" Style="{StaticResource TxtMuted}" />
+                        <TextBlock Text="{loc:Tr S0059}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBoxMono}" Margin="0,4,0,0" Height="46"
                                  Text="{Binding Node.WgPresharedKey, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
@@ -310,7 +311,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Адрес клиента (Address)" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0060}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0" Tag="10.13.13.2/24"
                                      Text="{Binding Node.WgAddress, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
@@ -332,7 +333,7 @@
                                      Text="{Binding Node.WgMtu, UpdateSourceTrigger=LostFocus}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Keepalive (сек)" Style="{StaticResource TxtMuted}" />
+                            <TextBlock Text="{loc:Tr S0061}" Style="{StaticResource TxtMuted}" />
                             <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                      Text="{Binding Node.WgKeepalive, UpdateSourceTrigger=LostFocus}" />
                         </StackPanel>
@@ -344,7 +345,7 @@
                     </Grid>
 
                     <StackPanel Margin="0,14,0,0" Visibility="{Binding IsAmnezia, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Обфускация AmneziaWG" Style="{StaticResource TxtH2}" />
+                        <TextBlock Text="{loc:Tr S0062}" Style="{StaticResource TxtH2}" />
                         <Grid Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -429,7 +430,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="I1 (маскировка)" Style="{StaticResource TxtMuted}" />
+                                <TextBlock Text="{loc:Tr S0063}" Style="{StaticResource TxtMuted}" />
                                 <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                                          Text="{Binding Node.AwgI1, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
@@ -527,7 +528,7 @@
                                           IsChecked="{Binding Node.AwgDisableCookies}" />
                         </Grid>
                         <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                   Text="Поля AmneziaWG 1.5/2.0 (S3/S4, I1–I5, HeaderProtectionKey и интервальные значения) понимает расширенная сборка ядра. RandomTrailers/DisableCookies пока поддерживаются не всеми её версиями — если ядро их не примет, они будут пропущены с предупреждением." />
+                                   Text="{loc:Tr S0064}" />
                     </StackPanel>
                 </StackPanel>
 
@@ -536,7 +537,7 @@
                     <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,12" />
                     <TextBlock Text="MTProto (Telegram)" Style="{StaticResource TxtH2}" />
                     <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                               Text="MTProto работает только внутри Telegram. После сохранения профиля нажмите «Открыть в Telegram», чтобы применить прокси в клиенте." />
+                               Text="{loc:Tr S0065}" />
                     <StackPanel Margin="0,12,0,0">
                         <TextBlock Text="Secret" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBoxMono}" Margin="0,4,0,0"
@@ -547,10 +548,10 @@
                 <!-- ============ исходники ============ -->
                 <StackPanel Margin="0,16,0,0">
                     <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,12" />
-                    <TextBlock Text="Исходная ссылка" Style="{StaticResource TxtH2}" />
+                    <TextBlock Text="{loc:Tr S0066}" Style="{StaticResource TxtH2}" />
                     <TextBox Style="{StaticResource InputBoxMono}" Margin="0,8,0,0" Height="58"
                              Text="{Binding RawUri, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Text="JSON ядра (для профилей типа «Custom»)" Style="{StaticResource TxtMuted}" Margin="0,10,0,0" />
+                    <TextBlock Text="{loc:Tr S0067}" Style="{StaticResource TxtMuted}" Margin="0,10,0,0" />
                     <TextBox Style="{StaticResource InputBoxMono}" Margin="0,4,0,0" Height="74"
                              Text="{Binding RawJson, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
@@ -561,13 +562,13 @@
         <Border Grid.Row="2" Padding="18,12" BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="Проверить пинг" Style="{StaticResource BtnGhost}" Command="{Binding TestPingCommand}" />
+                    <Button Content="{loc:Tr S0068}" Style="{StaticResource BtnGhost}" Command="{Binding TestPingCommand}" />
                     <TextBlock Text="{Binding PingText}" Style="{StaticResource TxtMono}" Margin="12,0,0,0"
                                VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Отмена" Style="{StaticResource BtnGhost}" Click="OnCancel" />
-                    <Button Content="Сохранить" Style="{StaticResource BtnPrimary}" Margin="8,0,0,0" Click="OnSave" />
+                    <Button Content="{loc:Tr S0015}" Style="{StaticResource BtnGhost}" Click="OnCancel" />
+                    <Button Content="{loc:Tr S0069}" Style="{StaticResource BtnPrimary}" Margin="8,0,0,0" Click="OnSave" />
                 </StackPanel>
             </Grid>
         </Border>

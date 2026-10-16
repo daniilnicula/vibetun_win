@@ -1,5 +1,8 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using Microsoft.Win32;
+using VibeTun.Views.Controls;
 using VibeTun.Models;
 
 namespace VibeTun.Services;
@@ -13,28 +16,87 @@ public static class ThemeService
     private static ResourceDictionary? _accentDict;
     private static string? _accentHex;
 
+    public static ThemeMode EffectiveMode { get; private set; } = ThemeMode.Dark;
+    private static ResourceDictionary? _palette;
+    private static bool _watchingSystem;
+
     public static void Apply(ThemeMode mode)
     {
         Current = mode;
         var app = Application.Current;
         if (app is null) return;
-
+        if (!_watchingSystem)
+        {
+            SystemEvents.UserPreferenceChanged += OnSystemPreferenceChanged;
+            _watchingSystem = true;
+        }
+        EffectiveMode = mode == ThemeMode.System ? DeviceTheme() : mode;
+        var name = EffectiveMode == ThemeMode.Light ? "Light" : EffectiveMode == ThemeMode.Black ? "Black" : "Dark";
+        var target = new ResourceDictionary { Source = new Uri($"Themes/{name}.xaml", UriKind.Relative) };
+        var replacement = new ResourceDictionary();
+        foreach (var key in target.Keys)
+        {
+            var value = target[key];
+            if (value is Brush brush)
+            {
+                var copy = brush.CloneCurrentValue();
+                if (_palette is not null && _palette[key] is Brush previous)
+                    AnimateBrush(copy, previous);
+                value = copy;
+            }
+            replacement[key] = value;
+        }
         var dicts = app.Resources.MergedDictionaries;
-        var uri = new Uri($"Themes/{(mode == ThemeMode.Light ? "Light" : "Dark")}.xaml", UriKind.Relative);
-        var replacement = new ResourceDictionary { Source = uri };
-
-        for (var i = 0; i < dicts.Count; i++)
+        for (var i = dicts.Count - 1; i >= 0; i--)
         {
             var src = dicts[i].Source?.OriginalString ?? "";
-            if (src.Contains("Themes/Dark.xaml") || src.Contains("Themes/Light.xaml"))
-            {
-                dicts[i] = replacement;
-                ReapplyAccent(app);
-                return;
-            }
+            if (dicts[i] == _palette || src.Contains("Themes/Dark.xaml") ||
+                src.Contains("Themes/Light.xaml") || src.Contains("Themes/Black.xaml"))
+                dicts.RemoveAt(i);
         }
+        _palette = replacement;
         dicts.Insert(0, replacement);
         ReapplyAccent(app);
+    }
+
+    private static void AnimateBrush(Brush target, Brush previous)
+    {
+        if (target is SolidColorBrush solid && previous is SolidColorBrush old)
+            solid.BeginAnimation(SolidColorBrush.ColorProperty, Transition(old.Color, solid.Color));
+        else if (target is GradientBrush gradient && previous is GradientBrush oldGradient)
+            for (var i = 0; i < Math.Min(gradient.GradientStops.Count, oldGradient.GradientStops.Count); i++)
+                gradient.GradientStops[i].BeginAnimation(GradientStop.ColorProperty,
+                    Transition(oldGradient.GradientStops[i].Color, gradient.GradientStops[i].Color));
+    }
+
+    private static ColorAnimation Transition(Color from, Color to) => new(from, to, Motion.Slide)
+    {
+        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut },
+        FillBehavior = FillBehavior.Stop
+    };
+
+    private static ThemeMode DeviceTheme()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            return key?.GetValue("AppsUseLightTheme") is int value && value == 0 ? ThemeMode.Dark : ThemeMode.Light;
+        }
+        catch { return ThemeMode.Light; }
+    }
+
+    private static void OnSystemPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (Current == ThemeMode.System) Apply(Current);
+        }));
+    }
+
+    public static void Shutdown()
+    {
+        if (_watchingSystem) SystemEvents.UserPreferenceChanged -= OnSystemPreferenceChanged;
+        _watchingSystem = false;
     }
 
     /// <summary>Цвет акцента по умолчанию: #FF758AAC (для кнопки «по умолчанию» в пикере).</summary>

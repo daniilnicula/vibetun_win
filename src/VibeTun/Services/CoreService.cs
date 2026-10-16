@@ -225,7 +225,7 @@ public sealed partial class CoreService : IDisposable
         {
             Info.SupportsAmnezia = false;
             Info.AmneziaProbed = false;
-            Info.EndpointError = "Ядро старше 1.11: эндпоинты WireGuard/AmneziaWG не поддерживаются.";
+            Info.EndpointError = L.T("S0297");
             return false;
         }
 
@@ -241,7 +241,7 @@ public sealed partial class CoreService : IDisposable
             Info.AmneziaProbed = true;
             Info.AwgTrailersProbed = true;
             Info.EndpointError = null;
-            AppendLog($"Проверка ядра: схема AmneziaWG задана вручную — {forced} (awg-schema.txt).");
+            AppendLog(L.F("S0298", forced));
             return true;
         }
 
@@ -263,7 +263,7 @@ public sealed partial class CoreService : IDisposable
             // Однозначного вывода об обфускации здесь нет (ядро могло не собрать эндпоинт по своей
             // причине) — запоминаем диагноз и оставляем оценку по строке версии.
             Info.EndpointError = FirstLine(baseline.Message);
-            AppendLog("Проверка ядра: тестовый эндпоинт WireGuard не собирается — " + Info.EndpointError);
+            AppendLog(L.T("S0299") + Info.EndpointError);
             return null;
         }
 
@@ -277,8 +277,8 @@ public sealed partial class CoreService : IDisposable
             Info.SupportsAmnezia = false;
             Info.AmneziaProbed = false;
             Info.AwgTrailersProbed = false;
-            AppendLog("Проверка ядра: ни эндпоинт type=\"awg\", ни блок amnezia не поддерживаются " +
-                      "(похоже на официальный sing-box).");
+            AppendLog(L.T("S0300") +
+                      L.T("S0301"));
             return false;
         }
 
@@ -289,7 +289,7 @@ public sealed partial class CoreService : IDisposable
         if (unknownField || !aboutAmnezia)
         {
             // ответ неоднозначен (ядро строго проверяет поля или упало по другой причине)
-            AppendLog("Проверка ядра: не удалось однозначно определить поддержку AmneziaWG — " + FirstLine(message));
+            AppendLog(L.T("S0302") + FirstLine(message));
             if (Info.SupportsAmnezia) await ProbeNestedAwg31Async();
             return null;
         }
@@ -297,7 +297,7 @@ public sealed partial class CoreService : IDisposable
         Info.SupportsAmnezia = true;
         Info.IsExtended = true;
         Info.AmneziaProbed = true;
-        AppendLog("Проверка ядра: AmneziaWG поддерживается (вложенный блок amnezia).");
+        AppendLog(L.T("S0303"));
         await ProbeNestedAwg31Async();
         return true;
     }
@@ -350,7 +350,7 @@ public sealed partial class CoreService : IDisposable
         var buildProbe = await RunCheckAsync(ProbeConfig("\"jc\":3,\"s1\":44,\"random_trailers\":true"));
         if (!buildProbe.Ok)
         {
-            AppendLog("Проверка ядра: плоская схема AmneziaWG не подтвердилась — " + FirstLine(buildProbe.Message));
+            AppendLog(L.T("S0304") + FirstLine(buildProbe.Message));
             return false;
         }
 
@@ -361,7 +361,7 @@ public sealed partial class CoreService : IDisposable
         Info.AmneziaProbed = true;
         Info.AwgTrailersProbed = true;
         Info.EndpointError = null;
-        AppendLog("Проверка ядра: плоская схема AmneziaWG (sing-box-lx) с поддержкой AWG 3.1.");
+        AppendLog(L.T("S0305"));
         return true;
     }
 
@@ -390,8 +390,8 @@ public sealed partial class CoreService : IDisposable
         Info.AwgTrailersProbed = Info.SupportsAwgTrailers;
 
         AppendLog(Info.SupportsAwgTrailers
-            ? "Проверка ядра: эндпоинт type=\"awg\" с AmneziaWG 3.1 (random_trailers, disable_cookies)."
-            : "Проверка ядра: эндпоинт type=\"awg\" есть, но флаги AmneziaWG 3.1 — нет (" + FirstLine(message) + ").");
+            ? L.T("S0306")
+            : L.T("S0307") + FirstLine(message) + ").");
         return true;
     }
 
@@ -410,7 +410,7 @@ public sealed partial class CoreService : IDisposable
         if (probe.Ok)
         {
             Info.AwgTrailersProbed = false;
-            AppendLog("Проверка ядра: random_trailers/disable_cookies (AmneziaWG 3.1) не поддерживаются.");
+            AppendLog(L.T("S0308"));
             return;
         }
 
@@ -421,8 +421,8 @@ public sealed partial class CoreService : IDisposable
         Info.SupportsAwgTrailers = supported;
         Info.AwgTrailersProbed = supported;
         AppendLog(supported
-            ? "Проверка ядра: AmneziaWG 3.1 (random_trailers) поддерживается."
-            : "Проверка ядра: поддержка random_trailers не подтвердилась — " + FirstLine(message));
+            ? L.T("S0309")
+            : L.T("S0310") + FirstLine(message));
     }
 
     /// <summary>
@@ -506,7 +506,7 @@ public sealed partial class CoreService : IDisposable
     private async Task<(bool Ok, string Message)> RunCheckAsync(string configJson, string fileName = "config.probe.json",
         int timeoutMs = 20000)
     {
-        if (!Info.Exists) return (false, "Ядро не найдено");
+        if (!Info.Exists) return (false, L.T("S0311"));
 
         AppPaths.EnsureCreated();
         var probe = Path.Combine(AppPaths.RuntimeDir, fileName);
@@ -526,7 +526,7 @@ public sealed partial class CoreService : IDisposable
                 StandardErrorEncoding = Encoding.UTF8
             };
             using var p = Process.Start(psi);
-            if (p is null) return (false, "Не удалось запустить ядро");
+            if (p is null) return (false, L.T("S0312"));
 
             var stdoutTask = p.StandardOutput.ReadToEndAsync();
             var stderrTask = p.StandardError.ReadToEndAsync();
@@ -541,7 +541,7 @@ public sealed partial class CoreService : IDisposable
                 try { p.Kill(entireProcessTree: true); } catch { /* ignore */ }
                 // потоки вывода не ждём бесконечно: их может держать потомок ядра, который уже не выйдет
                 try { await Task.WhenAny(Task.WhenAll(stdoutTask, stderrTask), Task.Delay(2000)); } catch { /* ignore */ }
-                return (false, "Проверка ядра прервана по таймауту");
+                return (false, L.T("S0313"));
             }
 
             var stdout = await stdoutTask;
@@ -565,7 +565,7 @@ public sealed partial class CoreService : IDisposable
     // ------------------------------------------------------------------- start
     public async Task StartAsync(string configJson, int clashPort)
     {
-        if (!Info.Exists) throw new InvalidOperationException("Ядро sing-box не найдено");
+        if (!Info.Exists) throw new InvalidOperationException(L.T("S0140"));
 
         // Гонка с удалением wintun-адаптера: при переключении режимов TUN остановка ядра удаляет
         // сетевой адаптер асинхронно (Windows завершает удаление ещё секунду-две), и мгновенный
@@ -583,8 +583,8 @@ public sealed partial class CoreService : IDisposable
             if (attempt > retryDelaysMs.Length) return;
 
             var delayMs = retryDelaysMs[attempt - 1];
-            AppendLog($"Ядро не поднялось — похоже, ресурс ещё освобождается после остановки. " +
-                      $"Повтор запуска через {delayMs / 1000} с (попытка {attempt + 1} из {retryDelaysMs.Length + 1})…");
+            AppendLog(L.T("S0314") +
+                      L.F("S0315", delayMs / 1000, attempt + 1, retryDelaysMs.Length + 1));
             await Task.Delay(delayMs);
         }
     }
@@ -606,7 +606,7 @@ public sealed partial class CoreService : IDisposable
         {
             var cleanupError = TunCleanup.PrepareForTun();
             if (cleanupError is not null)
-                AppendLog("Очистка TUN-адаптера: " + cleanupError);
+                AppendLog(L.T("S0316") + cleanupError);
         }
 
         await File.WriteAllTextAsync(AppPaths.RuntimeConfig, configJson, new UTF8Encoding(false));
@@ -624,7 +624,7 @@ public sealed partial class CoreService : IDisposable
             }
             catch (Exception ex)
             {
-                AppendLog("gRPC-режим ядра недоступен (" + FirstLine(ex.Message) + ") — пробуем обычный запуск.");
+                AppendLog(L.T("S0317") + FirstLine(ex.Message) + L.T("S0318"));
                 try { await StopAsync(); } catch { /* ignore */ }
             }
         }
@@ -655,7 +655,7 @@ public sealed partial class CoreService : IDisposable
         {
             if (State != ConnectionState.Stopping)
             {
-                AppendLog($"Ядро неожиданно завершилось (код {SafeExitCode(process)}).");
+                AppendLog(L.F("S0319", SafeExitCode(process)));
                 SetState(ConnectionState.Error);
             }
             else
@@ -674,7 +674,7 @@ public sealed partial class CoreService : IDisposable
         if (up)
         {
             SetState(ConnectionState.Running);
-            AppendLog(apiUp ? "Ядро запущено." : "Ядро запущено (API не ответил, работаем без статистики).");
+            AppendLog(apiUp ? L.T("S0320") : L.T("S0321"));
         }
         else
         {
@@ -785,7 +785,7 @@ public sealed partial class CoreService : IDisposable
         {
             if (State != ConnectionState.Stopping)
             {
-                AppendLog($"Ядро неожиданно завершилось (код {SafeExitCode(process)}).");
+                AppendLog(L.F("S0319", SafeExitCode(process)));
                 SetState(ConnectionState.Error);
             }
             else
@@ -815,8 +815,8 @@ public sealed partial class CoreService : IDisposable
 
         if (!listening)
             throw new InvalidOperationException(process.HasExited
-                ? $"gRPC-хост завершился до старта (код {SafeExitCode(process)})"
-                : "gRPC-порт ядра не открылся");
+                ? L.F("S0322", SafeExitCode(process))
+                : L.T("S0323"));
 
         var rpc = new NekoCoreRpcClient($"http://127.0.0.1:{port}", token);
         string? rpcError;
@@ -833,7 +833,7 @@ public sealed partial class CoreService : IDisposable
         if (!string.IsNullOrEmpty(rpcError))
         {
             rpc.Dispose();
-            throw new InvalidOperationException("ядро отклонило конфиг: " + rpcError);
+            throw new InvalidOperationException(L.T("S0324") + rpcError);
         }
 
         lock (_sync) _rpc = rpc;
@@ -844,8 +844,8 @@ public sealed partial class CoreService : IDisposable
         {
             SetState(ConnectionState.Running);
             AppendLog(apiUp
-                ? "Ядро запущено (gRPC nekobox)."
-                : "Ядро запущено (gRPC nekobox; API не ответил, работаем без статистики).");
+                ? L.T("S0325")
+                : L.T("S0326"));
         }
         else
         {
@@ -881,7 +881,7 @@ public sealed partial class CoreService : IDisposable
         }
         catch (Exception ex)
         {
-            AppendLog("Ошибка остановки ядра: " + FirstLine(ex.Message));
+            AppendLog(L.T("S0327") + FirstLine(ex.Message));
             SetState(ConnectionState.Stopped);   // состояние всё равно должно стать «Отключено»
         }
         finally
@@ -921,7 +921,7 @@ public sealed partial class CoreService : IDisposable
             }
         }
 
-        AppendLog("Ядро остановлено.");
+        AppendLog(L.T("S0328"));
         SetState(ConnectionState.Stopped);
     }
 
@@ -986,7 +986,7 @@ public sealed partial class CoreService : IDisposable
                     }
                     catch (Exception ex)
                     {
-                        AppendLog("Не удалось завершить процесс ядра: " + FirstLine(ex.Message));
+                        AppendLog(L.T("S0329") + FirstLine(ex.Message));
                     }
 
                     if (!process.HasExited)
@@ -995,11 +995,11 @@ public sealed partial class CoreService : IDisposable
             }
 
             if (!process.HasExited)
-                AppendLog("Процесс ядра не завершился за " + (int)timeout.TotalSeconds + " с.");
+                AppendLog(L.T("S0330") + (int)timeout.TotalSeconds + L.T("S0331"));
         }
         catch (Exception ex)
         {
-            AppendLog("Ошибка при остановке ядра: " + FirstLine(ex.Message));
+            AppendLog(L.T("S0332") + FirstLine(ex.Message));
         }
         finally
         {
@@ -1049,15 +1049,14 @@ public sealed partial class CoreService : IDisposable
     private void AppendLog(string? line)
     {
         if (string.IsNullOrWhiteSpace(line)) return;
-        // короткая форма строки ядра (без дублирующего времени, INFO и ANSI-кодов) — одна на панель, файл и диагностику
+        // Short form for diagnostics only; LogReceived preserves the original file entry.
         var shortLine = LogFormat.Shorten(line);
-        if (shortLine.Length == 0) return;
         lock (_sync)
         {
             _recentLog.Add(shortLine);
             if (_recentLog.Count > 500) _recentLog.RemoveRange(0, 200);
         }
-        LogReceived?.Invoke(shortLine);
+        LogReceived?.Invoke(line);   // preserve the full original entry in the file log
     }
 
     public string RecentLogText()

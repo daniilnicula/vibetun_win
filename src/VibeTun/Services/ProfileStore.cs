@@ -59,7 +59,7 @@ public sealed class ProfileStore
         foreach (var profile in result.Profiles)
         {
             if (string.IsNullOrWhiteSpace(profile.Name))
-                profile.Name = profile.Node.Server.Length > 0 ? $"{profile.Node.Server}:{profile.Node.Port}" : "Профиль";
+                profile.Name = profile.Node.Server.Length > 0 ? $"{profile.Node.Server}:{profile.Node.Port}" : L.T("S0036");
 
             profile.Name = UniqueName(profile.Name, profile);
             Save(profile);

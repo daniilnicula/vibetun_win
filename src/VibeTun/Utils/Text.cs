@@ -119,7 +119,7 @@ public static class Text
 
     public static string Bytes(long b)
     {
-        string[] units = { "Б", "КБ", "МБ", "ГБ", "ТБ" };
+        string[] units = { L.T("S0598"), L.T("S0599"), L.T("S0600"), L.T("S0601"), L.T("S0602") };
         double v = b;
         var i = 0;
         while (v >= 1024 && i < units.Length - 1) { v /= 1024; i++; }

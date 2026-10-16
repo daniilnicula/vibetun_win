@@ -6,6 +6,10 @@ namespace VibeTun.ViewModels;
 
 public abstract class ObservableObject : INotifyPropertyChanged
 {
+    protected ObservableObject() => L.Observe(this);
+
+    internal virtual void RefreshLanguage() => Raise(null);
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected void Raise([CallerMemberName] string? name = null)

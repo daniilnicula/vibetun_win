@@ -32,7 +32,9 @@ public enum RouteKind
 public enum ThemeMode
 {
     Dark,
-    Light
+    Light,
+    System,
+    Black
 }
 
 /// <summary>Состояние прокси-ядра.</summary>

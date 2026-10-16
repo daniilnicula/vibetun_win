@@ -15,7 +15,7 @@ public static class AppInfo
     public const string BuildStamp = "log-compact";
 
     /// <summary>Тег релиза на GitHub (daniilnicula/vibetun_win), которому соответствует эта сборка по умолчанию.</summary>
-    public const string DefaultReleaseTag = "26.11.14L";
+    public const string DefaultReleaseTag = "26.11.16S";
 
     public static string ReleaseTag
     {

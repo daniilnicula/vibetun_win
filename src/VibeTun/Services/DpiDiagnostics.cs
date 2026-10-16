@@ -31,11 +31,11 @@ public sealed class DpiDiagRow
     {
         var list = new List<string> { Domain };
 
-        if (DnsVerdict.Length > 0) list.Add($"   DNS: DoH [{Doh}] · система [{SystemDns}] · {DnsVerdict}");
+        if (DnsVerdict.Length > 0) list.Add(L.F("S0411", Doh, SystemDns, DnsVerdict));
         if (Tcp.Length > 0) list.Add($"   TCP: {Tcp}");
         if (Tls.Length > 0) list.Add($"   TLS: {Tls}");
         if (HttpDirect.Length > 0 || HttpVia.Length > 0)
-            list.Add($"   HTTP: напрямую {HttpDirect} · через обход {HttpVia}");
+            list.Add(L.F("S0412", HttpDirect, HttpVia));
 
         return list;
     }
@@ -88,11 +88,11 @@ public static class DpiDiagnostics
         var direct = rows.Count(r => r.OpenedDirect);
         var via = rows.Count(r => r.OpenedVia);
         var anywhere = rows.Count(r => r.OpenedDirect || r.OpenedVia);
-        var dns = rows.Count(r => r.DnsVerdict.Contains("различаются", StringComparison.OrdinalIgnoreCase));
+        var dns = rows.Count(r => r.DnsVerdict.Contains(L.T("S0413"), StringComparison.OrdinalIgnoreCase));
 
-        return $"итог: открывается {anywhere} из {rows.Count} "
-               + $"(напрямую {direct}, через обход {via})"
-               + (dns > 0 ? $"; у {dns} домен(ов) DoH и системный DNS дают разные адреса" : "");
+        return L.F("S0414", anywhere, rows.Count)
+               + L.F("S0415", direct, via)
+               + (dns > 0 ? L.F("S0416", dns) : "");
     }
 
     private static async Task<DpiDiagRow> RunOneAsync(
@@ -106,18 +106,18 @@ public static class DpiDiagnostics
         using var dnsBudget = WithTimeout(ct, DnsTimeout);
 
         var system = await Safe(DnsResolver.ResolveSystemAsync(domain, dnsBudget.Token));
-        row.SystemDns = system?.Text ?? "ошибка";
+        row.SystemDns = system?.Text ?? L.T("S0417");
 
         DnsLookup? dohLookup = null;
         if (doh == DohMode.Off)
         {
-            row.Doh = "выключен";
-            row.DnsVerdict = "DoH выключен — адреса берём у провайдера";
+            row.Doh = L.T("S0395");
+            row.DnsVerdict = L.T("S0418");
         }
         else
         {
             dohLookup = await Safe(DnsResolver.ResolveDohAsync(domain, doh, dohUrl, dnsBudget.Token));
-            row.Doh = dohLookup is null ? "DoH недоступен" : dohLookup.Text;
+            row.Doh = dohLookup is null ? L.T("S0419") : dohLookup.Text;
             row.DnsVerdict = Compare(system, dohLookup);
         }
 
@@ -126,7 +126,7 @@ public static class DpiDiagnostics
 
         if (addresses.Count == 0)
         {
-            row.Tcp = "некуда подключаться — DNS не дал адресов";
+            row.Tcp = L.T("S0420");
             return row;
         }
 
@@ -143,7 +143,7 @@ public static class DpiDiagnostics
                 using var budget = WithTimeout(ct, ConnectTimeout);
                 await client.ConnectAsync(address, 443, budget.Token);
                 connected = address;
-                row.Tcp = $"{address}: ok {sw.ElapsedMilliseconds} мс";
+                row.Tcp = L.F("S0421", address, sw.ElapsedMilliseconds);
                 break;
             }
             catch (Exception ex)
@@ -157,7 +157,7 @@ public static class DpiDiagnostics
             row.Tcp = string.Join("; ", reasons);
             row.Tls = "—";
             row.HttpDirect = "—";
-            row.HttpVia = enginePort > 0 ? "—" : "обход выключен";
+            row.HttpVia = enginePort > 0 ? "—" : L.T("S0422");
             return row;
         }
 
@@ -168,7 +168,7 @@ public static class DpiDiagnostics
         row.HttpDirect = await HttpStageAsync(domain, addresses, 0, ct);
         row.HttpVia = enginePort > 0
             ? await HttpStageAsync(domain, addresses, enginePort, ct)
-            : "обход выключен";
+            : L.T("S0422");
 
         return row;
     }
@@ -199,22 +199,22 @@ public static class DpiDiagnostics
                 if (read >= 5 && (head[0] == 0x16 || head[0] == 0x15)) break;
             }
 
-            if (read == 0) return $"соединение закрыто, не прочитано ни байта ({sw.ElapsedMilliseconds} мс)";
-            if (read < 5) return $"пришло {read} байт, это не TLS";
+            if (read == 0) return L.F("S0423", sw.ElapsedMilliseconds);
+            if (read < 5) return L.F("S0424", read);
 
-            if (head[0] == 0x16) return $"ServerHello через {sw.ElapsedMilliseconds} мс";
+            if (head[0] == 0x16) return L.F("S0425", sw.ElapsedMilliseconds);
 
             if (head[0] == 0x15)
             {
                 var code = read >= 7 ? head[6] : -1;
-                return $"alert {code} через {sw.ElapsedMilliseconds} мс";
+                return L.F("S0426", code, sw.ElapsedMilliseconds);
             }
 
-            return $"не TLS, первый байт {head[0]:X2}";
+            return L.F("S0427", head[0]);
         }
         catch (Exception ex)
         {
-            return Short(ex) + $" ({sw.ElapsedMilliseconds} мс)";
+            return Short(ex) + L.F("S0428", sw.ElapsedMilliseconds);
         }
     }
 
@@ -244,7 +244,7 @@ public static class DpiDiagnostics
                 var reply = Encoding.ASCII.GetString(await ReadUntilAsync(client.GetStream(), budget.Token));
                 if (!reply.StartsWith("HTTP/1.1 200", StringComparison.OrdinalIgnoreCase) &&
                     !reply.StartsWith("HTTP/1.0 200", StringComparison.OrdinalIgnoreCase))
-                    return "обход не открыл туннель: " + reply.Split("\r\n")[0];
+                    return L.T("S0429") + reply.Split("\r\n")[0];
             }
             else
             {
@@ -263,7 +263,7 @@ public static class DpiDiagnostics
                     }
                 }
 
-                if (client is null) return "не подключились";
+                if (client is null) return L.T("S0430");
             }
 
             using var ssl = new SslStream(client.GetStream(), false, (_, _, _, _) => true);
@@ -276,7 +276,7 @@ public static class DpiDiagnostics
 
             var buffer = new byte[4096];
             var read = await ssl.ReadAsync(buffer.AsMemory(), budget.Token);
-            if (read <= 0) return "сервер молчит";
+            if (read <= 0) return L.T("S0431");
 
             var head = Encoding.ASCII.GetString(buffer, 0, Math.Min(read, 512));
             var line = head.Split("\r\n")[0];
@@ -295,14 +295,14 @@ public static class DpiDiagnostics
                     }
                 }
 
-                return $"{parts[1]} ({sw.ElapsedMilliseconds} мс){redirect}";
+                return L.F("S0432", parts[1], sw.ElapsedMilliseconds, redirect);
             }
 
-            return "в ответе не HTTP: " + (line.Length > 40 ? line[..40] : line);
+            return L.T("S0433") + (line.Length > 40 ? line[..40] : line);
         }
         catch (Exception ex)
         {
-            return Short(ex) + $" ({sw.ElapsedMilliseconds} мс)";
+            return Short(ex) + L.F("S0428", sw.ElapsedMilliseconds);
         }
         finally
         {
@@ -313,13 +313,13 @@ public static class DpiDiagnostics
     // ------------------------------------------------------------------ helpers
     private static string Compare(DnsLookup? system, DnsLookup? doh)
     {
-        if (doh is null || !doh.Ok) return "DoH недоступен — работаем на системном DNS";
-        if (system is null || !system.Ok) return "системный DNS молчит, DoH дал адреса";
+        if (doh is null || !doh.Ok) return L.T("S0434");
+        if (system is null || !system.Ok) return L.T("S0435");
 
         var a = system.Addresses.Select(x => x.ToString()).OrderBy(x => x).ToList();
         var b = doh.Addresses.Select(x => x.ToString()).OrderBy(x => x).ToList();
 
-        return a.SequenceEqual(b) ? "адреса совпадают" : "адреса РАЗЛИЧАЮТСЯ — системный DNS подменяет ответ";
+        return a.SequenceEqual(b) ? L.T("S0436") : L.T("S0437");
     }
 
     /// <summary>Отдельный бюджет времени на этап: источник токена, чтобы его можно было освободить.</summary>
@@ -372,19 +372,19 @@ public static class DpiDiagnostics
     {
         SocketException se => se.SocketErrorCode switch
         {
-            SocketError.ConnectionRefused => "отказ",
-            SocketError.ConnectionReset => "сброс (RST)",
-            SocketError.ConnectionAborted => "сброс (RST)",
-            SocketError.TimedOut => "таймаут",
-            SocketError.HostNotFound => "DNS не знает имени",
-            SocketError.TryAgain => "DNS временно не отвечает",
-            SocketError.NetworkUnreachable => "сеть недоступна",
-            SocketError.HostUnreachable => "хост недоступен",
-            _ => "сеть: " + se.SocketErrorCode
+            SocketError.ConnectionRefused => L.T("S0438"),
+            SocketError.ConnectionReset => L.T("S0439"),
+            SocketError.ConnectionAborted => L.T("S0439"),
+            SocketError.TimedOut => L.T("S0440"),
+            SocketError.HostNotFound => L.T("S0441"),
+            SocketError.TryAgain => L.T("S0442"),
+            SocketError.NetworkUnreachable => L.T("S0443"),
+            SocketError.HostUnreachable => L.T("S0444"),
+            _ => L.T("S0445") + se.SocketErrorCode
         },
-        OperationCanceledException => "таймаут",
+        OperationCanceledException => L.T("S0440"),
         IOException io when io.InnerException is SocketException inner => Short(inner),
-        AuthenticationException => "TLS не поднялся: " + ShortMessage(ex),
+        AuthenticationException => L.T("S0446") + ShortMessage(ex),
         _ => ShortMessage(ex)
     };
 

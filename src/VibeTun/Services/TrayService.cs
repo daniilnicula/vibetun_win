@@ -21,6 +21,7 @@ public sealed class TrayService : IDisposable
     private readonly Icon _iconOff; // серый: прокси выключен
     private bool _proxyOn;
     private bool _disposed;
+    private WinForms.ToolStripMenuItem? _closeItem;
 
     /// <summary>Двойной клик: открыть окно приложения.</summary>
     public event Action? OpenRequested;
@@ -65,7 +66,7 @@ public sealed class TrayService : IDisposable
             Renderer = new MinimalMenuRenderer()
         };
 
-        var closeItem = new WinForms.ToolStripMenuItem("Закрыть")
+        var closeItem = new WinForms.ToolStripMenuItem(L.T("S0017"))
         {
             ForeColor = Color.White,
             AutoSize = false,
@@ -76,6 +77,8 @@ public sealed class TrayService : IDisposable
             if (_disposed) return;
             ExitRequested?.Invoke();
         };
+        _closeItem = closeItem;
+        L.Changed += OnLanguageChanged;
         menu.Items.Add(closeItem);
 
         _icon.ContextMenuStrip = menu;
@@ -217,10 +220,16 @@ public sealed class TrayService : IDisposable
         catch { /* ignore */ }
     }
 
+    private void OnLanguageChanged()
+    {
+        if (!_disposed && _closeItem is not null) _closeItem.Text = L.T("S0017");
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        L.Changed -= OnLanguageChanged;
         _singleClickTimer.Stop();
         try
         {

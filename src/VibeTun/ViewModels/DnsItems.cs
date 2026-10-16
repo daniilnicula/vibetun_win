@@ -9,22 +9,20 @@ public sealed class DnsPinnedVm : ObservableObject
 {
     private bool _isSelected;
 
-    public DnsPinnedVm(string mode, string name, string subtitle, string hint)
+    public DnsPinnedVm(string mode)
     {
         Mode = mode;
-        Name = name;
-        Subtitle = subtitle;
-        Hint = hint;
+
     }
 
     /// <summary><see cref="DnsModes.System"/> или <see cref="DnsModes.Proxy"/>.</summary>
     public string Mode { get; }
 
-    public string Name { get; }
-    public string Subtitle { get; }
+    public string Name => L.T(IsSystem ? "S0624" : "S0628");
+    public string Subtitle => L.T(IsSystem ? "S0625" : "S0629");
 
     /// <summary>Подробности — во всплывающей подсказке.</summary>
-    public string Hint { get; }
+    public string Hint => IsSystem ? L.T("S0626") + L.T("S0627") : L.T("S0630");
 
     public bool IsSystem => Mode == DnsModes.System;
 
@@ -78,7 +76,7 @@ public sealed class DnsServerVm : ObservableObject
     {
         Entry = entry;
         Address = address;
-        Label = label;
+        _label = label;
         IsSelected = isSelected;
         IsStale = isStale;
     }
@@ -87,7 +85,8 @@ public sealed class DnsServerVm : ObservableObject
     public string Address { get; }
 
     /// <summary>Вариант сервера: режим фильтрации («Семейный») или регион выхода («EU»).</summary>
-    public string Label { get; }
+    private readonly string _label;
+    public string Label => L.Text(_label);
 
     public bool IsSelected { get; }
 
@@ -153,7 +152,7 @@ public sealed class DnsServerVm : ObservableObject
 public sealed class DnsEntryVm : ObservableObject
 {
     private readonly DnsPingBoard _pings;
-    private readonly DnsProviderInfo? _info;
+    private DnsProviderInfo? _info => Model.IsProvider ? DnsProviders.Find(Model.Id) : null;
     private bool _isSelected;
     private bool _isLoading;
     private bool _isDragging;
@@ -168,7 +167,6 @@ public sealed class DnsEntryVm : ObservableObject
     {
         Model = model;
         _pings = pings;
-        _info = model.IsProvider ? DnsProviders.Find(model.Id) : null;
         RebuildServers();
     }
 
@@ -189,7 +187,7 @@ public sealed class DnsEntryVm : ObservableObject
     public bool HasSite => Site.Length > 0;
 
     /// <summary>Подпись выбранного сервера, которого больше нет в списке провайдера.</summary>
-    public string StaleNote => IsDynamic ? "нет в свежем ответе провайдера" : "нет в списке провайдера";
+    public string StaleNote => IsDynamic ? L.T("S0605") : L.T("S0606");
 
     public bool Favorite
     {
@@ -264,14 +262,14 @@ public sealed class DnsEntryVm : ObservableObject
         {
             if (!IsProvider) return Address;
             if (!IsDynamic || Model.Servers.Count > 0) return Tagline;
-            if (IsLoading) return Tagline + " · запрос адресов…";
-            return Tagline + (HasError ? " · адреса не получены" : " · нажмите, чтобы получить адреса");
+            if (IsLoading) return Tagline + L.T("S0607");
+            return Tagline + (HasError ? L.T("S0608") : L.T("S0609"));
         }
     }
 
     /// <summary>Выбранный сервер провайдера — подсвечивается акцентом рядом с подписью.</summary>
     public string SelectedNote =>
-        IsProvider && IsSelected && !string.IsNullOrEmpty(_selectedServer) ? " · выбран " + _selectedServer : "";
+        IsProvider && IsSelected && !string.IsNullOrEmpty(_selectedServer) ? L.T("S0610") + _selectedServer : "";
 
     /// <summary>Строка под серверами: когда и чем получен список или что пошло не так.</summary>
     public string StatusText
@@ -279,20 +277,20 @@ public sealed class DnsEntryVm : ObservableObject
         get
         {
             if (!IsDynamic) return "";
-            if (IsLoading) return "Запрашиваем адреса серверов у провайдера…";
+            if (IsLoading) return L.T("S0611");
 
             var at = Model.ServersUpdatedAt?.ToLocalTime().ToString("dd.MM HH:mm");
             if (HasError)
-                return "Не удалось обновить: " + _error + (at is null ? "" : " · показан список от " + at);
+                return L.T("S0612") + _error + (at is null ? "" : L.T("S0613") + at);
             if (at is null)
-                return Model.Servers.Count > 0 ? "Список сохранён прежней версией — обновится при раскрытии" : "Список серверов ещё не запрашивали";
+                return Model.Servers.Count > 0 ? L.T("S0614") : L.T("S0615");
 
             var source = string.IsNullOrWhiteSpace(Model.ServersSource) ? "" : " · " + Model.ServersSource;
-            return "Обновлено " + at + source;
+            return L.T("S0616") + at + source;
         }
     }
 
-    public string RefreshText => IsLoading ? "Запрос…" : "Обновить";
+    public string RefreshText => IsLoading ? L.T("S0617") : L.T("S0013");
 
     // ------------------------------------------------------------------- пинг
     /// <summary>Идёт замер: своего адреса или хотя бы одного из серверов провайдера.</summary>
@@ -367,9 +365,9 @@ public sealed class DnsEntryVm : ObservableObject
             var best = Servers.Where(s => s.HasPing && s.PingMs >= 0).MinBy(s => s.PingMs);
             PingMs = best?.PingMs ?? -1;
             PingTip = best is not null
-                ? "Быстрее всех: " + best.Address + (best.Label.Length > 0 ? " (" + best.Label + ")" : "") +
+                ? L.T("S0618") + best.Address + (best.Label.Length > 0 ? " (" + best.Label + ")" : "") +
                   " — " + DnsPingBoard.Format(best.PingMs)
-                : HasPing ? "Ни один сервер не ответил" : null;
+                : HasPing ? L.T("S0619") : null;
         }
         Raise(nameof(ShowPingValue));
         Raise(nameof(PingFailed));
@@ -570,6 +568,32 @@ public abstract class DnsTargetVm : ObservableObject
     }
 }
 
+/// <summary>
+/// Сервис раздела «DPI» со своим DNS: своей карточки в разделе «DNS» у него нет — он только цель
+/// выбора («Выбрать DNS» в окне сервиса или «Общих»). После выбора пользователь возвращается
+/// в раздел «DPI» (<see cref="Done"/>).
+/// </summary>
+public sealed class DpiDnsVm : DnsTargetVm
+{
+    private readonly string _name;
+
+    public DpiDnsVm(DpiDnsChoice choice, string name, Action done) : base(choice)
+    {
+        Model = choice;
+        _name = name;
+        Done = done;
+    }
+
+    public DpiDnsChoice Model { get; }
+
+    /// <summary>DNS выбран — вернуть пользователя туда, откуда пришёл (раздел «DPI»).</summary>
+    public Action Done { get; }
+
+    public override string Name => _name;
+    public override string TabTitle => L.T("dpi.title");
+    public override string Noun => L.T("dpi.nounService");
+}
+
 /// <summary>Приложение со своим DNS — карточка во вкладке «Приложения», как в маршрутизации.</summary>
 public sealed class DnsAppVm : DnsTargetVm
 {
@@ -584,8 +608,8 @@ public sealed class DnsAppVm : DnsTargetVm
     public DnsAppRule Model { get; }
 
     public override string Name => string.IsNullOrWhiteSpace(Model.Name) ? Model.ProcessName : Model.Name;
-    public override string TabTitle => "Приложения";
-    public override string Noun => "приложение";
+    public override string TabTitle => L.T("S0102");
+    public override string Noun => L.T("S0620");
 
     public string Path => string.IsNullOrWhiteSpace(Model.Path) ? Model.ProcessName : Model.Path;
 
@@ -619,11 +643,17 @@ public sealed class DnsDomainVm : DnsTargetVm
         Parse();
     }
 
+    internal override void RefreshLanguage()
+    {
+        Parse();
+        base.RefreshLanguage();
+    }
+
     public DnsDomainRule Model { get; }
 
     public override string Name => Model.Pattern;
-    public override string TabTitle => "Домены";
-    public override string Noun => "домен";
+    public override string TabTitle => L.T("S0101");
+    public override string Noun => L.T("S0270");
 
     /// <summary>С ошибкой в записи (IP, неверный regex) правило в конфиг ядра не попадает.</summary>
     public override bool IsUsable => _parsed is not null;
@@ -659,7 +689,7 @@ public sealed class DnsDomainVm : DnsTargetVm
     public bool IsRegex => _parsed?.IsRegex == true;
 
     /// <summary>«домен» / «regex»; у записи с ошибкой — «ошибка».</summary>
-    public string KindLabel => _parsed is null ? "ошибка" : IsRegex ? "regex" : "домен";
+    public string KindLabel => _parsed is null ? L.T("S0417") : IsRegex ? "regex" : L.T("S0270");
 
     /// <summary>Что не так с записью (пусто — всё в порядке).</summary>
     public string Problem => _problem;
@@ -674,9 +704,9 @@ public sealed class DnsDomainVm : DnsTargetVm
             if (_parsed is null) return _problem;
             return _parsed.Field switch
             {
-                "domain_suffix" => $"{_parsed.Value} и все его поддомены",
-                "domain_keyword" => $"Домены, в имени которых есть «{_parsed.Value}»",
-                _ => $"Домены, имя которых подходит под выражение {_parsed.Value}"
+                "domain_suffix" => L.F("S0621", _parsed.Value),
+                "domain_keyword" => L.F("S0622", _parsed.Value),
+                _ => L.F("S0623", _parsed.Value)
             };
         }
     }

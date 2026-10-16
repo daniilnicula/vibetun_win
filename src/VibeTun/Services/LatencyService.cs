@@ -77,7 +77,7 @@ public sealed class LatencyService
     private static async Task<int> TryViaSocks5Async(
         string listenAddress, int listenPort, TimeSpan timeout, CancellationToken ct)
     {
-        var tag = $"Замер через {LoopbackOf(listenAddress)}:{listenPort} SOCKS5";
+        var tag = L.F("S0490", LoopbackOf(listenAddress), listenPort);
         try
         {
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -91,7 +91,7 @@ public sealed class LatencyService
             var resp = await RecvExactAsync(socket, 2, linked.Token);
             if (resp is null || resp[0] != 0x05 || resp[1] != 0x00)
             {
-                AppLog.Write(tag + ": вход ядра не принял greeting" + (resp is null ? " (нет ответа)" : $" (ver={resp[0]}, method={resp[1]})"));
+                AppLog.Write(tag + L.T("S0491") + (resp is null ? L.T("S0492") : $" (ver={resp[0]}, method={resp[1]})"));
                 return -1;
             }
 
@@ -105,12 +105,12 @@ public sealed class LatencyService
             var head = await RecvExactAsync(socket, 4, linked.Token);
             if (head is null || head[0] != 0x05)
             {
-                AppLog.Write(tag + ": нет ответа на CONNECT");
+                AppLog.Write(tag + L.T("S0493"));
                 return -1;
             }
             if (head[1] != 0x00)
             {
-                AppLog.Write(tag + $": вход отказал rep={head[1]} — ядро не достучалось до {ProbeHost} по своим маршрутам");
+                AppLog.Write(tag + L.F("S0494", head[1], ProbeHost));
                 return -1;
             }
             // в сокете мог остаться хвост адреса из ответа на CONNECT (BIND) — вычитываем,
@@ -127,7 +127,7 @@ public sealed class LatencyService
         }
         catch (OperationCanceledException)
         {
-            AppLog.Write(tag + ": таймаут — вход ядра не ответил за " + (int)timeout.TotalSeconds + " с");
+            AppLog.Write(tag + L.T("S0495") + (int)timeout.TotalSeconds + L.T("S0496"));
         }
         catch (Exception e)
         {
@@ -139,7 +139,7 @@ public sealed class LatencyService
     private static async Task<int> TryViaHttpConnectAsync(
         string listenAddress, int listenPort, TimeSpan timeout, CancellationToken ct)
     {
-        var tag = $"Замер через {LoopbackOf(listenAddress)}:{listenPort} HTTP CONNECT";
+        var tag = L.F("S0497", LoopbackOf(listenAddress), listenPort);
         try
         {
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -169,14 +169,14 @@ public sealed class LatencyService
 
             if (!headersComplete)
             {
-                AppLog.Write(tag + ": нет ответа от входа ядра");
+                AppLog.Write(tag + L.T("S0498"));
                 return -1;
             }
             var head = Encoding.ASCII.GetString(received.ToArray());
             if (!head.Contains(" 200", StringComparison.Ordinal))
             {
                 var statusLine = head.Split('\r')[0];
-                AppLog.Write(tag + $": вход отказал ({statusLine.Trim()})");
+                AppLog.Write(tag + L.F("S0499", statusLine.Trim()));
                 return -1;
             }
 
@@ -184,7 +184,7 @@ public sealed class LatencyService
         }
         catch (OperationCanceledException)
         {
-            AppLog.Write(tag + ": таймаут — вход ядра не ответил за " + (int)timeout.TotalSeconds + " с");
+            AppLog.Write(tag + L.T("S0495") + (int)timeout.TotalSeconds + L.T("S0496"));
         }
         catch (Exception e)
         {
@@ -218,10 +218,10 @@ public sealed class LatencyService
         var head = Encoding.ASCII.GetString(received.ToArray());
         if (head.Contains(" 204", StringComparison.Ordinal) || head.StartsWith("HTTP/", StringComparison.Ordinal))
         {
-            AppLog.Write(tag + $": OK {sw.ElapsedMilliseconds} мс");
+            AppLog.Write(tag + L.F("S0500", sw.ElapsedMilliseconds));
             return (int)sw.ElapsedMilliseconds;
         }
-        AppLog.Write(tag + ": тестовый хост не ответил на GET");
+        AppLog.Write(tag + L.T("S0501"));
         return -1;
     }
 

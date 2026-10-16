@@ -1,9 +1,10 @@
 <UserControl x:Class="VibeTun.Views.SshView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:VibeTun.Services">
     <Grid Margin="18,14,18,14">
         <TextBlock x:Name="EmptyHint"
-                   Text="Подключения не созданы. Откройте «SSH» слева и нажмите «+»."
+                   Text="{loc:Tr S0253}"
                    Style="{StaticResource TxtMuted}" TextWrapping="Wrap" TextAlignment="Center"
                    HorizontalAlignment="Center" VerticalAlignment="Center" />
         <!-- страница выбранного подключения (терминал) подставляется кодом -->

@@ -87,7 +87,7 @@ public static class StorageLocation
             if (!IsWritable(desired))
             {
                 effective = LocalDataDir;
-                FallbackReason = $"Папка «{desired}» недоступна для записи, поэтому данные хранятся в «{LocalDataDir}».";
+                FallbackReason = L.F("S0550", desired, LocalDataDir);
                 notice = FallbackReason;
             }
 
@@ -104,7 +104,7 @@ public static class StorageLocation
                     var found = CopyMissing(source, effective);
                     if (found > 0)
                     {
-                        notice = Join(notice, $"Данные найдены в «{source}» и скопированы в «{effective}» (файлов: {found}).");
+                        notice = Join(notice, L.F("S0551", source, effective, found));
                         break;
                     }
                 }
@@ -121,7 +121,7 @@ public static class StorageLocation
                 }
 
                 config.PendingMigrationFrom = new List<string>();
-                if (copied > 0) notice = Join(notice, $"Данные скопированы в «{effective}» (файлов: {copied}).");
+                if (copied > 0) notice = Join(notice, L.F("S0552", effective, copied));
                 Save();
             }
             else if (firstRun)
@@ -132,7 +132,7 @@ public static class StorageLocation
         catch (Exception ex)
         {
             AppPaths.SetDataRoot(LocalDataDir);
-            notice = "Не удалось определить место хранения данных: " + ex.Message;
+            notice = L.T("S0553") + ex.Message;
         }
 
         return notice;
@@ -151,8 +151,8 @@ public static class StorageLocation
         };
 
         var desired = RootFor(next);
-        if (desired is null) return "Не указана папка для данных.";
-        if (!IsWritable(desired)) return $"Папка «{desired}» недоступна для записи. Выберите другую.";
+        if (desired is null) return L.T("S0554");
+        if (!IsWritable(desired)) return L.F("S0555", desired);
 
         var current = AppPaths.DataRoot;
         if (!SamePath(desired, current))
@@ -227,6 +227,7 @@ public static class StorageLocation
 
     private static bool HasData(string root) =>
         File.Exists(Path.Combine(root, "settings.json")) ||
+        File.Exists(Path.Combine(root, "profile-layout.json")) ||
         File.Exists(Path.Combine(root, "routing-profiles.json")) ||
         HasJson(Path.Combine(root, "profiles")) ||
         HasJson(Path.Combine(root, "routes"));

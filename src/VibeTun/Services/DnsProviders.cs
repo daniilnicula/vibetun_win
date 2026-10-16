@@ -50,79 +50,94 @@ public sealed class DnsProviderLookup
 /// </summary>
 public static class DnsProviders
 {
-    public static readonly IReadOnlyList<DnsProviderInfo> BuiltIn = new[]
+    private static IReadOnlyList<DnsProviderInfo>? _builtIn;
+    private static string? _catalogLanguage;
+    public static IReadOnlyList<DnsProviderInfo> BuiltIn
     {
-        Dynamic("geohide", "GeoHide", "Выходы RU / EU / US", "https://geohide.ru/",
-            "Обход зарубежных геоблокировок: для сайтов из списка проекта отдаёт адрес своего прокси, " +
-            "остальные имена резолвит как обычный DNS. Блокировки внутри страны не обходит. " +
-            "RU — DNS в России, прокси через Россию в Европу и США; EU — DNS и прокси в Европе; US — в США.",
+        get
+        {
+            if (_builtIn is null || _catalogLanguage != L.Language)
+            {
+                _builtIn = CreateBuiltIn();
+                _catalogLanguage = L.Language;
+            }
+            return _builtIn;
+        }
+    }
+
+    private static IReadOnlyList<DnsProviderInfo> CreateBuiltIn() => new[]
+    {
+        Dynamic("geohide", "GeoHide", L.T("S0344"), "https://geohide.ru/",
+            L.T("S0345") +
+            L.T("S0346") +
+            L.T("S0347"),
             new DnsProviderHost("dns.geohide.ru", "RU"),
             new DnsProviderHost("eu.geohide.ru", "EU"),
             new DnsProviderHost("us.geohide.ru", "US")),
 
-        Static("xbox-dns", "Xbox DNS", "Игровые платформы и сервисы", "https://xbox-dns.ru/",
-            "Smart DNS: Xbox Live, игры, AI-сервисы и Spotify идут через шлюз сервиса, остальные сайты — напрямую.",
+        Static("xbox-dns", "Xbox DNS", L.T("S0348"), "https://xbox-dns.ru/",
+            L.T("S0349"),
             Group("", "111.88.96.54", "111.88.96.55")),
 
-        Static("comss", "Comss.one", "Доступ к поддерживаемым сервисам", "https://www.comss.ru/page.php?id=7315",
-            "Smart DNS: открывает AI-сервисы с ограничением по региону, заодно блокирует рекламу, трекеры и фишинг.",
+        Static("comss", "Comss.one", L.T("S0350"), "https://www.comss.ru/page.php?id=7315",
+            L.T("S0351"),
             Group("", "83.220.169.155", "212.109.195.93")),
 
-        Static("quad9", "Quad9", "Защита от вредоносных доменов", "https://quad9.net/", "",
+        Static("quad9", "Quad9", L.T("S0352"), "https://quad9.net/", "",
             Group("", "9.9.9.9", "149.112.112.112")),
 
-        Static("adguard", "AdGuard", "Реклама и трекеры", "https://adguard-dns.io/", "",
-            Group("Стандартный", "94.140.14.14", "94.140.15.15"),
-            Group("Семейный", "94.140.14.15", "94.140.15.16"),
-            Group("Без фильтров", "94.140.14.140", "94.140.14.141")),
+        Static("adguard", "AdGuard", L.T("S0353"), "https://adguard-dns.io/", "",
+            Group(L.T("S0354"), "94.140.14.14", "94.140.15.15"),
+            Group(L.T("S0355"), "94.140.14.15", "94.140.15.16"),
+            Group(L.T("S0356"), "94.140.14.140", "94.140.14.141")),
 
-        Static("cloudflare", "Cloudflare", "Универсальный DNS", "https://one.one.one.one/", "",
-            Group("Без фильтров", "1.1.1.1", "1.0.0.1"),
-            Group("Без вредоносных", "1.1.1.2", "1.0.0.2"),
-            Group("Семейный", "1.1.1.3", "1.0.0.3")),
+        Static("cloudflare", "Cloudflare", L.T("S0357"), "https://one.one.one.one/", "",
+            Group(L.T("S0356"), "1.1.1.1", "1.0.0.1"),
+            Group(L.T("S0358"), "1.1.1.2", "1.0.0.2"),
+            Group(L.T("S0355"), "1.1.1.3", "1.0.0.3")),
 
-        Static("dns4eu", "DNS4EU", "Европейская инфраструктура", "https://www.joindns4.eu/for-public", "",
-            Group("Защитный", "86.54.11.1", "86.54.11.201"),
-            Group("Защитный + дети", "86.54.11.12", "86.54.11.212"),
-            Group("Защитный + без рекламы", "86.54.11.13", "86.54.11.213"),
-            Group("Защитный + дети + без рекламы", "86.54.11.11", "86.54.11.211"),
-            Group("Без фильтров", "86.54.11.100", "86.54.11.200")),
+        Static("dns4eu", "DNS4EU", L.T("S0359"), "https://www.joindns4.eu/for-public", "",
+            Group(L.T("S0360"), "86.54.11.1", "86.54.11.201"),
+            Group(L.T("S0361"), "86.54.11.12", "86.54.11.212"),
+            Group(L.T("S0362"), "86.54.11.13", "86.54.11.213"),
+            Group(L.T("S0363"), "86.54.11.11", "86.54.11.211"),
+            Group(L.T("S0356"), "86.54.11.100", "86.54.11.200")),
 
-        Static("dnsforge", "dnsforge.de", "Фильтрация и варианты без фильтров", "https://dnsforge.de/", "",
-            Group("Обычный", "49.12.67.122", "91.99.154.175", "176.9.93.198", "176.9.1.117"),
-            Group("Детский", "49.12.223.2", "49.12.43.208"),
-            Group("Строгий", "49.12.222.213", "88.198.122.154"),
-            Group("Без фильтров", "138.199.149.249", "78.47.71.194")),
+        Static("dnsforge", "dnsforge.de", L.T("S0364"), "https://dnsforge.de/", "",
+            Group(L.T("S0365"), "49.12.67.122", "91.99.154.175", "176.9.93.198", "176.9.1.117"),
+            Group(L.T("S0366"), "49.12.223.2", "49.12.43.208"),
+            Group(L.T("S0367"), "49.12.222.213", "88.198.122.154"),
+            Group(L.T("S0356"), "138.199.149.249", "78.47.71.194")),
 
-        Static("cleanbrowsing", "CleanBrowsing", "Защита и семейные фильтры", "https://cleanbrowsing.org/filters/", "",
-            Group("Защитный", "185.228.168.9", "185.228.169.9"),
-            Group("Без 18+", "185.228.168.10", "185.228.169.11"),
-            Group("Семейный", "185.228.168.168", "185.228.169.168")),
+        Static("cleanbrowsing", "CleanBrowsing", L.T("S0368"), "https://cleanbrowsing.org/filters/", "",
+            Group(L.T("S0360"), "185.228.168.9", "185.228.169.9"),
+            Group(L.T("S0369"), "185.228.168.10", "185.228.169.11"),
+            Group(L.T("S0355"), "185.228.168.168", "185.228.169.168")),
 
-        Static("yandex", "Yandex DNS", "Базовый, безопасный и семейный режимы", "https://dns.yandex.ru/", "",
-            Group("Базовый", "77.88.8.8", "77.88.8.1"),
-            Group("Безопасный", "77.88.8.88", "77.88.8.2"),
-            Group("Семейный", "77.88.8.7", "77.88.8.3")),
+        Static("yandex", "Yandex DNS", L.T("S0370"), "https://dns.yandex.ru/", "",
+            Group(L.T("S0371"), "77.88.8.8", "77.88.8.1"),
+            Group(L.T("S0372"), "77.88.8.88", "77.88.8.2"),
+            Group(L.T("S0355"), "77.88.8.7", "77.88.8.3")),
 
-        Static("google", "Google DNS", "Универсальный резолвер", "https://developers.google.com/speed/public-dns", "",
+        Static("google", "Google DNS", L.T("S0373"), "https://developers.google.com/speed/public-dns", "",
             Group("", "8.8.8.8", "8.8.4.4")),
 
-        Static("opendns", "OpenDNS", "Публичный DNS и FamilyShield", "https://www.opendns.com/", "",
-            Group("Публичный", "208.67.222.222", "208.67.220.220"),
+        Static("opendns", "OpenDNS", L.T("S0374"), "https://www.opendns.com/", "",
+            Group(L.T("S0375"), "208.67.222.222", "208.67.220.220"),
             Group("FamilyShield", "208.67.222.123", "208.67.220.123")),
 
-        Static("nextdns", "NextDNS", "Персональные политики", "https://nextdns.io/",
-            "Фильтры и политики аккаунта NextDNS действуют для обычного DNS, только если в кабинете NextDNS " +
-            "привязан ваш IP (Linked IP); без этого — DNS без фильтрации.",
+        Static("nextdns", "NextDNS", L.T("S0376"), "https://nextdns.io/",
+            L.T("S0377") +
+            L.T("S0378"),
             Group("", "45.90.28.0", "45.90.30.0")),
 
-        Static("controld", "Control D", "Настраиваемые фильтры", "https://controld.com/free-dns", "",
-            Group("Без фильтров", "76.76.2.0", "76.76.10.0"),
-            Group("Без вредоносных", "76.76.2.1", "76.76.10.1"),
-            Group("Без рекламы и трекеров", "76.76.2.2", "76.76.10.2"),
-            Group("Без соцсетей", "76.76.2.3", "76.76.10.3"),
-            Group("Семейный", "76.76.2.4", "76.76.10.4"),
-            Group("Без цензуры", "76.76.2.5", "76.76.10.5")),
+        Static("controld", "Control D", L.T("S0379"), "https://controld.com/free-dns", "",
+            Group(L.T("S0356"), "76.76.2.0", "76.76.10.0"),
+            Group(L.T("S0358"), "76.76.2.1", "76.76.10.1"),
+            Group(L.T("S0380"), "76.76.2.2", "76.76.10.2"),
+            Group(L.T("S0381"), "76.76.2.3", "76.76.10.3"),
+            Group(L.T("S0355"), "76.76.2.4", "76.76.10.4"),
+            Group(L.T("S0382"), "76.76.2.5", "76.76.10.5")),
     };
 
     private static DnsProviderInfo Static(string id, string name, string tagline, string site, string description,
@@ -207,7 +222,7 @@ public static class DnsProviders
         var result = new DnsProviderLookup();
         if (!info.IsDynamic)
         {
-            result.Error = "у провайдера постоянные адреса";
+            result.Error = L.T("S0383");
             return result;
         }
 
@@ -234,13 +249,13 @@ public static class DnsProviders
 
         if (result.Servers.Count == 0)
         {
-            if (result.Error.Length == 0) result.Error = "провайдер не вернул адресов";
+            if (result.Error.Length == 0) result.Error = L.T("S0384");
             return result;
         }
 
         result.Error = "";
         result.Source = string.Join(", ", sources) +
-                        (failed.Count > 0 ? " · не ответили: " + string.Join(", ", failed) : "");
+                        (failed.Count > 0 ? L.T("S0385") + string.Join(", ", failed) : "");
         return result;
     }
 
@@ -258,12 +273,12 @@ public static class DnsProviders
             timeout.CancelAfter(LookupTimeout);
             var addresses = await System.Net.Dns.GetHostAddressesAsync(host, timeout.Token);
             var servers = Usable(addresses);
-            if (servers.Count > 0) return (servers, "системный DNS", "");
-            error = "системный DNS не вернул адресов";
+            if (servers.Count > 0) return (servers, L.T("S0386"), "");
+            error = L.T("S0387");
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            error = "системный DNS не ответил";
+            error = L.T("S0388");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -278,7 +293,7 @@ public static class DnsProviders
             if (servers.Count > 0) return (servers, lookup.Source, "");
         }
 
-        return (new List<string>(), "", error.Length > 0 ? error : "провайдер не вернул адресов");
+        return (new List<string>(), "", error.Length > 0 ? error : L.T("S0384"));
     }
 
     private static bool IsIPv4(string address) =>

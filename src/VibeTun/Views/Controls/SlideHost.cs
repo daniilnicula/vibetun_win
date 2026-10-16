@@ -62,14 +62,22 @@ public class SlideHost : Grid
     {
         var to = FindPage(key);
         var from = _current;
-        var size = AxisSize();
-        if (!IsLoaded || from is null || to is null || ReferenceEquals(from, to) || size <= 0)
+        if (!IsLoaded || from is null || to is null || ReferenceEquals(from, to))
         {
             ShowInstant(key);
             return;
         }
 
-        Slide(from, to, DirectionBetween(from, to), size);
+        var size = AxisSize();
+        var expandFromZero = size <= 0 && AnimateHeight && Vertical;
+        if (expandFromZero) size = MeasurePageHeight(to);
+        if (size <= 0)
+        {
+            ShowInstant(key);
+            return;
+        }
+
+        Slide(from, to, DirectionBetween(from, to), size, expandFromZero);
     }
 
     /// <summary>Без анимации: показать одну страницу и сбросить сдвиги.</summary>
@@ -100,14 +108,14 @@ public class SlideHost : Grid
         return Children.IndexOf(to) > Children.IndexOf(from) ? 1 : -1;
     }
 
-    private void Slide(UIElement from, UIElement to, int direction, double size)
+    private void Slide(UIElement from, UIElement to, int direction, double size, bool expandFromZero = false)
     {
         var property = AxisProperty();
         var toMove = MoveOf(to);
         var fromMove = MoveOf(from);
 
         // если страница ещё едет (быстрые клики) — продолжаем с её текущего места
-        var toStart = to.Visibility == Visibility.Visible ? Offset(toMove) : direction * size;
+        var toStart = to.Visibility == Visibility.Visible ? Offset(toMove) : (expandFromZero ? 0 : direction * size);
         var fromStart = Offset(fromMove);
 
         to.Visibility = Visibility.Visible;
@@ -120,6 +128,17 @@ public class SlideHost : Grid
 
         _current = to;
         if (AnimateHeight) AnimateHeightTo(to);
+    }
+
+    /// <summary>Измерить входящую страницу, пока сам контейнер свёрнут до нулевой высоты.</summary>
+    private double MeasurePageHeight(UIElement page)
+    {
+        var oldVisibility = page.Visibility;
+        page.Visibility = Visibility.Visible;
+        page.Measure(new Size(ActualWidth > 0 ? ActualWidth : double.PositiveInfinity, double.PositiveInfinity));
+        var height = page.DesiredSize.Height;
+        page.Visibility = oldVisibility;
+        return height;
     }
 
     /// <summary>Высота контейнера: от текущей к высоте новой страницы.</summary>
