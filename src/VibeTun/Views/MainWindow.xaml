@@ -77,7 +77,7 @@
         </Border>
 
         <!-- ============================= основная область ============================= -->
-        <Grid Grid.Row="1">
+        <Grid x:Name="MainContent" Grid.Row="1" Opacity="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="252" />
                 <ColumnDefinition Width="*" />
@@ -88,8 +88,8 @@
                     BorderBrush="{DynamicResource Divider}">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
@@ -287,9 +287,18 @@
                         </ListBoxItem>
 
                     </ListBox>
+                    <Border Height="26" VerticalAlignment="Bottom" Background="{DynamicResource PanelBg}"
+                            IsHitTestVisible="False" Margin="0,0,0,2">
+                        <Border.OpacityMask>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#00000000" Offset="0" />
+                                <GradientStop Color="#FF000000" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.OpacityMask>
+                    </Border>
                     </Grid>
 
-                    <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Margin="14,0,14,10">
+                    <StackPanel Grid.Row="1" Margin="14,0,14,10">
                         <TextBlock Text="{loc:Tr S0139}" Style="{StaticResource TxtCaption}" Margin="2,0,0,6" />
                         <TextBlock Text="{Binding ActiveProfileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                    Foreground="{DynamicResource TextPrimary}" />
@@ -358,6 +367,34 @@
                     </Grid>
                 </Border>
             </Grid>
+        </Grid>
+
+        <!-- ============================= сплэш холодного старта ============================= -->
+        <Grid x:Name="Splash" Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource WindowBg}" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,10">
+                <Grid Width="56" Height="56" HorizontalAlignment="Center">
+                    <Border CornerRadius="13" Background="{DynamicResource LogoTileBg}"
+                            BorderBrush="{DynamicResource LogoTileStroke}" BorderThickness="1" />
+                    <Border CornerRadius="11,11,0,0" Margin="2,2,2,0" Height="26" VerticalAlignment="Top"
+                            Background="{DynamicResource LogoGloss}" />
+                    <Viewbox Width="56" Height="56" Stretch="Uniform">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="M 12.04,5.59 L 6.55,18.41 M 12.04,5.59 L 17.46,18.41"
+                                  Stroke="{DynamicResource LogoGradient}" StrokeThickness="3.18"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                            <Path Data="M 9.75,12.35 L 13.69,18.47"
+                                  Stroke="{DynamicResource LogoGradient}" StrokeThickness="2.35"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </Grid>
+                <TextBlock Text="VibeTun" Margin="0,12,0,0" FontSize="20" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" />
+                <TextBlock x:Name="SplashStatus" Text="{loc:Tr S1005}" Margin="0,6,0,0"
+                           Style="{StaticResource TxtMuted}" HorizontalAlignment="Center" />
+                <ProgressBar x:Name="SplashProgress" Style="{StaticResource UpdateProgressBar}"
+                             Width="240" Margin="0,14,0,0" Minimum="0" Maximum="100" Value="0" />
+            </StackPanel>
         </Grid>
 
         <!-- ============================= пикер акцента ============================= -->

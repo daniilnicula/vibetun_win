@@ -137,6 +137,11 @@ public sealed class RouteProfile
     public bool TunStrictRoute { get; set; }
     public bool SniffTraffic { get; set; } = true;
 
+    /// <summary>
+    /// Куда уходит трафик, не подошедший ни под одно правило (route.final ядра): через прокси или напрямую.
+    /// </summary>
+    public RouteAction DefaultAction { get; set; } = RouteAction.Proxy;
+
     // system | proxy | profile | custom. Теперь DNS выбирается в разделе «DNS» (AppSettings.Dns):
     // перед сборкой конфига поля заполняются оттуда (DnsViewModel.ApplyTo), а из файла читаются
     // только один раз — чтобы перенести прежний выбор в новый раздел.
@@ -278,6 +283,12 @@ public sealed class AppSettings
 
     /// <summary>Высота панели логов на вкладке «Профили» в пикселях.</summary>
     public double ProfilesLogHeight { get; set; } = 210;
+
+    /// <summary>Ширина панели логов при боковом доке (Left/Right) в пикселях.</summary>
+    public double ProfilesLogWidth { get; set; } = 320;
+
+    /// <summary>Сторона панели логов: Bottom, Top, Left, Right.</summary>
+    public string ProfilesLogDock { get; set; } = "Bottom";
 }
 
 /// <summary>Информация об установленном ядре.</summary>

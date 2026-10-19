@@ -37,6 +37,8 @@ public static class AmneziaJson
     public static Result Parse(JsonElement root, string raw)
     {
         var notes = new List<string>();
+        var keys = Collect(root);
+        var displayName = PickDisplayName(keys);
 
         // 1) внутри уже лежит готовый .conf
         var conf = FindEmbeddedConf(root);
@@ -44,12 +46,12 @@ public static class AmneziaJson
         {
             var fromConf = WgConfParser.Parse(conf, out var err);
             if (fromConf is null) notes.Add(err ?? L.T("S0557"));
+            // имя сервера из JSON (description у клиента Amnezia) важнее придуманного по endpoint
+            else if (displayName is not null) fromConf.Name = displayName;
             return new Result(fromConf, notes);
         }
 
         // 2) собираем параметры из ключей
-        var keys = Collect(root);
-
         var host = Pick(keys, "hostname", "host", "serveraddress", "server", "address", "endpoint", "ip");
         var port = PickInt(keys, "port", "serverport", "listenport");
         var serverKey = Pick(keys, "publickey", "serverpublickey", "peerpublickey", "wgpublickey", "public");
@@ -110,9 +112,8 @@ public static class AmneziaJson
 
         var isAwg = node.HasAwgParams || serverPrivateKey is not null;
         var prefix = isAwg ? "AmneziaWG" : "WG";
-        var name = node.Server.Length > 0
-            ? $"{prefix} · {node.Server}"
-            : L.F("S0563", prefix);
+        var name = displayName
+            ?? (node.Server.Length > 0 ? $"{prefix} · {node.Server}" : L.F("S0563", prefix));
 
         var profile = new ProxyProfile
         {
@@ -195,6 +196,44 @@ public static class AmneziaJson
             if (hit is not null) return hit.Value!.Trim();
         }
         return null;
+    }
+
+    private static readonly HashSet<string> ProtoIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "amnezia-awg", "amneziawg", "awg", "wireguard", "wg"
+    };
+
+    /// <summary>
+    /// Человеческое имя сервера из JSON: у клиента AmneziaVPN это поле description,
+    /// у панелей — name/title/remark и т.п. Значения-протоиды (amnezia-awg) и имена
+    /// отдельных клиентов пропускаем.
+    /// </summary>
+    private static string? PickDisplayName(List<Entry> keys)
+    {
+        foreach (var name in new[]
+                 {
+                     "description", "name", "servername", "title", "remark", "remarks",
+                     "label", "alias", "nickname"
+                 })
+        {
+            var hit = keys.FirstOrDefault(k => k.Key == name && !string.IsNullOrWhiteSpace(k.Value) &&
+                                               !k.Path.Any(p => p is "client" or "clients" or "user" or "users"));
+            var clean = CleanName(hit?.Value);
+            if (clean is not null) return clean;
+        }
+        return null;
+
+        static string? CleanName(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            // первая строка, схлопнутые пробелы, разумная длина
+            var line = value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
+            if (string.IsNullOrWhiteSpace(line)) return null;
+            line = string.Join(' ', line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            if (line.Length > 96) line = line[..96].TrimEnd();
+            if (ProtoIds.Contains(line)) return null;
+            return line;
+        }
     }
 
     private static string? PickClientPrivate(List<Entry> keys)

@@ -4,7 +4,7 @@ using VibeTun.Services;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class ProfileGroupDeleteWindow : Window
+public partial class ProfileGroupDeleteWindow : DialogWindow
 {
     public ProfileGroupDeleteWindow(string groupName, int profileCount)
     {

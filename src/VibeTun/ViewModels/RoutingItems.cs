@@ -381,6 +381,40 @@ public sealed class RouteProfileItemVm : ObservableObject
         }
     }
 
+    public RouteAction DefaultAction
+    {
+        get => _model.DefaultAction;
+        set
+        {
+            if (_model.DefaultAction == value) return;
+            _model.DefaultAction = value;
+            Raise();
+            Raise(nameof(IsDefaultProxy));
+            Raise(nameof(IsDefaultDirect));
+            Changed?.Invoke();
+        }
+    }
+
+    public bool IsDefaultProxy
+    {
+        get => _model.DefaultAction == RouteAction.Proxy;
+        set
+        {
+            if (value) DefaultAction = RouteAction.Proxy;
+            else Raise(nameof(IsDefaultProxy));
+        }
+    }
+
+    public bool IsDefaultDirect
+    {
+        get => _model.DefaultAction == RouteAction.Direct;
+        set
+        {
+            if (value) DefaultAction = RouteAction.Direct;
+            else Raise(nameof(IsDefaultDirect));
+        }
+    }
+
     // DNS здесь больше не редактируется: он в разделе «DNS» (DnsViewModel)
 
     public string? RouteSetId

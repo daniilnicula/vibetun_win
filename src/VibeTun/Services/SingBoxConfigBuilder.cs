@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using VibeTun.Models;
@@ -76,9 +78,15 @@ public static class SingBoxConfigBuilder
             }
         };
 
+        // IPv6 в TUN отдаём, только если физическая сеть его реально тянет (см. PhysicalSupportsV6).
+        // Без TUN проверка не нужна и не выполняется: там v6 падает быстро сам и откат на v4 работает.
+        var tunV6 = !route.TunEnabled || PhysicalSupportsV6();
+        if (route.TunEnabled && !tunV6)
+            result.Warnings.Add(L.T("S1004"));
+
         // ---------------------------------------------------------------- DNS
         var dns = BuildDns(route, profile, modernDns, appDns, domainDns, allowProcessPath, independentCache,
-            out var resolverTag, out var profileDnsInTunnel, out var dnsRuleGroups);
+            out var resolverTag, out var profileDnsInTunnel, out var dnsRuleGroups, out var directDialDns, tunV6);
         root["dns"] = dns;
 
         // ----------------------------------------------------------- inbounds
@@ -106,6 +114,11 @@ public static class SingBoxConfigBuilder
             var tunMtu = route.TunMtu;
             if (tunnelMtu > 0) tunMtu = Math.Min(tunMtu, tunnelMtu);
 
+            var tunV4 = TunAddressV4();
+            if (tunV4 != DefaultTunV4)
+                result.Warnings.Add(L.F("S1003", DefaultTunV4, tunV4));
+            var tunExclusions = TunRouteExclusions(profile, directDialDns);
+
             var tun = new JsonObject
             {
                 ["type"] = "tun",
@@ -119,13 +132,32 @@ public static class SingBoxConfigBuilder
                 // невозможной: новое имя никогда не занято, удаление старого идёт параллельно.
                 // Суффикс обновляет и CoreService перед каждой повторной попыткой запуска.
                 ["interface_name"] = "VibeTun-" + Guid.NewGuid().ToString("N")[..8],
-                ["address"] = new JsonArray("172.19.0.1/30", "fdfe:dcba:9876::1/126"),
                 ["mtu"] = tunMtu,
                 ["auto_route"] = true,
                 ["strict_route"] = route.TunStrictRoute,
                 ["stack"] = route.TunStack
             };
             if (!modern) tun["sniff"] = route.SniffTraffic;
+
+            // Единое поле address есть только с sing-box 1.10, а старые inet4/inet6_address свежие ядра
+            // (≥ 1.12) отвергают фатальной ошибкой — поэтому имена полей выбираем по версии ядра.
+            // Без адресов старого формата самособранный nekobox_core 1.9.x поднимал TUN без адресов.
+            if (modern)
+            {
+                tun["address"] = tunV6
+                    ? new JsonArray(tunV4, "fdfe:dcba:9876::1/126")
+                    : new JsonArray(tunV4);
+                if (tunExclusions.Count > 0) tun["route_exclude_address"] = ToJsonArray(tunExclusions);
+            }
+            else
+            {
+                tun["inet4_address"] = new JsonArray(tunV4);
+                if (tunV6) tun["inet6_address"] = new JsonArray("fdfe:dcba:9876::1/126");
+                var v4 = tunExclusions.Where(c => !c.Contains(':')).ToList();
+                var v6 = tunExclusions.Where(c => c.Contains(':')).ToList();
+                if (v4.Count > 0) tun["inet4_route_exclude_address"] = ToJsonArray(v4);
+                if (v6.Count > 0) tun["inet6_route_exclude_address"] = ToJsonArray(v6);
+            }
             inbounds.Add(tun);
         }
         root["inbounds"] = inbounds;
@@ -211,6 +243,214 @@ public static class SingBoxConfigBuilder
         return result;
     }
 
+    /// <summary>TUN-подсеть по умолчанию. Меняется только при конфликте — см. <see cref="TunAddressV4"/>.</summary>
+    private const string DefaultTunV4 = "172.19.0.1/30";
+
+    /// <summary>
+    /// IPv4-адрес TUN-адаптера. Подсеть 172.19.0.0/30 любят занимать Docker-сети и чужие VPN-клиенты:
+    /// пересечение с локальным интерфейсом ломает таблицу маршрутов, и получается «TUN подключён,
+    /// а интернета нет». Поэтому берём первую подсеть из списка, которая не пересекается
+    /// ни с одним локальным адресом.
+    /// </summary>
+    private static string TunAddressV4()
+    {
+        foreach (var candidate in new[]
+                 {
+                     DefaultTunV4, "172.20.0.1/30", "172.21.0.1/30", "172.22.0.1/30", "10.253.0.1/30"
+                 })
+            if (!SubnetOverlapsLocal(candidate))
+                return candidate;
+        return DefaultTunV4;
+    }
+
+    /// <summary>
+    /// Умеет ли физическая сеть IPv6 на выход. Результат кэшируется на 5 минут: проба висит
+    /// до 4 секунд, когда v6 мёртвый, и платить её на каждый переподключение ни к чему.
+    /// </summary>
+    private static (bool Supported, DateTime At)? _v6Cache;
+
+    /// <summary>
+    /// true — IPv6 отдаём в TUN и DNS. Иначе — только IPv4: фейковый v6 (адрес TUN + маршрут ::/0
+    /// без реального транзита) заставляет приложения ходить в v6, локальный стек ядра подтверждает
+    /// хендшейк мгновенно (Happy Eyeballs считает соединение установленным и не пробует v4), а дайл
+    /// наверх висит до таймаута — внешне «TUN подключён, а ничего не грузит». См. лог 2026-10-19:
+    /// Chrome долбился в 2a02:6b8::2:242 по v6, v4 не пробовал ни разу.
+    /// </summary>
+    private static bool PhysicalSupportsV6()
+    {
+        if (_v6Cache is { } cached && (DateTime.UtcNow - cached.At) < TimeSpan.FromMinutes(5))
+            return cached.Supported;
+        var supported = HasGlobalV6Address() && ProbeV6Transit();
+        _v6Cache = (supported, DateTime.UtcNow);
+        return supported;
+    }
+
+    /// <summary>Есть ли на не-наших интерфейсах глобальный IPv6-юникаст (2000::/3). Быстрая проверка.</summary>
+    private static bool HasGlobalV6Address()
+    {
+        try
+        {
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                // свой протухший TUN-адаптер прошлого запуска не считаем
+                if (nic.Name.StartsWith("VibeTun", StringComparison.OrdinalIgnoreCase)) continue;
+                foreach (var unicast in nic.GetIPProperties().UnicastAddresses)
+                {
+                    if (unicast.Address.AddressFamily != AddressFamily.InterNetworkV6) continue;
+                    if ((unicast.Address.GetAddressBytes()[0] & 0xE0) == 0x20) return true;
+                }
+            }
+        }
+        catch
+        {
+            // ignore — не смогли опросить, считаем что v6 нет
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Живая проверка IPv6-транзита: TCP-хендшейк до Яндекса и Google (у обоих точно есть v6).
+    /// Глобальный адрес на интерфейсе ещё не означает рабочий транзит (протухший 6to4/Teredo,
+    /// провайдер без v6-маршрутов) — решает только проба.
+    /// </summary>
+    private static bool ProbeV6Transit()
+    {
+        foreach (var host in new[] { "2a02:6b8::2:242", "2a00:1450:4010:c01::bc" })
+        {
+            try
+            {
+                using var client = new TcpClient(AddressFamily.InterNetworkV6);
+                if (client.ConnectAsync(IPAddress.Parse(host), 443).Wait(TimeSpan.FromSeconds(2))) return true;
+            }
+            catch
+            {
+                // следующий кандидат
+            }
+        }
+        return false;
+    }
+
+    /// <summary>true, если подсеть пересекается с адресом какого-нибудь локального интерфейса.</summary>
+    private static bool SubnetOverlapsLocal(string cidr)
+    {
+        try
+        {
+            var slash = cidr.IndexOf('/');
+            var candidate = IPAddress.Parse(cidr[..slash]).GetAddressBytes();
+            var candidateBits = int.Parse(cidr[(slash + 1)..]);
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                foreach (var unicast in nic.GetIPProperties().UnicastAddresses)
+                {
+                    if (unicast.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                    if (PrefixesOverlap(candidate, candidateBits,
+                            unicast.Address.GetAddressBytes(), unicast.PrefixLength)) return true;
+                }
+            }
+        }
+        catch
+        {
+            // не смогли опросить интерфейсы — не мешаем запуску, оставляем подсеть по умолчанию
+        }
+        return false;
+    }
+
+    /// <summary>Пересекаются ли два IPv4-префикса: совпадают первые min(len) бит.</summary>
+    private static bool PrefixesOverlap(byte[] first, int firstBits, byte[] second, int secondBits)
+    {
+        var common = Math.Min(firstBits, secondBits);
+        for (var i = 0; i < common; i++)
+        {
+            var a = (first[i / 8] >> (7 - i % 8)) & 1;
+            var b = (second[i / 8] >> (7 - i % 8)) & 1;
+            if (a != b) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Адреса, которые ОС должна вести мимо TUN (route_exclude_address): сервер прокси и DNS-серверы,
+    /// которые ядро диалит напрямую. Свои сокеты ядро привязывает к физическому интерфейсу само
+    /// (route.auto_detect_interface), но если детект на машине сбоит, дайл уходит в туннель и петляет —
+    /// внешне это «TUN подключён, а интернета нет». Исключения на уровне таблицы маршрутов такое
+    /// исключают в принципе: пакет к этим адресам в wintun-адаптер не попадает вообще.
+    /// Серверы, идущие через detour (DNS через прокси, DNS WireGuard внутри туннеля), сюда не попадают:
+    /// им в туннель как раз надо.
+    /// </summary>
+    private static List<string> TunRouteExclusions(ProxyProfile profile, List<string> dnsHosts)
+    {
+        var hosts = new List<string>(dnsHosts);
+        var server = ServerHostOf(profile);
+        if (!string.IsNullOrWhiteSpace(server)) hosts.Add(server!);
+
+        var result = new List<string>();
+        foreach (var host in hosts.Distinct(StringComparer.OrdinalIgnoreCase))
+            result.AddRange(ResolveExclusions(host));
+        return result.Distinct().ToList();
+    }
+
+    /// <summary>Хост сервера прокси: IP или имя — из полей профиля либо из сырого JSON.</summary>
+    private static string? ServerHostOf(ProxyProfile profile)
+    {
+        if (profile.RawJson is { Length: > 0 })
+        {
+            try
+            {
+                var node = JsonNode.Parse(profile.RawJson);
+                if (node is JsonObject obj)
+                {
+                    if (obj["server"]?.GetValue<string>() is { Length: > 0 } top) return top;
+                    var first = (obj["outbounds"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault()
+                                ?? (obj["endpoints"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault();
+                    if (first is not null)
+                    {
+                        if (first["server"]?.GetValue<string>() is { Length: > 0 } direct) return direct;
+                        // у wireguard-эндпоинта адрес сервера — в первом пире
+                        var peer = (first["peers"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault();
+                        if (peer?["address"]?.GetValue<string>() is { Length: > 0 } peerAddress) return peerAddress;
+                    }
+                }
+            }
+            catch
+            {
+                // сырой JSON разберёт сам сборщик (и честно упадёт с подсказкой); здесь просто пропускаем
+            }
+            return null;
+        }
+
+        return profile.Node.Server;
+    }
+
+    /// <summary>
+    /// Хост → список /32 (/128): IP берётся как есть, имя резолвится системным DNS не дольше 4 секунд.
+    /// Не резолвится — пропускаем: останется штатный путь через привязку сокета к интерфейсу.
+    /// </summary>
+    private static List<string> ResolveExclusions(string host)
+    {
+        var result = new List<string>();
+        host = host.Trim().Trim('[', ']');
+        if (host.Length == 0) return result;
+
+        if (IPAddress.TryParse(host, out var literal))
+        {
+            result.Add(literal + (literal.AddressFamily == AddressFamily.InterNetwork ? "/32" : "/128"));
+            return result;
+        }
+
+        try
+        {
+            var task = Dns.GetHostAddressesAsync(host);
+            if (!task.Wait(TimeSpan.FromSeconds(4))) return result;
+            foreach (var ip in task.Result.Distinct())
+                result.Add(ip + (ip.AddressFamily == AddressFamily.InterNetwork ? "/32" : "/128"));
+        }
+        catch
+        {
+            // ignore — см. выше
+        }
+        return result;
+    }
+
     // ------------------------------------------------------------------- DNS
     private const string LocalDnsTag = "dns-local";
 
@@ -226,14 +466,19 @@ public static class SingBoxConfigBuilder
 
     /// <summary>
     /// Блок dns: основной DNS (final) и свой DNS доменов и приложений — серверы и DNS-правила.
-    /// Правила — в порядке приоритета (<paramref name="ruleGroups"/>): сначала домены (точные раньше
-    /// общих, см. <see cref="DomainGroups"/>), потом приложения — по пути, затем по имени. Действует
-    /// первое подходящее правило, так что запись домена важнее записи приложения.
+    /// Правила — в порядке приоритета (<paramref name="ruleGroups"/>): домены (точные раньше общих,
+    /// см. <see cref="DomainGroups"/>) и приложения (по пути, затем по имени). Действует первое
+    /// подходящее правило; в TUN приложения идут раньше доменов, без TUN — домены раньше приложений.
+    /// Хосты серверов, которые ядро диалит напрямую (<paramref name="directDialDns"/>), — кандидаты
+    /// в исключения TUN-маршрутов (см. <see cref="TunRouteExclusions"/>).
+    /// Без рабочего IPv6 (<paramref name="allowV6"/> false) стратегия DNS — ipv4_only, чтобы AAAA
+    /// вообще не отдавались и приложения не пытались ходить в v6 (см. <see cref="PhysicalSupportsV6"/>).
     /// </summary>
     private static JsonNode BuildDns(RouteProfile route, ProxyProfile profile, bool modernDns,
         IReadOnlyList<AppDnsRoute>? appDns, IReadOnlyList<DomainDnsRoute>? domainDns,
         bool allowProcessPath, bool independentCache,
-        out string resolverTag, out bool tunnelledProfileDns, out List<DnsRuleGroup> ruleGroups)
+        out string resolverTag, out bool tunnelledProfileDns, out List<DnsRuleGroup> ruleGroups,
+        out List<string> directDialDns, bool allowV6)
     {
         var profileDns = ProfileDnsServers(profile);
         var tunnelProfile = IsTunnelProfile(profile);
@@ -242,6 +487,7 @@ public static class SingBoxConfigBuilder
         var tagByServer = new Dictionary<string, string>(StringComparer.Ordinal);
         var serverNumbers = new Dictionary<string, int>(StringComparer.Ordinal);
         var usesTunnelledProfileDns = false;
+        var directHosts = new List<string>();
 
         // Тег сервера под выбор DNS. Одинаковый сервер попадает в конфиг один раз, даже если его выбрали
         // и основным, и у доменов или приложений. Основной DNS получает прежние теги (dns-remote,
@@ -251,7 +497,8 @@ public static class SingBoxConfigBuilder
             var spec = DnsServerFor(mode, server, route.TunEnabled, profileDns, tunnelProfile, modernDns);
             if (spec is null) return LocalDnsTag;
 
-            var (node, tunnelled) = spec.Value;
+            var (node, tunnelled, directHost) = spec.Value;
+            if (directHost is not null) directHosts.Add(directHost);
             var key = ServerKey(node);
             if (tagByServer.TryGetValue(key, out var existing)) return existing;
 
@@ -290,13 +537,23 @@ public static class SingBoxConfigBuilder
             if (path.Length > 0 && !group.Paths.Contains(path, StringComparer.OrdinalIgnoreCase)) group.Paths.Add(path);
         }
 
-        // правила в порядке приоритета: домены, приложения по пути (точнее: у двух программ бывает одно
-        // имя процесса), приложения по имени (путь меняется при обновлении программы, имя — нет)
-        var groups = DomainGroups(domainDns, (mode, server) => Use(mode, server, "dns-domain-"));
+        // Серверы заводим в прежнем порядке (сначала домены), чтобы теги dns-domain-N/dns-app-N
+        // не менялись, — а вот порядок самих правил зависит от режима (см. ниже).
+        var domainGroups = DomainGroups(domainDns, (mode, server) => Use(mode, server, "dns-domain-"));
+        var processGroups = new List<DnsRuleGroup>();
+        // приложения по пути (точнее: у двух программ бывает одно имя процесса), затем по имени
+        // (путь меняется при обновлении программы, имя — нет)
         foreach (var app in appGroups.Where(g => g.Paths.Count > 0))
-            groups.Add(new DnsRuleGroup("process_path", app.Tag, new JsonObject { ["process_path"] = ToJsonArray(app.Paths) }));
+            processGroups.Add(new DnsRuleGroup("process_path", app.Tag, new JsonObject { ["process_path"] = ToJsonArray(app.Paths) }));
         foreach (var app in appGroups.Where(g => g.Names.Count > 0))
-            groups.Add(new DnsRuleGroup("process_name", app.Tag, new JsonObject { ["process_name"] = ToJsonArray(app.Names) }));
+            processGroups.Add(new DnsRuleGroup("process_name", app.Tag, new JsonObject { ["process_name"] = ToJsonArray(app.Names) }));
+
+        // Действует первое подходящее правило. В TUN приложения важнее доменов — как и в маршрутах:
+        // DNS приложения отвечает за все его запросы, даже если домен описан отдельно. Без TUN
+        // порядок прежний: домены раньше приложений.
+        var groups = route.TunEnabled
+            ? processGroups.Concat(domainGroups).ToList()
+            : domainGroups.Concat(processGroups).ToList();
 
         // Правила в конце списка, которые ведут на основной DNS, ничего не меняют: туда и так придёт всё,
         // что не подошло выше. В середине такое правило нужно — оно перехватывает запрос у правил ниже
@@ -309,11 +566,12 @@ public static class SingBoxConfigBuilder
             : new JsonObject { ["tag"] = LocalDnsTag, ["address"] = "local" });   // без detour: см. DnsServerFor
 
         tunnelledProfileDns = usesTunnelledProfileDns;
+        directDialDns = directHosts;
         var dns = new JsonObject
         {
             ["servers"] = servers,
             ["final"] = resolverTag,
-            ["strategy"] = "prefer_ipv4"
+            ["strategy"] = allowV6 ? "prefer_ipv4" : "ipv4_only"
         };
 
         if (groups.Count > 0)
@@ -374,8 +632,10 @@ public static class SingBoxConfigBuilder
     /// <summary>
     /// Сервер под выбор DNS — основной, домена или приложения (<paramref name="mode"/> как у
     /// <see cref="RouteProfile.DnsMode"/>). null — системный резолвер: он есть в конфиге всегда (dns-local).
+    /// <c>DirectHost</c> — хост сервера (IP или имя), если ядро диалит его напрямую: под TUN такой адрес
+    /// исключается из маршрутов, чтобы сокет ядра не заворачивался в туннель (см. <see cref="TunRouteExclusions"/>).
     /// </summary>
-    private static (JsonObject Node, bool TunnelledProfileDns)? DnsServerFor(string mode, string? server,
+    private static (JsonObject Node, bool TunnelledProfileDns, string? DirectHost)? DnsServerFor(string mode, string? server,
         bool tunEnabled, List<string> profileDns, bool tunnelProfile, bool modernDns)
     {
         // DNS из конфига WireGuard/AmneziaWG (Dns = 10.8.0.1, ...) — это то, чем пользуется официальный
@@ -403,7 +663,7 @@ public static class SingBoxConfigBuilder
                     ["tag"] = "dns-remote",
                     ["address"] = tunnelledProfileDns ? "udp://" + profileDns[0] : "tls://1.1.1.1",
                     ["detour"] = ProxyTag
-                }, tunnelledProfileDns);
+                }, tunnelledProfileDns, null);
             }
 
             return (tunnelledProfileDns
@@ -420,11 +680,12 @@ public static class SingBoxConfigBuilder
                     ["tag"] = "dns-remote",
                     ["server"] = "1.1.1.1",
                     ["detour"] = ProxyTag
-                }, tunnelledProfileDns);
+                }, tunnelledProfileDns, null);
         }
 
         if (custom)
-            return (modernDns ? CustomDnsServer(server!) : LegacyCustomDnsServer(server!), false);
+            return (modernDns ? CustomDnsServer(server!) : LegacyCustomDnsServer(server!), false,
+                ParseCustomDns(server!).Host);
 
         if (tunEnabled)
         {
@@ -445,7 +706,7 @@ public static class SingBoxConfigBuilder
                 {
                     ["tag"] = "dns-direct",
                     ["address"] = "udp://1.1.1.1"
-                }, false);
+                }, false, "1.1.1.1");
         }
 
         return null;
@@ -1263,11 +1524,11 @@ public static class SingBoxConfigBuilder
         }
 
         var userRules = set?.Rules.Where(r => r.Enabled && !string.IsNullOrWhiteSpace(r.Pattern)).ToList() ?? new();
-        foreach (var rule in BuildJsonRules(userRules, modern))
-            rules.Add(rule);
+        var domainNodes = BuildJsonRules(userRules, modern);
 
         var appRules = set?.Apps.Where(a => a.Enabled && (!string.IsNullOrWhiteSpace(a.ProcessName) || !string.IsNullOrWhiteSpace(a.Path))).ToList()
                        ?? new List<AppRule>();
+        var appNodes = new List<JsonNode>();
         foreach (var app in appRules)
         {
             // Поля одного правила в sing-box объединяются по И: если и process_name, и process_path
@@ -1275,11 +1536,26 @@ public static class SingBoxConfigBuilder
             // содержит версию, напр. WindowsApps\..._4.54.8517.0_x64__...). Разбиваем на два
             // отдельных правила — матчит хоть имя процесса, хоть путь.
             if (!string.IsNullOrWhiteSpace(app.ProcessName))
-                rules.Add(Action(modern, app.Action,
+                appNodes.Add(Action(modern, app.Action,
                     new JsonObject { ["process_name"] = new JsonArray(NormalizeProcessName(app.ProcessName)) }));
             var path = app.Path;
             if (allowProcessPath && !string.IsNullOrWhiteSpace(path))
-                rules.Add(Action(modern, app.Action, new JsonObject { ["process_path"] = new JsonArray(path) }));
+                appNodes.Add(Action(modern, app.Action, new JsonObject { ["process_path"] = new JsonArray(path) }));
+        }
+
+        // В TUN приложение знает о себе точнее домена из сниффера: процесс виден ядру напрямую,
+        // а домен ещё надо угадать из SNI/Host. Поэтому правила приложений идут раньше доменных —
+        // приложение, помеченное «через прокси», идёт через прокси, даже если домен помечен
+        // «напрямую». Без TUN порядок прежний: там процесс виден не всегда, и домены надёжнее.
+        if (route.TunEnabled)
+        {
+            foreach (var node in appNodes) rules.Add(node);
+            foreach (var node in domainNodes) rules.Add(node);
+        }
+        else
+        {
+            foreach (var node in domainNodes) rules.Add(node);
+            foreach (var node in appNodes) rules.Add(node);
         }
 
         if (dnsGroups is { Count: > 0 })
@@ -1288,7 +1564,10 @@ public static class SingBoxConfigBuilder
         var routeNode = new JsonObject
         {
             ["rules"] = rules,
-            ["final"] = ProxyTag,
+            // Куда уходит то, что не подошло ни под одно правило, — переключатель «По умолчанию»
+            // в профиле маршрутизации. Block здесь не предлагается (тупик вместо маршрута),
+            // но если такое значение как-то оказалось в файле — трактуем как прокси.
+            ["final"] = route.DefaultAction == RouteAction.Direct ? DirectTag : ProxyTag,
             ["auto_detect_interface"] = true
         };
 

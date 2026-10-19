@@ -22,6 +22,11 @@ public partial class ProfilesView : UserControl
 
     private bool _logFollow = true;
     private ProfilesViewModel? _subscribed;
+    private string _logDock = "Bottom";
+    private bool _logDragArmed;
+    private bool _logDragging;
+    private Point _logDragStart;
+    private string? _dockHover;
     private Point _dragStart;
     private ProfileItemVm? _dragProfile;
     private ProfileGroupVm? _dragGroup;
@@ -100,7 +105,7 @@ public partial class ProfilesView : UserControl
         InitializeComponent();
         List.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
             new MouseButtonEventHandler(OnCollectionPreviewMouseDown), handledEventsToo: true);
-        LogRow.Height = new GridLength(Math.Clamp(App.Settings.Current.ProfilesLogHeight, 100, 600));
+        LayoutLogDock(App.Settings.Current.ProfilesLogDock);
         LogScroll.ScrollChanged += OnLogScrollChanged;
         DataContextChanged += OnDataContextChanged;
     }
@@ -601,9 +606,232 @@ public partial class ProfilesView : UserControl
 
     private void OnLogSplitterDragCompleted(object sender, DragCompletedEventArgs e)
     {
-        var rowHeight = LogPanel.ActualHeight + LogPanel.Margin.Top + LogPanel.Margin.Bottom;
-        App.Settings.Current.ProfilesLogHeight = Math.Round(rowHeight);
+        if (_logDock is "Left" or "Right")
+        {
+            var colWidth = LogPanel.ActualWidth + LogPanel.Margin.Left + LogPanel.Margin.Right;
+            App.Settings.Current.ProfilesLogWidth = Math.Round(colWidth);
+        }
+        else
+        {
+            var rowHeight = LogPanel.ActualHeight + LogPanel.Margin.Top + LogPanel.Margin.Bottom;
+            App.Settings.Current.ProfilesLogHeight = Math.Round(rowHeight);
+        }
         App.Settings.SaveSoon();
+    }
+
+    // ------------------------------------------------------------- док панели логов
+    private static string NormalizeLogDock(string? side)
+        => side is "Top" or "Left" or "Right" or "Bottom" ? side : "Bottom";
+
+    /// <summary>Мгновенно перестроить сплит профили/логи под сторону дока.</summary>
+    private void LayoutLogDock(string side)
+    {
+        side = NormalizeLogDock(side);
+        _logDock = side;
+        var settings = App.Settings.Current;
+        var logH = Math.Clamp(settings.ProfilesLogHeight, 100, 600);
+        var logW = Math.Clamp(settings.ProfilesLogWidth, 220, 800);
+
+        SplitRoot.RowDefinitions.Clear();
+        SplitRoot.ColumnDefinitions.Clear();
+
+        if (side is "Bottom" or "Top")
+        {
+            var logDef = new RowDefinition { Height = new GridLength(logH), MinHeight = 100 };
+            var listDef = new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 120 };
+            var gapDef = new RowDefinition { Height = new GridLength(9) };
+            if (side == "Bottom")
+            {
+                SplitRoot.RowDefinitions.Add(listDef);
+                SplitRoot.RowDefinitions.Add(gapDef);
+                SplitRoot.RowDefinitions.Add(logDef);
+                Grid.SetRow(ProfilesPane, 0);
+                Grid.SetRow(LogPanel, 2);
+                ProfilesPane.Margin = new Thickness(0, 14, 0, 0);
+                LogPanel.Margin = new Thickness(0, 0, 0, 14);
+            }
+            else
+            {
+                SplitRoot.RowDefinitions.Add(logDef);
+                SplitRoot.RowDefinitions.Add(gapDef);
+                SplitRoot.RowDefinitions.Add(listDef);
+                Grid.SetRow(LogPanel, 0);
+                Grid.SetRow(ProfilesPane, 2);
+                LogPanel.Margin = new Thickness(0, 14, 0, 0);
+                ProfilesPane.Margin = new Thickness(0, 0, 0, 14);
+            }
+            Grid.SetRow(LogSplitter, 1);
+            Grid.SetRow(SplitGrip, 1);
+            Grid.SetColumn(ProfilesPane, 0);
+            Grid.SetColumn(LogSplitter, 0);
+            Grid.SetColumn(SplitGrip, 0);
+            Grid.SetColumn(LogPanel, 0);
+            LogSplitter.ResizeDirection = GridResizeDirection.Rows;
+            LogSplitter.Cursor = Cursors.SizeNS;
+            LogSplitter.Height = 9;
+            LogSplitter.Width = double.NaN;
+            SplitGrip.Height = 3;
+            SplitGrip.Width = double.NaN;
+            SplitGrip.Margin = new Thickness(60, 0, 60, 0);
+            SplitGrip.HorizontalAlignment = HorizontalAlignment.Stretch;
+            SplitGrip.VerticalAlignment = VerticalAlignment.Center;
+        }
+        else
+        {
+            var logDef = new ColumnDefinition { Width = new GridLength(logW), MinWidth = 220 };
+            var listDef = new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 300 };
+            var gapDef = new ColumnDefinition { Width = new GridLength(9) };
+            if (side == "Left")
+            {
+                SplitRoot.ColumnDefinitions.Add(logDef);
+                SplitRoot.ColumnDefinitions.Add(gapDef);
+                SplitRoot.ColumnDefinitions.Add(listDef);
+                Grid.SetColumn(LogPanel, 0);
+                Grid.SetColumn(ProfilesPane, 2);
+            }
+            else
+            {
+                SplitRoot.ColumnDefinitions.Add(listDef);
+                SplitRoot.ColumnDefinitions.Add(gapDef);
+                SplitRoot.ColumnDefinitions.Add(logDef);
+                Grid.SetColumn(ProfilesPane, 0);
+                Grid.SetColumn(LogPanel, 2);
+            }
+            Grid.SetColumn(LogSplitter, 1);
+            Grid.SetColumn(SplitGrip, 1);
+            Grid.SetRow(ProfilesPane, 0);
+            Grid.SetRow(LogSplitter, 0);
+            Grid.SetRow(SplitGrip, 0);
+            Grid.SetRow(LogPanel, 0);
+            ProfilesPane.Margin = new Thickness(0, 14, 0, 14);
+            LogPanel.Margin = new Thickness(0, 14, 0, 14);
+            LogSplitter.ResizeDirection = GridResizeDirection.Columns;
+            LogSplitter.Cursor = Cursors.SizeWE;
+            LogSplitter.Width = 9;
+            LogSplitter.Height = double.NaN;
+            SplitGrip.Width = 3;
+            SplitGrip.Height = double.NaN;
+            SplitGrip.Margin = new Thickness(0, 60, 0, 60);
+            SplitGrip.HorizontalAlignment = HorizontalAlignment.Center;
+            SplitGrip.VerticalAlignment = VerticalAlignment.Stretch;
+        }
+    }
+
+    /// <summary>Перестыковка с анимацией: панель гаснет, раскладка меняется, панель проявляется слайдом от края.</summary>
+    private void AnimateLogDockTo(string side)
+    {
+        side = NormalizeLogDock(side);
+        if (side == _logDock) return;
+        App.Settings.Current.ProfilesLogDock = side;
+        App.Settings.SaveSoon();
+        Motion.Run(LogPanel, OpacityProperty, LogPanel.Opacity, 0, Motion.Scaled(140), EasingMode.EaseOut, () =>
+        {
+            LayoutLogDock(side);
+            var (dx, dy) = side switch
+            {
+                "Top" => (0.0, -24.0),
+                "Left" => (-24.0, 0.0),
+                "Right" => (24.0, 0.0),
+                _ => (0.0, 24.0)
+            };
+            LogSlide.X = dx;
+            LogSlide.Y = dy;
+            Motion.To(LogPanel, OpacityProperty, 1, Motion.Scaled(240));
+            Motion.Run(LogSlide, TranslateTransform.XProperty, dx, 0, Motion.Scaled(240), EasingMode.EaseOut);
+            Motion.Run(LogSlide, TranslateTransform.YProperty, dy, 0, Motion.Scaled(240), EasingMode.EaseOut);
+        });
+    }
+
+    private void OnLogHeaderMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // кнопки хедера (копировать/очистить) работают как обычно — тянем только за пустое место
+        if (e.ChangedButton != MouseButton.Left) return;
+        if (FindAncestor<ButtonBase>(e.OriginalSource as DependencyObject) is not null) return;
+        _logDragArmed = true;
+        _logDragStart = e.GetPosition(SplitRoot);
+        LogHeader.CaptureMouse();
+    }
+
+    private void OnLogHeaderMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_logDragArmed) return;
+        var pos = e.GetPosition(SplitRoot);
+        if (!_logDragging)
+        {
+            if (Math.Abs(pos.X - _logDragStart.X) + Math.Abs(pos.Y - _logDragStart.Y) < 6) return;
+            _logDragging = true;
+            _dockHover = null;
+            Mouse.OverrideCursor = Cursors.SizeAll;
+            DockLayer.Visibility = Visibility.Visible;
+        }
+        UpdateDockHover(pos);
+    }
+
+    private void OnLogHeaderMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_logDragArmed) return;
+        var commit = _logDragging ? _dockHover : null;
+        EndLogDrag();
+        if (commit is not null) AnimateLogDockTo(commit);
+    }
+
+    private void OnLogHeaderLostCapture(object sender, MouseEventArgs e)
+    {
+        if (_logDragArmed) EndLogDrag();
+    }
+
+    private void EndLogDrag()
+    {
+        _logDragArmed = false;
+        _logDragging = false;
+        _dockHover = null;
+        Mouse.OverrideCursor = null;
+        if (LogHeader.IsMouseCaptured) LogHeader.ReleaseMouseCapture();
+        DockLayer.Visibility = Visibility.Collapsed;
+        DockHighlight.Opacity = 0;
+    }
+
+    /// <summary>Ближайший к курсору край SplitRoot — туда приклеится панель. Вне области — null (отмена).</summary>
+    private void UpdateDockHover(Point pos)
+    {
+        var w = SplitRoot.ActualWidth;
+        var h = SplitRoot.ActualHeight;
+        string? side = null;
+        if (pos.X > -30 && pos.Y > -30 && pos.X < w + 30 && pos.Y < h + 30)
+        {
+            var dl = pos.X;
+            var dr = w - pos.X;
+            var dt = pos.Y;
+            var db = h - pos.Y;
+            var min = Math.Min(Math.Min(dl, dr), Math.Min(dt, db));
+            side = min == dt ? "Top" : min == db ? "Bottom" : min == dl ? "Left" : "Right";
+        }
+        if (side == _dockHover) return;
+        var first = _dockHover is null;
+        _dockHover = side;
+        if (side is null)
+        {
+            DockHighlight.Opacity = 0;
+            return;
+        }
+        // размер подсветки — запомненный размер панели в этой ориентации
+        var horizontal = side is "Top" or "Bottom";
+        var size = horizontal
+            ? Math.Clamp(App.Settings.Current.ProfilesLogHeight, 100, Math.Max(100, h - 140))
+            : Math.Clamp(App.Settings.Current.ProfilesLogWidth, 220, Math.Max(220, w - 320));
+        double x = 0, y = 0, hlW = w, hlH = size;
+        switch (side)
+        {
+            case "Bottom": y = h - size; break;
+            case "Left": hlW = size; hlH = h; break;
+            case "Right": x = w - size; hlW = size; hlH = h; break;
+        }
+        Canvas.SetLeft(DockHighlight, x);
+        Canvas.SetTop(DockHighlight, y);
+        DockHighlight.Width = hlW;
+        DockHighlight.Height = hlH;
+        if (first) Motion.To(DockHighlight, OpacityProperty, 0.9, Motion.Scaled(150));
+        else DockHighlight.Opacity = 0.9;
     }
 
     private void OnLogScrollChanged(object sender, ScrollChangedEventArgs e)

@@ -130,13 +130,11 @@ public sealed class MainViewModel : ObservableObject
         Tray.ExitRequested += () => ExitRequested?.Invoke();
 
         ToggleProxyCommand = new AsyncRelayCommand(ToggleProxyAsync, () => !Busy);
-        TestPingCommand = new AsyncRelayCommand(TestActivePingAsync, () => ActiveProfile is not null && !Busy);
         ToggleDpiCommand = new AsyncRelayCommand(ToggleDpiAsync, () => !Busy);
         InstallCoreCommand = new AsyncRelayCommand(InstallCoreAsync, () => !Busy);
         RestartElevatedCommand = new RelayCommand(_ => RestartElevated());
         TelegramProxyCommand = new RelayCommand(_ => OpenTelegramProxy(), _ => ActiveProfile?.IsTelegramOnly == true);
         ShowLogCommand = new RelayCommand(_ => _dialogs.ShowCoreLog(Core.RecentLogText()));
-        OpenDnsCommand = new RelayCommand(_ => ActiveTab = "dns");
         CopyDiagnosticsCommand = new RelayCommand(_ => CopyDiagnostics());
 
         _statsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -168,7 +166,6 @@ public sealed class MainViewModel : ObservableObject
     public UpdatesViewModel Updates { get; }
 
     public AsyncRelayCommand ToggleProxyCommand { get; }
-    public AsyncRelayCommand TestPingCommand { get; }
     public AsyncRelayCommand InstallCoreCommand { get; }
 
     /// <summary>Включить / выключить обход DPI.</summary>
@@ -179,11 +176,11 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ShowLogCommand { get; }
     public RelayCommand CopyDiagnosticsCommand { get; }
 
-    /// <summary>Открыть раздел «DNS» (ссылка на вкладке «Маршрутизация», где DNS был раньше).</summary>
-    public RelayCommand OpenDnsCommand { get; }
-
     public event Action? ShowWindowRequested;
     public event Action? ExitRequested;
+
+    /// <summary>Прогресс холодного старта для сплэша: доля 0..1 + ключ строки статуса.</summary>
+    public event Action<double, string>? StartupProgress;
 
     /// <summary>Перезапуск приложения (нужен после смены места хранения данных).</summary>
     public event Action? RestartRequested;
@@ -370,7 +367,6 @@ public sealed class MainViewModel : ObservableObject
             if (!SetProperty(ref _busy, value)) return;
             ToggleProxyCommand.RaiseCanExecuteChanged();
             InstallCoreCommand.RaiseCanExecuteChanged();
-            TestPingCommand.RaiseCanExecuteChanged();
             ToggleDpiCommand.RaiseCanExecuteChanged();
         }
     }
@@ -453,7 +449,8 @@ public sealed class MainViewModel : ObservableObject
         // DNS раньше жил в профиле маршрутизации: при первом запуске выбор переносится оттуда
         Dns.Load(Routing.ActiveProfile);
         Profiles.Load();
-        SystemProxy.CleanupStale(Routing.Profiles.Select(p => p.ListenPort));
+        SystemProxy.CleanupStale(Routing.Profiles.Select(p => p.ListenPort)
+            .Append(App.Settings.Current.Dpi.ListenPort));
         Preferences.RefreshCoreInfo();
         _activeProfile = ActiveProfileFromSettings();
         Profiles.SetActive(_activeProfile?.Id);
@@ -461,8 +458,10 @@ public sealed class MainViewModel : ObservableObject
         ActivePing = _activeProfile?.LastPingMs ?? -1;
         Raise(nameof(ActiveProfileName));
         Raise(nameof(ActiveProfileSubtitle));
+        StartupProgress?.Invoke(0.25, "S1005");
 
         // ядра вшиты в приложение — при первом запуске просто распаковываем выбранный вариант
+        StartupProgress?.Invoke(0.55, "S1006");
         try
         {
             if (BundledCores.HasOfficial || BundledCores.HasExtended)
@@ -492,11 +491,14 @@ public sealed class MainViewModel : ObservableObject
         if (App.Settings.Current.RememberState && App.Settings.Current.ProxyWasActive && _activeProfile is not null)
         {
             ShowStatus(L.T("S0694"), false);
+            StartupProgress?.Invoke(0.7, "S0694");
             await StartProxyAsync(autoRestore: true);
         }
 
         if (App.Settings.Current.RememberState && App.Settings.Current.Dpi.Enabled)
-            _ = StartDpiAsync(ownSystemProxy: !IsProxyOn);
+            // обход всегда забирает прокси себе: когда поднято и ядро — это цепочка
+            // «браузер → DPI → ядро», а не «кто включён последним» (см. StartProxyAsync)
+            _ = StartDpiAsync();
 
         _ = Updates.LoadReleasesAsync();
     }
@@ -658,7 +660,7 @@ public sealed class MainViewModel : ObservableObject
 
             Routing.Persist();
 
-            var clashPort = FindFreePort();
+            var clashPort = GetClashPort();
             // DNS выбирается в разделе «DNS»: сборщик получает копию профиля входа с ним,
             // а также домены и приложения со своим DNS
             var build = SingBoxConfigBuilder.Build(_activeProfile, Dns.ApplyTo(route), Routing.ActiveSet,
@@ -683,7 +685,8 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
-            // системный прокси забирает себе ядро (если обход DPI уже владеет им — он его и оставит).
+            // Системный прокси забирает себе ядро; если включён обход DPI — ниже вернём
+            // владение ему (цепочка «браузер → DPI → ядро», см. DpiExitMode.Proxy).
             // При включённом TUN системный прокси не ставим: туннель и так захватывает весь трафик,
             // а прокси на 127.0.0.1 ломает UWP/WebView2-приложения (Яндекс Музыка и т.п.) —
             // для них loopback заблокирован изоляцией AppContainer, приложение видит «нет сети».
@@ -707,7 +710,15 @@ public sealed class MainViewModel : ObservableObject
             Core.TunActive = route.TunEnabled;
             Core.LocalListenAddress = route.ListenAddress;
             Core.LocalListenPort = route.ListenPort;
-            if (route.UseSystemProxy) await ApplySystemProxyAsync();
+            if (DpiEnabled)
+            {
+                // цепочка «браузер → DPI (свой список) → ядро (остальное)»: DPI владеет системным
+                // прокси и узнаёт про поднявшееся ядро. Иначе ядро перехватило бы прокси, и DPI-домены
+                // ушли бы в DIRECT без обхода — а порядок включения влиял бы на результат.
+                _dpi.SetUpstream(BuildDpiUpstream());
+                _dpiOwnsSystemProxy = App.Settings.Current.Dpi.UseSystemProxy;
+            }
+            if (route.UseSystemProxy || DpiEnabled) await ApplySystemProxyAsync();
 
             App.Settings.Current.ProxyWasActive = true;
             App.Settings.Current.ActiveProfileId = _activeProfile.Id;
@@ -913,28 +924,18 @@ public sealed class MainViewModel : ObservableObject
             Core.ConnectedProfileId = null;
             Core.TunActive = false;   // дальнейшие замеры задержки — снова прямой TCP/ICMP
 
+            // ядра больше нет — остальное обход отдаёт напрямую, а не в мёртвый порт
+            if (DpiEnabled) _dpi.SetUpstream(BuildDpiUpstream());
+
             // сначала возвращаем прежний системный прокси: интернет работает, даже если ядро не ответит.
             // Если обход DPI включён, системный прокси тут же переходит к нему.
             _dpiOwnsSystemProxy = App.Settings.Current.Dpi.UseSystemProxy && DpiEnabled;
             await ApplySystemProxyAsync();
 
-            try
-            {
-                await Core.StopAsync();
-            }
-            catch (Exception ex)
-            {
-                AppendLog(L.T("S0327") + ex.Message);
-            }
-
-            // страховка: если системный прокси всё же указывает на порт нашего ядра (снимок не сохранился,
-            // запись не откатилась, в TUN-режиме остался залипший прокси), отключаем его — ядро уже
-            // остановлено, такой прокси не работает. Проверяется только порт этого профиля.
-            if (coreWasRunning && !DpiEnabled)
-            {
-                var port = routeOnStop.ListenPort;
-                await Task.Run(() => SystemProxy.CleanupStale(new[] { port }));
-            }
+            // Ядро останавливается в фоне: системный прокси уже возвращён (интернет работает),
+            // а мягкое завершение процесса (~2 с на снятие TUN/маршрутов) UI не держит.
+            // Порядок относительно следующего запуска хранит _stopGate: старт дождётся конца остановки.
+            _ = StopCoreInBackgroundAsync(coreWasRunning && !DpiEnabled ? routeOnStop.ListenPort : null);
 
             _proxyStartedAt = null;
             TrafficUploadText = "—";
@@ -960,6 +961,37 @@ public sealed class MainViewModel : ObservableObject
         finally
         {
             Busy = false;
+        }
+    }
+
+    /// <summary>
+    /// Фоновая остановка ядра после отключения UI. Исключения гасятся внутри: метод вызывается
+    /// без await, и необработанное исключение ушло бы в UnobservedTaskException.
+    /// </summary>
+    private async Task StopCoreInBackgroundAsync(int? staleProxyPort)
+    {
+        try
+        {
+            await Core.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            AppendLog(L.T("S0327") + ex.Message);
+        }
+
+        // страховка: если системный прокси всё же указывает на порт нашего ядра (снимок не сохранился,
+        // запись не откатилась, в TUN-режиме остался залипший прокси), отключаем его — ядро к этому
+        // моменту уже остановлено, такой прокси не работает. Проверяется только порт этого профиля.
+        if (staleProxyPort is { } port)
+        {
+            try
+            {
+                await Task.Run(() => SystemProxy.CleanupStale(new[] { port }));
+            }
+            catch (Exception ex)
+            {
+                AppendLog(L.T("S0327") + ex.Message);
+            }
         }
     }
 
@@ -1030,6 +1062,32 @@ public sealed class MainViewModel : ObservableObject
         return port;
     }
 
+    /// <summary>
+    /// Порт Clash API ядра: фиксированный, чтобы повторные подключения получали тот же конфиг
+    /// и пропускали проверку sing-box check (см. кэш в ValidateAsync). Если порт занят —
+    /// случайный свободный, как раньше.
+    /// </summary>
+    private static int GetClashPort()
+    {
+        const int preferred = 16787;
+        return IsPortFree(preferred) ? preferred : FindFreePort();
+    }
+
+    private static bool IsPortFree(int port)
+    {
+        try
+        {
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     // ------------------------------------------------------------------ метрики
     private async Task UpdateStatsAsync()
     {
@@ -1051,6 +1109,8 @@ public sealed class MainViewModel : ObservableObject
             _connectionCount = await _api.GetActiveConnectionsAsync(Core.ClashApiPort);
             Raise(nameof(ConnectionCountText));
             Raise(nameof(UptimeText));
+            // пинг активного профиля обновляется тем же таймером: тихий замер без записи на диск
+            _ = RefreshActivePingQuietAsync();
         }
 
         if (DpiEnabled) RaiseDpiStats();
@@ -1162,19 +1222,17 @@ public sealed class MainViewModel : ObservableObject
         return Profiles.PingAsync(profile is null ? null : Profiles.Find(profile.Id));
     }
 
-    private async Task TestActivePingAsync()
+    /// <summary>Тихий замер пинга по таймеру статистики. Ошибки гасятся: диагностика не должна шуметь.</summary>
+    private async Task RefreshActivePingQuietAsync()
     {
-        if (_activeProfile is null) return;
-        Busy = true;
         try
         {
-            ShowStatus(L.T("S0754"), false);
-            await RefreshActivePingAsync();
-            ShowStatus(ActivePing < 0 ? L.T("S0755") : L.T("S0756") + ActivePingText, ActivePing < 0);
+            var profile = _activeProfile;
+            await Profiles.PingAsync(profile is null ? null : Profiles.Find(profile.Id), quiet: true);
         }
-        finally
+        catch
         {
-            Busy = false;
+            /* тихий замер не должен ломать таймер статистики */
         }
     }
 
@@ -1240,11 +1298,12 @@ public sealed class MainViewModel : ObservableObject
         else await StartDpiAsync();
     }
 
-    /// <param name="ownSystemProxy">
-    /// Забирать ли системный прокси Windows себе. При восстановлении состояния на старте
-    /// уступаем его прокси-ядру, иначе обход перебил бы настройку профиля.
-    /// </param>
-    private async Task StartDpiAsync(bool ownSystemProxy = true)
+    /// <summary>
+    /// Обход всегда забирает системный прокси себе: когда поднято и ядро, получается
+    /// цепочка «браузер → DPI (свой список) → ядро (остальное)», и порядок включения
+    /// ни на что не влияет. Ядро при старте тоже возвращает владение обходу.
+    /// </summary>
+    private async Task StartDpiAsync()
     {
         if (Busy) return;
         Busy = true;
@@ -1260,7 +1319,7 @@ public sealed class MainViewModel : ObservableObject
             // проверяют его кнопки «Тест» и «Подобрать» в окне сервиса, когда это нужно пользователю.
             DpiState = DpiBypassState.On;
             _dpiStartedAt = DateTime.Now;
-            _dpiOwnsSystemProxy = ownSystemProxy;
+            _dpiOwnsSystemProxy = App.Settings.Current.Dpi.UseSystemProxy;
             App.Settings.Current.Dpi.Enabled = true;
             App.Settings.SaveSoon();
 

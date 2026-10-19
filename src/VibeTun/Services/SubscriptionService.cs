@@ -20,7 +20,6 @@ public sealed record SubscriptionFetchResult(string Name, List<ProxyProfile> Pro
 public sealed class SubscriptionService
 {
     private const int MaxResponseBytes = 8 * 1024 * 1024;
-    private static readonly HttpClient Client = CreateClient();
 
     public async Task<SubscriptionFetchResult> FetchAsync(string address, CancellationToken cancellationToken = default)
     {
@@ -30,35 +29,65 @@ public sealed class SubscriptionService
             string.IsNullOrWhiteSpace(uri.Host))
             throw new ArgumentException("Enter a valid HTTP or HTTPS subscription URL.", nameof(address));
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.UserAgent.ParseAdd("VibeTun/1.2.0");
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json", 0.9));
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.5));
+        Exception? lastError = null;
 
-        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Subscription server returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).");
-
-        var content = await ReadContentAsync(response.Content, cancellationToken);
-        var parsed = ParseContent(content);
-        if (parsed.Profiles.Count == 0)
+        // Пробуем через системный прокси, затем напрямую (как AppUpdateService.FetchWindowsReleasesAsync).
+        // Через прокси — когда наш прокси включён, заодно обходятся блокировки панели подписки;
+        // напрямую — когда системный прокси залип на нашем же остановленном входе (127.0.0.0:порт
+        // после падения) или панель доступна только без прокси.
+        foreach (var useProxy in new[] { true, false })
         {
-            var detail = parsed.Errors.FirstOrDefault();
-            throw new InvalidDataException(string.IsNullOrWhiteSpace(detail)
-                ? "The response did not contain supported proxy profiles."
-                : $"The response did not contain supported proxy profiles: {detail}");
+            try
+            {
+                using var client = CreateClient(useProxy);
+                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                request.Headers.UserAgent.ParseAdd("VibeTun/1.2.0");
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json", 0.9));
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.5));
+
+                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                    throw new HttpRequestException($"Subscription server returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).");
+
+                var content = await ReadContentAsync(response.Content, cancellationToken);
+                var parsed = ParseContent(content);
+                if (parsed.Profiles.Count == 0)
+                {
+                    var detail = parsed.Errors.FirstOrDefault();
+                    throw new InvalidDataException(string.IsNullOrWhiteSpace(detail)
+                        ? "The response did not contain supported proxy profiles."
+                        : $"The response did not contain supported proxy profiles: {detail}");
+                }
+
+                return new SubscriptionFetchResult(ReadTitle(response, uri), parsed.Profiles, parsed.Errors);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (InvalidDataException)
+            {
+                // ответ получен и разобран: повтор напрямую вернёт то же самое — не гоняем второй раз
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+            }
         }
 
-        return new SubscriptionFetchResult(ReadTitle(response, uri), parsed.Profiles, parsed.Errors);
+        throw lastError ?? new HttpRequestException("Subscription request failed.");
     }
 
-    private static HttpClient CreateClient()
+    private static HttpClient CreateClient(bool useSystemProxy)
     {
         var handler = new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
+            UseProxy = useSystemProxy
         };
+        if (!useSystemProxy) handler.Proxy = null;
         return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(25) };
     }
 

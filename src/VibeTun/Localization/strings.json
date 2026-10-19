@@ -5098,5 +5098,33 @@
   "S1000": {
     "ru": "Обход включён",
     "en": "Bypass on"
+  },
+  "S1001": {
+    "ru": "По умолчанию (без правил)",
+    "en": "Default (no rule matched)"
+  },
+  "S1002": {
+    "ru": "Куда уходит трафик, не подошедший ни под одно правило: через прокси или напрямую.",
+    "en": "Where traffic matching no rule goes: via proxy or directly."
+  },
+  "S1003": {
+    "ru": "Подсеть TUN {0} занята другим адаптером, используется {1}.",
+    "en": "TUN subnet {0} is taken by another adapter, using {1} instead."
+  },
+  "S1004": {
+    "ru": "IPv6 недоступен: TUN работает только через IPv4.",
+    "en": "IPv6 is unavailable: TUN runs on IPv4 only."
+  },
+  "S1005": {
+    "ru": "Загрузка данных…",
+    "en": "Loading data…"
+  },
+  "S1006": {
+    "ru": "Подготовка ядра…",
+    "en": "Preparing core…"
+  },
+  "S1007": {
+    "ru": "Перетащите, чтобы прикрепить панель к другому краю",
+    "en": "Drag to dock the panel to another edge"
   }
 }

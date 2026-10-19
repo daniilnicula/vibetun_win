@@ -1,10 +1,12 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using VibeTun.ViewModels;
+using VibeTun.Views.Controls;
 
 namespace VibeTun.Views;
 
@@ -19,6 +21,8 @@ public partial class DpiView : UserControl
     private DpiServiceVm? _pressed;     // строка, по шапке которой нажали ЛКМ
     private Point _pressPoint;
     private bool _dragging;
+    private AdornerLayer? _dragLayer;
+    private ReorderDrag.Preview? _dragPreview;
 
     public DpiView()
     {
@@ -57,16 +61,20 @@ public partial class DpiView : UserControl
             _dragging = true;
             dragged.IsDragging = true;
             EntryList.CaptureMouse();
+            ShowPreview(dragged, e);
         }
 
         AutoScroll(e);
+        _dragPreview?.MoveTo(pos);
 
         var from = vm.Services.IndexOf(dragged);
         var to = TargetIndex(pos.Y, from);
         if (from < 0 || to < 0 || to == from) return;
 
+        var before = ReorderDrag.Capture(EntryList, DragRows());
         vm.MoveEntry(from, to);
         EntryList.UpdateLayout();   // следующее движение мыши должно видеть строки уже на новых местах
+        ReorderDrag.AnimateReflow(EntryList, before, DragRows());
     }
 
     private void OnEntryPreviewMouseUp(object sender, MouseButtonEventArgs e)
@@ -95,7 +103,30 @@ public partial class DpiView : UserControl
         _dragging = false;
         if (item is not null) item.IsDragging = false;
         if (EntryList.IsMouseCaptured) EntryList.ReleaseMouseCapture();
+        if (_dragPreview is not null && _dragLayer is not null) _dragLayer.Remove(_dragPreview);
+        _dragPreview = null;
+        _dragLayer = null;
         if (wasDragging) Vm?.CommitOrder();
+    }
+
+    /// <summary>Превью перетаскиваемой строки за курсором (как у профилей).</summary>
+    private void ShowPreview(DpiServiceVm dragged, MouseEventArgs e)
+    {
+        if (EntryList.ItemContainerGenerator.ContainerFromItem(dragged) is not FrameworkElement row) return;
+        if (AdornerLayer.GetAdornerLayer(EntryList) is not { } layer) return;
+        _dragLayer = layer;
+        _dragPreview = new ReorderDrag.Preview(EntryList, row, e.GetPosition(row));
+        layer.Add(_dragPreview);
+        _dragPreview.MoveTo(e.GetPosition(EntryList));
+    }
+
+    private IEnumerable<FrameworkElement> DragRows()
+    {
+        var vm = Vm;
+        if (vm is null) yield break;
+        foreach (var service in vm.Services)
+            if (EntryList.ItemContainerGenerator.ContainerFromItem(service) is FrameworkElement row)
+                yield return row;
     }
 
     /// <summary>
@@ -120,7 +151,11 @@ public partial class DpiView : UserControl
         if (EntryList.ItemContainerGenerator.ContainerFromIndex(index) is not FrameworkElement container ||
             container.ActualHeight <= 0)
             return null;
-        return container.TranslatePoint(new Point(0, container.ActualHeight / 2), EntryList).Y;
+        var center = container.TranslatePoint(new Point(0, container.ActualHeight / 2), EntryList).Y;
+        // слот в layout, а не анимированная позиция: иначе середина пролетает мимо
+        // неподвижного курсора и просит обратный ход (та же правка, что у профилей)
+        if (container.RenderTransform is TranslateTransform move) center -= move.Y;
+        return center;
     }
 
     /// <summary>У края области прокрутки список сам едет вслед за перетаскиваемой строкой.</summary>

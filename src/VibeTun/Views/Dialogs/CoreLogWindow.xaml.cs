@@ -3,7 +3,7 @@ using System.Windows.Input;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class CoreLogWindow : Window
+public partial class CoreLogWindow : DialogWindow
 {
     public CoreLogWindow(string title, string text)
     {

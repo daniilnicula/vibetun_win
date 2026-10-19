@@ -19,6 +19,10 @@ public sealed partial class CoreService : IDisposable
     private NekoCoreRpcClient? _rpc;
     private int _clashPort;
     private readonly SemaphoreSlim _stopGate = new(1, 1);   // остановки выполняются по одной
+    // кэш проверки конфига: повторный запуск того же конфига на том же ядре check не гоняет
+    private string? _checkedConfigNorm;
+    private string? _checkedCorePath;
+    private string? _checkedCoreVersion;
 
     public event Action<string>? LogReceived;
     public event Action<ConnectionState>? StateChanged;
@@ -496,8 +500,23 @@ public sealed partial class CoreService : IDisposable
     }
 
     // ------------------------------------------------------------------ config
-    public async Task<(bool Ok, string Message)> ValidateAsync(string configJson) =>
-        await RunCheckAsync(configJson, "config.check.json");
+    public async Task<(bool Ok, string Message)> ValidateAsync(string configJson)
+    {
+        // Имя TUN-адаптера случайно на каждую сборку конфига — маскируем его, остальное сравниваем
+        // как есть (порт Clash API обычно стабилен, см. GetClashPort). Тот же конфиг на том же ядре
+        // проверять заново не нужно: результат sing-box check детерминирован.
+        var norm = TunAdapterNameRegex().Replace(configJson, "\"interface_name\": \"VibeTun-#\"");
+        if (norm == _checkedConfigNorm && Info.Path == _checkedCorePath && Info.Version == _checkedCoreVersion)
+            return (true, "OK");
+        var result = await RunCheckAsync(configJson, "config.check.json");
+        if (result.Ok)
+        {
+            _checkedConfigNorm = norm;
+            _checkedCorePath = Info.Path;
+            _checkedCoreVersion = Info.Version;
+        }
+        return result;
+    }
 
     /// <summary>
     /// Запуск <c>sing-box check</c> на отдельном временном файле. Ничего не стартует и прав не требует:
@@ -717,8 +736,9 @@ public sealed partial class CoreService : IDisposable
             var tunReady = !wantTun || TunAdapterExists(tunName) || TunStartLogged();
             if (apiUp && tunReady)
             {
-                // короткая выдержка: ошибки настройки адаптера (IP, стек) сыпятся сразу после создания
-                await Task.Delay(1500);
+                // короткая выдержка: ошибки настройки адаптера (IP, стек) сыпятся сразу после создания.
+                // Без TUN адаптера нет — ждать нечего, оставляем паузу на случай мгновенного FATAL.
+                await Task.Delay(wantTun ? 1500 : 400);
                 return (!process.HasExited, apiUp);
             }
             await Task.Delay(250);
@@ -868,8 +888,8 @@ public sealed partial class CoreService : IDisposable
     }
 
     /// <summary>
-    /// Остановка ядра. Сначала мягкая команда по gRPC (не дольше 3 с), затем завершение процесса
-    /// (не дольше 5 с). Все ожидания ограничены по времени: остановка не может зависнуть навсегда.
+    /// Остановка ядра. Сначала мягкая команда по gRPC (не дольше 3 с), затем Ctrl+C (не дольше 2 с)
+    /// и Kill. Все ожидания ограничены по времени: остановка не может зависнуть навсегда.
     /// Параллельные вызовы выстраиваются в очередь: второй дождётся завершения первого.
     /// </summary>
     public async Task StopAsync()
@@ -914,7 +934,7 @@ public sealed partial class CoreService : IDisposable
 
         if (process is not null)
         {
-            await KillProcessAsync(process, TimeSpan.FromSeconds(5));
+            await KillProcessAsync(process, TimeSpan.FromSeconds(2));
             lock (_sync)
             {
                 if (ReferenceEquals(_process, process)) _process = null;
@@ -977,8 +997,10 @@ public sealed partial class CoreService : IDisposable
             process.Exited += onExited;   // EnableRaisingEvents включён при создании процесса
             if (!process.HasExited)
             {
-                // Сначала мягкая остановка (Ctrl+C), по таймауту — Kill как раньше.
-                if (!await TryGracefulShutdownAsync(process, TimeSpan.FromSeconds(4)))
+                // Сначала мягкая остановка (Ctrl+C), по таймауту — Kill. 2 с хватает типичному
+                // завершению (включая удаление wintun-адаптера драйвером); зависший процесс
+                // убиваем — остаточный адаптер снимет PrepareForTun, имя берётся новое.
+                if (!await TryGracefulShutdownAsync(process, TimeSpan.FromSeconds(2)))
                 {
                     try
                     {

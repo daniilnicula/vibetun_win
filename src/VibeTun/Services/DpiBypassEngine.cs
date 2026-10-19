@@ -187,12 +187,21 @@ public sealed class DpiBypassEngine
     /// <summary>Движок отдаёт трафик в туннель sing-box: десинхронизация при этом не применяется.</summary>
     public bool UsesUpstream => _upstream is not null;
 
+    /// <summary>
+    /// Сменить апстрим на лету: ядро поднялось или упало позже обхода.
+    /// Присваивание ссылки атомарно — соединения, открытые раньше, доработают на старом.
+    /// </summary>
+    public void SetUpstream(DpiUpstream? upstream)
+    {
+        _upstream = upstream is { Port: > 0 } ? upstream : null;
+    }
+
     public async Task StartAsync(DpiBypassSettings options, DpiUpstream? upstream, CancellationToken ct = default)
     {
         if (IsRunning) return;
 
         _options = options.Clone();
-        _upstream = upstream is { Port: > 0 } ? upstream : null;
+        SetUpstream(upstream);
         _injectionWarned = false;
         _seqWarned = false;
 

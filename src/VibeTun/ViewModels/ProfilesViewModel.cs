@@ -895,7 +895,8 @@ public sealed class ProfilesViewModel : ObservableObject
     // -------------------------------------------------------------------- пинг
     // Все вызовы начинаются на UI-потоке: обновление списка, сохранение и событие
     // выполняются вместе. Повторный запрос того же профиля ждёт уже идущий замер.
-    public async Task PingAsync(ProfileItemVm? item)
+    /// <summary>Замер пинга. Тихий режим (автообновление по таймеру): без спиннера в списке и без записи на диск.</summary>
+    public async Task PingAsync(ProfileItemVm? item, bool quiet = false)
     {
         if (item is null) return;
         if (_pendingPings.TryGetValue(item.Id, out var pending))
@@ -904,7 +905,7 @@ public sealed class ProfilesViewModel : ObservableObject
             return;
         }
 
-        var task = MeasureAndPublishPingAsync(item);
+        var task = MeasureAndPublishPingAsync(item, quiet);
         _pendingPings[item.Id] = task;
         try
         {
@@ -916,9 +917,9 @@ public sealed class ProfilesViewModel : ObservableObject
         }
     }
 
-    private async Task MeasureAndPublishPingAsync(ProfileItemVm item)
+    private async Task MeasureAndPublishPingAsync(ProfileItemVm item, bool quiet)
     {
-        item.IsPinging = true;
+        if (!quiet) item.IsPinging = true;
         try
         {
             await _pingGate.WaitAsync();
@@ -930,7 +931,7 @@ public sealed class ProfilesViewModel : ObservableObject
                 item.PingMs = ms;
                 item.Profile.LastPingMs = ms;
                 PingUpdated?.Invoke(item.Profile, ms);
-                _store.Save(item.Profile);
+                if (!quiet) _store.Save(item.Profile);
             }
             finally
             {
@@ -939,7 +940,7 @@ public sealed class ProfilesViewModel : ObservableObject
         }
         finally
         {
-            item.IsPinging = false;
+            if (!quiet) item.IsPinging = false;
         }
     }
 

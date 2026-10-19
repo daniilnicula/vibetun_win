@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -25,6 +26,12 @@ public partial class MainWindow : Window
     private NavSectionMenu<SshEntry>? _sshMenu;
     private TrayPanelWindow? _trayPanel;
     private SlideMarker? _navMarker;
+    // сплэш холодного старта: нормальная геометрия, к которой окно морфится после загрузки
+    private double _normalWidth;
+    private double _normalHeight;
+    private double _normalMinWidth;
+    private double _normalMinHeight;
+    private bool _splashMode;   // true от сплэша до конца морфинга: геометрию сохранять нельзя
 
     public MainWindow()
     {
@@ -78,9 +85,40 @@ public partial class MainWindow : Window
         if (_panelMenu is not null) _panelMenu.EntrySelectionChanged += SyncMenuSelection;
         if (_sshMenu is not null) _sshMenu.EntrySelectionChanged += SyncMenuSelection;
         NavList.SelectionChanged += (_, _) => _navMarker?.Sync(!_navDragging);
-        NavList.LayoutUpdated += (_, _) => _navMarker?.Sync(false);
+        NavList.LayoutUpdated += (_, _) => _navMarker?.Sync(_navDragging);
         Motion.AttachHoverPress(PanelHeader);
         Motion.AttachHoverPress(SshHeader);
+
+        // Холодный старт с видимым окном: сначала показываем компактный сплэш —
+        // он рисуется раньше, чем backend успевает прогрузиться (см. InitializeAsync).
+        // При автозапуске в трей (--minimized) всё как раньше: сплэша нет.
+        if (!App.StartMinimized)
+        {
+            _splashMode = true;
+            _normalWidth = Width;
+            _normalHeight = Height;
+            _normalMinWidth = MinWidth;
+            _normalMinHeight = MinHeight;
+            MinWidth = 0;
+            MinHeight = 0;
+            Width = 400;
+            Height = 300;
+            if (!IsMaximizedSaved() && TryGetSavedRect(out var saved))
+            {
+                // сплэш встаёт в центр будущего окна — морфинг будет симметричным ростом без перелёта
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Left = ClampToScreen(saved.X + (saved.Width - Width) / 2, Width,
+                    SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenWidth);
+                Top = ClampToScreen(saved.Y + (saved.Height - Height) / 2, Height,
+                    SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenHeight);
+            }
+            else
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+            MainContent.Opacity = 0;
+            Splash.Visibility = Visibility.Visible;
+        }
     }
 
     /// <summary>Место пункта навигации по его вкладке (с учётом порядка, заданного пользователем); −1 — нет такого.</summary>
@@ -140,6 +178,22 @@ public partial class MainWindow : Window
 
         UpdateLayout();
         var settings = App.Settings.Current;
+        if (!App.StartMinimized)
+        {
+            // сплэш: размеры из настроек применим после загрузки, в MorphFromSplashAsync
+            _vm.StartupProgress += OnStartupProgress;
+            try
+            {
+                await _vm.InitializeAsync();
+            }
+            finally
+            {
+                _vm.StartupProgress -= OnStartupProgress;
+                RestoreSelectedEntries();
+                await MorphFromSplashAsync();
+            }
+            return;
+        }
         if (settings.WindowWidth > 600) Width = settings.WindowWidth;
         if (settings.WindowHeight > 400) Height = settings.WindowHeight;
         if (settings.WindowLeft is { } left && settings.WindowTop is { } top &&
@@ -162,6 +216,85 @@ public partial class MainWindow : Window
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         });
+    }
+
+    /// <summary>Окно было развёрнуто (строка WindowState в настройках).</summary>
+    private static bool IsMaximizedSaved()
+        => string.Equals(App.Settings.Current.WindowState, "Maximized", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Сохранённые размеры+позиция окна, если они осмысленны (окно было на видимом экране).</summary>
+    private static bool TryGetSavedRect(out Rect rect)
+    {
+        var settings = App.Settings.Current;
+        rect = default;
+        if (settings.WindowWidth <= 600 || settings.WindowHeight <= 400) return false;
+        if (settings.WindowLeft is not { } left || settings.WindowTop is not { } top) return false;
+        if (left <= SystemParameters.VirtualScreenLeft - 50 || top <= SystemParameters.VirtualScreenTop - 50 ||
+            left >= SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - 100 ||
+            top >= SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - 100) return false;
+        rect = new Rect(left, top, settings.WindowWidth, settings.WindowHeight);
+        return true;
+    }
+
+    /// <summary>Вписать координату окна размером size в отрезок экрана [areaMin, areaMin + areaSize].</summary>
+    private static double ClampToScreen(double value, double size, double areaMin, double areaSize)
+        => areaSize <= size ? areaMin : Math.Clamp(value, areaMin, areaMin + areaSize - size);
+
+    /// <summary>Сплэш холодного старта: строка статуса + плавно догоняющая полоска.</summary>
+    private void OnStartupProgress(double fraction, string statusKey)
+    {
+        SplashStatus.Text = L.T(statusKey);
+        Motion.To(SplashProgress, ProgressBar.ValueProperty, fraction * 100, Motion.Scaled(300));
+    }
+
+    /// <summary>Морфинг сплэша в полное окно: сначала геометрия, потом кроссфейд в реальный UI.</summary>
+    private async Task MorphFromSplashAsync()
+    {
+        Motion.To(SplashProgress, ProgressBar.ValueProperty, 100, Motion.Scaled(260));
+        if (IsMaximizedSaved())
+        {
+            // развёрнутое окно не растёт, а просто появляется — плавно только кроссфейд
+            WindowState = WindowState.Maximized;
+        }
+        else
+        {
+            var settings = App.Settings.Current;
+            var w = settings.WindowWidth > 600 ? settings.WindowWidth : _normalWidth;
+            var h = settings.WindowHeight > 400 ? settings.WindowHeight : _normalHeight;
+            double endLeft, endTop;
+            if (TryGetSavedRect(out var saved))
+            {
+                // сплэш уже стоит в центре будущего окна (см. конструктор) — чистый рост без перелёта
+                endLeft = saved.X;
+                endTop = saved.Y;
+            }
+            else
+            {
+                // сохранённой геометрии нет — растём из центра вокруг текущей середины
+                endLeft = Left + (Width - w) / 2;
+                endTop = Top + (Height - h) / 2;
+            }
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            var grow = Motion.Scaled(600);
+            Motion.Run(this, LeftProperty, Left, endLeft, grow, EasingMode.EaseInOut);
+            Motion.Run(this, TopProperty, Top, endTop, grow, EasingMode.EaseInOut);
+            Motion.Run(this, WidthProperty, Width, w, grow, EasingMode.EaseInOut);
+            Motion.Run(this, HeightProperty, Height, h, grow, EasingMode.EaseInOut);
+            await Task.Delay(grow);
+            // страховка: итоговая геометрия выставляется явно, а не только держится анимацией
+            Left = endLeft;
+            Top = endTop;
+            Width = w;
+            Height = h;
+        }
+        MinWidth = _normalMinWidth;
+        MinHeight = _normalMinHeight;
+        var fade = Motion.Scaled(260);
+        Motion.Run(MainContent, OpacityProperty, 0, 1, fade);
+        Motion.Run(Splash, OpacityProperty, 1, 0, fade);
+        await Task.Delay(fade);
+        Splash.Visibility = Visibility.Collapsed;
+        _splashMode = false;
     }
 
     public void PrepareForSystemShutdown() => _vm?.PrepareForSystemShutdown();
@@ -212,6 +345,8 @@ public partial class MainWindow : Window
     private ListBoxItem? _navPressed;     // вкладка, по которой нажали ЛКМ
     private Point _navPressPoint;
     private bool _navDragging;
+    private AdornerLayer? _navDragLayer;
+    private ReorderDrag.Preview? _navDragPreview;
 
     /// <summary>
     /// Восстановить сохранённый порядок вкладок. Неизвестные ключи пропускаем, а вкладки, которых
@@ -296,7 +431,16 @@ public partial class MainWindow : Window
             _navDragging = true;
             dragged.Opacity = 0.7;
             NavList.CaptureMouse();
+            if (AdornerLayer.GetAdornerLayer(NavList) is { } layer)
+            {
+                _navDragLayer = layer;
+                _navDragPreview = new ReorderDrag.Preview(NavList, dragged, e.GetPosition(dragged));
+                layer.Add(_navDragPreview);
+                _navDragPreview.MoveTo(pos);
+            }
         }
+
+        _navDragPreview?.MoveTo(pos);
 
         var target = NavItemNearest(pos.Y);
         if (target is null || ReferenceEquals(target, dragged)) return;
@@ -307,9 +451,12 @@ public partial class MainWindow : Window
 
         // при удалении выбранной вкладки WPF сбрасывает выбор — вернём его тем же значением
         var active = NavList.SelectedValue;
+        var before = ReorderDrag.Capture(NavList, NavList.Items.OfType<ListBoxItem>());
         NavList.Items.RemoveAt(from);
         NavList.Items.Insert(to, dragged);
         NavList.SelectedValue = active;
+        NavList.UpdateLayout();
+        ReorderDrag.AnimateReflow(NavList, before, NavList.Items.OfType<ListBoxItem>());
     }
 
     private void OnNavPreviewMouseUp(object sender, MouseButtonEventArgs e) => EndNavDrag();
@@ -324,6 +471,9 @@ public partial class MainWindow : Window
         _navDragging = false;
         if (item is not null) item.Opacity = 1;
         if (NavList.IsMouseCaptured) NavList.ReleaseMouseCapture();
+        if (_navDragPreview is not null && _navDragLayer is not null) _navDragLayer.Remove(_navDragPreview);
+        _navDragPreview = null;
+        _navDragLayer = null;
 
         if (!dragged) return;
         App.Settings.Current.NavOrder = NavList.Items.OfType<ListBoxItem>()
@@ -340,7 +490,10 @@ public partial class MainWindow : Window
         var bestDistance = double.MaxValue;
         foreach (var item in NavList.Items.OfType<ListBoxItem>())
         {
+            // слот в layout, а не анимированная позиция: иначе середина пролетает мимо
+            // неподвижного курсора и просит обратный ход (та же правка, что у профилей)
             var centerY = item.TranslatePoint(new Point(0, item.ActualHeight / 2), NavList).Y;
+            if (item.RenderTransform is TranslateTransform move) centerY -= move.Y;
             var distance = Math.Abs(centerY - y);
             if (distance < bestDistance)
             {
@@ -590,21 +743,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>DWMWA_WINDOW_CORNER_PREFERENCE = ROUND (только Windows 11).</summary>
-    private void ApplyDwmRoundCorners()
-    {
-        try
-        {
-            const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-            const int DWMWCP_ROUND = 2;
-            var hwnd = new WindowInteropHelper(this).Handle;
-            var pref = DWMWCP_ROUND;
-            DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
-        }
-        catch { /* DWM недоступен — оставляем системное оформление */ }
-    }
-
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    private void ApplyDwmRoundCorners() => DwmCorners.ApplyRound(this);
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
@@ -838,6 +977,8 @@ public partial class MainWindow : Window
 
     private void SaveWindowGeometry()
     {
+        // пока висит сплэш или идёт морфинг размеры переходные (400x300, кадры роста) — их сохранять нельзя
+        if (_splashMode) return;
         var settings = App.Settings.Current;
         if (WindowState == WindowState.Normal)
         {

@@ -6,7 +6,7 @@ using VibeTun.Utils;
 namespace VibeTun.Views.Dialogs;
 
 /// <summary>Небольшое окно «Свой DNS» (кнопка «Добавить свой» и карандаш в строке): IP-адрес и название.</summary>
-public partial class DnsServerWindow : Window
+public partial class DnsServerWindow : DialogWindow
 {
     private bool _done;
 

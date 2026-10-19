@@ -32,7 +32,7 @@ public sealed class SystemProxyService
         }
     }
 
-    public void Enable(string host, int port, string bypass = "localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;192.168.*;<local>")
+    public void Enable(string host, int port, string bypass = "localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;192.168.*;<local>")
     {
         using var key = Registry.CurrentUser.OpenSubKey(RegPath, true) ?? Registry.CurrentUser.CreateSubKey(RegPath);
         if (key is null) return;

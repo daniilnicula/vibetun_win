@@ -10,12 +10,20 @@ public static class WgConfParser
         error = null;
         var iface = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var peer = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var comments = new List<string>();
         var section = "";
 
         foreach (var raw in text.Split('\n'))
         {
             var line = raw.Trim().TrimEnd('\r');
-            if (line.Length == 0 || line.StartsWith('#') || line.StartsWith(';')) continue;
+            if (line.StartsWith('#'))
+            {
+                // подпись конфига (# amnezia-mPC): собираем, имя выберем ниже
+                var comment = line[1..].Trim();
+                if (comment.Length > 0) comments.Add(comment);
+                continue;
+            }
+            if (line.Length == 0 || line.StartsWith(';')) continue;
             if (line.StartsWith('[') && line.EndsWith(']'))
             {
                 section = line[1..^1].Trim().ToLowerInvariant();
@@ -85,11 +93,12 @@ public static class WgConfParser
         };
 
         var isAmnezia = node.HasAwgParams;
-        var name = peer.TryGetValue("Endpoint", out var e2) ? e2 : host;
+        var remark = PickRemark(comments);
+        var endpoint = peer.TryGetValue("Endpoint", out var e2) ? e2 : host;
 
         return new ProxyProfile
         {
-            Name = $"{(isAmnezia ? "AmneziaWG" : "WG")} · {name}",
+            Name = remark ?? $"{(isAmnezia ? "AmneziaWG" : "WG")} · {endpoint}",
             Protocol = isAmnezia ? ProtocolIds.AmneziaWg : ProtocolIds.Wireguard,
             Uri = null,
             Node = node
@@ -103,6 +112,41 @@ public static class WgConfParser
                               v.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                               v.Equals("yes", StringComparison.OrdinalIgnoreCase) || v == "1");
     }
+
+    private static readonly HashSet<string> RemarkPrefixes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "name", "remark", "remarks", "title", "description", "server", "tunnel", "config"
+    };
+
+    /// <summary>
+    /// Подпись конфига из `#`-комментариев: сначала явный маркер (# name: ...),
+    /// иначе — единственный комментарий целиком. URL, длинные инструкции
+    /// и закомментированные настройки (с `=`) именем не считаем.
+    /// </summary>
+    private static string? PickRemark(List<string> comments)
+    {
+        foreach (var comment in comments)
+        {
+            var stripped = StripRemarkPrefix(comment);
+            if (stripped is not null && IsNameLike(stripped)) return stripped;
+        }
+        if (comments.Count == 1 && !comments[0].Contains('=') && IsNameLike(comments[0]))
+            return comments[0];
+        return null;
+    }
+
+    private static string? StripRemarkPrefix(string comment)
+    {
+        var idx = comment.IndexOfAny([':', '=']);
+        if (idx <= 0) return null;
+        if (!RemarkPrefixes.Contains(comment[..idx].Trim())) return null;
+        var value = comment[(idx + 1)..].Trim();
+        return value.Length > 0 ? value : null;
+    }
+
+    private static bool IsNameLike(string value) =>
+        value.Length is > 0 and <= 96 &&
+        !value.Contains("://", StringComparison.Ordinal);
 
     private static (string host, int port) SplitHostPort(string s)
     {

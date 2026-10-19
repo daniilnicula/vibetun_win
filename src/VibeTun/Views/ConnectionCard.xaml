@@ -42,8 +42,6 @@
 
                 <Button Content="{Binding ProxyToggleText}" Command="{Binding ToggleProxyCommand}"
                         Style="{StaticResource BtnPrimary}" Height="38" Margin="0,12,0,0" />
-                <Button Content="{loc:Tr S0000}" Command="{Binding TestPingCommand}"
-                        Style="{StaticResource BtnGhost}" Height="30" Margin="0,8,0,0" FontSize="12" />
                 <Button Content="{loc:Tr S0001}" Command="{Binding TelegramProxyCommand}"
                         Style="{StaticResource BtnGhost}" Height="30" Margin="0,8,0,0" FontSize="12"
                         Visibility="{Binding IsTelegramProfile, Converter={StaticResource BoolToVis}}" />

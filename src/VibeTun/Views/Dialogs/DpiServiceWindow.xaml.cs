@@ -10,7 +10,7 @@ namespace VibeTun.Views.Dialogs;
 /// «Тест», «Подобрать», «Отмена», «Сохранить». Всё состояние живёт в
 /// <see cref="DpiServiceEditorViewModel"/>; здесь — только окно и прокрутка журнала.
 /// </summary>
-public partial class DpiServiceWindow : Window
+public partial class DpiServiceWindow : DialogWindow
 {
     private readonly DpiServiceEditorViewModel _vm;
     private bool _done;

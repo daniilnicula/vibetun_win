@@ -7,7 +7,7 @@ using VibeTun.Services;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class SubscriptionImportWindow : Window
+public partial class SubscriptionImportWindow : DialogWindow
 {
     private readonly IReadOnlyList<SubscriptionGroupOption> _groups;
 

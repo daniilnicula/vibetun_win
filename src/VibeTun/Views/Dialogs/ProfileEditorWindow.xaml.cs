@@ -6,7 +6,7 @@ using VibeTun.ViewModels;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class ProfileEditorWindow : Window
+public partial class ProfileEditorWindow : DialogWindow
 {
     private readonly ProfileEditorViewModel _vm;
     private readonly ProxyProfile _target;

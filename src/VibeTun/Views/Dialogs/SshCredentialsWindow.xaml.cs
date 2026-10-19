@@ -4,7 +4,7 @@ using System.Windows.Input;
 namespace VibeTun.Views.Dialogs;
 
 /// <summary>Небольшое окно: логин и пароль для одного SSH-подключения (шестерёнка в списке).</summary>
-public partial class SshCredentialsWindow : Window
+public partial class SshCredentialsWindow : DialogWindow
 {
     public SshCredentialsWindow(string title, string user, string password)
     {

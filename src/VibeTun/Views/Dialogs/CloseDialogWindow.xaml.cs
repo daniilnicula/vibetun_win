@@ -7,7 +7,7 @@ namespace VibeTun.Views.Dialogs;
 /// Диалог закрытия: «Скрыть или выйти из приложения?».
 /// DialogResult: true — скрыть в трей, false — выйти полностью, null — отмена (Esc).
 /// </summary>
-public partial class CloseDialogWindow : Window
+public partial class CloseDialogWindow : DialogWindow
 {
     public CloseDialogWindow()
     {
@@ -32,6 +32,11 @@ public partial class CloseDialogWindow : Window
     {
         DialogResult = false;
         Close();
+    }
+
+    private void OnCancel(object sender, RoutedEventArgs e)
+    {
+        Close();   // DialogResult остаётся null — отмена, как по Esc
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

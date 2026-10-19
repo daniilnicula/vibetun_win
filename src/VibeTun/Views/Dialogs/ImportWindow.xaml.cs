@@ -8,7 +8,7 @@ using VibeTun.Utils;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class ImportWindow : Window
+public partial class ImportWindow : DialogWindow
 {
     private readonly ObservableCollection<ProxyProfile> _parsed = new();
 

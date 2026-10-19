@@ -3,7 +3,7 @@ using System.Windows.Input;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class PromptWindow : Window
+public partial class PromptWindow : DialogWindow
 {
     public PromptWindow(string title, string caption, string initial)
     {

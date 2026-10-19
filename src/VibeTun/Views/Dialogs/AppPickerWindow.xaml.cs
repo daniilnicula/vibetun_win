@@ -10,7 +10,7 @@ using VibeTun.ViewModels;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class AppPickerWindow : Window
+public partial class AppPickerWindow : DialogWindow
 {
     private readonly ObservableCollection<AppEntry> _all = new();
     private readonly ObservableCollection<AppEntry> _view = new();

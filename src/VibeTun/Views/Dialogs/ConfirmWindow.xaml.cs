@@ -4,7 +4,7 @@ using System.Windows.Input;
 
 namespace VibeTun.Views.Dialogs;
 
-public partial class ConfirmWindow : Window
+public partial class ConfirmWindow : DialogWindow
 {
     public ConfirmWindow(string title, string text, string okText, bool danger, bool okOnly)
     {

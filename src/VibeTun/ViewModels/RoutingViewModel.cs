@@ -38,8 +38,6 @@ public sealed class RoutingViewModel : ObservableObject
         AddAppFromExeCommand = new AsyncRelayCommand(AddAppFromExeAsync);
         AddAppFromProcessesCommand = new AsyncRelayCommand(AddAppsFromProcessesAsync);
         RemoveAppCommand = new RelayCommand(p => RemoveApp(p as AppRuleItemVm));
-        NewProfileCommand = new RelayCommand(_ => NewProfile());
-        DeleteProfileCommand = new RelayCommand(_ => DeleteProfile(), _ => Profiles.Count > 1);
         DuplicateSetCommand = new RelayCommand(_ => DuplicateSet(), _ => SelectedSet is not null);
         NewSetCommand = new RelayCommand(_ => NewSet());
         DeleteSetCommand = new RelayCommand(_ => DeleteSet(), _ => SelectedSet is { BuiltIn: false });
@@ -65,8 +63,6 @@ public sealed class RoutingViewModel : ObservableObject
     public AsyncRelayCommand AddAppFromExeCommand { get; }
     public AsyncRelayCommand AddAppFromProcessesCommand { get; }
     public RelayCommand RemoveAppCommand { get; }
-    public RelayCommand NewProfileCommand { get; }
-    public RelayCommand DeleteProfileCommand { get; }
     public RelayCommand DuplicateSetCommand { get; }
     public RelayCommand NewSetCommand { get; }
     public RelayCommand DeleteSetCommand { get; }
@@ -82,11 +78,8 @@ public sealed class RoutingViewModel : ObservableObject
             if (!SetProperty(ref _selectedProfile, value)) return;
             foreach (var p in Profiles) p.IsSelected = ReferenceEquals(p, value);
             Raise(nameof(ShowTunHint));
-            Raise(nameof(SelectedProfileName));
         }
     }
-
-    public string SelectedProfileName => SelectedProfile?.Name ?? "—";
 
     public RouteSetItemVm? SelectedSet
     {
@@ -94,6 +87,9 @@ public sealed class RoutingViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _selectedSet, value)) return;
+            // выбор набора живёт в профиле — иначе после перезапуска набор сбросится
+            // на записанный в профиле (см. Load). Changed тянет за собой ScheduleSave.
+            if (SelectedProfile is not null) SelectedProfile.RouteSetId = value?.Id;
             LoadSetContents();
             DuplicateSetCommand.RaiseCanExecuteChanged();
             DeleteSetCommand.RaiseCanExecuteChanged();
@@ -400,36 +396,6 @@ public sealed class RoutingViewModel : ObservableObject
         if (app is null) return;
         Apps.Remove(app);
         ApplyAppFilter();
-        ScheduleSave();
-    }
-
-    // ------------------------------------------------------------------ профили
-    private void NewProfile()
-    {
-        var name = _dialogs.PromptText(L.T("S0164"), L.T("S0027"), L.T("S0821") + (Profiles.Count + 1));
-        if (string.IsNullOrWhiteSpace(name)) return;
-
-        var model = new RouteProfile
-        {
-            Name = name!,
-            ListenPort = Profiles.Count > 0 ? Profiles.Max(p => p.ListenPort) + 1 : 2080,
-            RouteSetId = SelectedSet?.Id ?? Sets.FirstOrDefault()?.Id
-        };
-        var vm = new RouteProfileItemVm(model);
-        vm.Changed += ScheduleSave;
-        Profiles.Add(vm);
-        SelectedProfile = vm;
-        ScheduleSave();
-    }
-
-    private void DeleteProfile()
-    {
-        if (SelectedProfile is null || Profiles.Count <= 1) return;
-        if (!_dialogs.Confirm(L.T("S0822"),
-                L.F("S0823", SelectedProfile.Name), L.T("S0083"))) return;
-
-        Profiles.Remove(SelectedProfile);
-        SelectedProfile = Profiles.FirstOrDefault();
         ScheduleSave();
     }
 

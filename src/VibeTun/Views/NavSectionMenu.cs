@@ -1,9 +1,11 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using VibeTun.Models;
 using VibeTun.Services;
+using VibeTun.Views.Controls;
 
 namespace VibeTun.Views;
 
@@ -37,6 +39,8 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
     private T? _dragItem;
     private bool _dragging;
     private Point _pressPoint;
+    private AdornerLayer? _dragLayer;
+    private ReorderDrag.Preview? _dragPreview;
 
     /// <summary>Запись, открытая сейчас.</summary>
     public string? SelectedId { get; private set; }
@@ -242,7 +246,16 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
             _dragging = true;
             row.CaptureMouse();
             row.Opacity = 0.7;
+            if (AdornerLayer.GetAdornerLayer(_host) is { } layer)
+            {
+                _dragLayer = layer;
+                _dragPreview = new ReorderDrag.Preview(_host, row, e.GetPosition(row));
+                layer.Add(_dragPreview);
+                _dragPreview.MoveTo(pos);
+            }
         }
+
+        _dragPreview?.MoveTo(pos);
 
         // едем по строкам: встаём туда, чей центр ближе к мыши
         var rows = Rows();
@@ -252,8 +265,7 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         var best = double.MaxValue;
         for (var i = 0; i < rows.Count; i++)
         {
-            var centerY = rows[i].TranslatePoint(new Point(0, rows[i].ActualHeight / 2), _host).Y;
-            var d = Math.Abs(centerY - pos.Y);
+            var d = Math.Abs(RowCenterY(rows[i]) - pos.Y);
             if (d < best)
             {
                 best = d;
@@ -265,10 +277,24 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         var list = _items();
         var index = list.IndexOf(_dragItem);
         if (index < 0 || index >= list.Count) return;
+        var before = ReorderDrag.Capture(_host, rows);
         list.RemoveAt(index);
         list.Insert(Math.Min(to, list.Count), _dragItem);
         _host.Children.Remove(row);
         _host.Children.Insert(Math.Min(to, _host.Children.Count - 1), row);   // «+» остаётся последней
+        _host.UpdateLayout();
+        ReorderDrag.AnimateReflow(_host, before, Rows());
+    }
+
+    /// <summary>
+    /// Центр строки в её layout-слоте, а не анимированная позиция: иначе середина пролетает
+    /// мимо неподвижного курсора и просит обратный ход (та же правка, что у профилей).
+    /// </summary>
+    private double RowCenterY(Grid row)
+    {
+        var center = row.TranslatePoint(new Point(0, row.ActualHeight / 2), _host).Y;
+        if (row.RenderTransform is TranslateTransform move) center -= move.Y;
+        return center;
     }
 
     private void OnRowUp(Grid row, T item, MouseButtonEventArgs e)
@@ -278,8 +304,9 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         if (dragging)
         {
             e.Handled = true;
+            // модель и строки уже пересобраны вживую — Rebuild только убил бы
+            // долетающую FLIP-анимацию и моргнул бы списком
             _persist();
-            Rebuild();
         }
         else
         {
@@ -294,6 +321,9 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         _dragging = false;
         row.Opacity = 1;
         if (row.IsMouseCaptured) row.ReleaseMouseCapture();
+        if (_dragPreview is not null && _dragLayer is not null) _dragLayer.Remove(_dragPreview);
+        _dragPreview = null;
+        _dragLayer = null;
     }
 
     /// <summary>Строки списка (без кнопки «+» внизу).</summary>
@@ -354,9 +384,15 @@ public sealed class NavSectionMenu<T> where T : class, INavEntry
         }
     }
 
-    /// <summary>Силуэт шестерёнки: центральный кружок и восемь зубцов-спиц.</summary>
+    /// <summary>Шестерёнка: зубчатый венец (8 зубцов) и центральное отверстие.</summary>
     private const string GearGeometry =
-        "M6,7.6 A1.6,1.6 0 1 1 6,4.4 A1.6,1.6 0 1 1 6,7.6 " +
-        "M6,1 V2.3 M6,9.7 V11 M1,6 H2.3 M9.7,6 H11 " +
-        "M2.45,2.45 L3.35,3.35 M8.65,8.65 L9.55,9.55 M9.55,2.45 L8.65,3.35 M3.35,8.65 L2.45,9.55";
+        "M9.12,5.28 L10.37,5.5 L10.37,6.5 L9.12,6.72 A3.2,3.2 0 0 1 8.71,7.7 " +
+        "L9.44,8.74 L8.74,9.44 L7.7,8.71 A3.2,3.2 0 0 1 6.72,9.12 " +
+        "L6.5,10.37 L5.5,10.37 L5.28,9.12 A3.2,3.2 0 0 1 4.3,8.71 " +
+        "L3.26,9.44 L2.56,8.74 L3.29,7.7 A3.2,3.2 0 0 1 2.88,6.72 " +
+        "L1.63,6.5 L1.63,5.5 L2.88,5.28 A3.2,3.2 0 0 1 3.29,4.3 " +
+        "L2.56,3.26 L3.26,2.56 L4.3,3.29 A3.2,3.2 0 0 1 5.28,2.88 " +
+        "L5.5,1.63 L6.5,1.63 L6.72,2.88 A3.2,3.2 0 0 1 7.7,3.29 " +
+        "L8.74,2.56 L9.44,3.26 L8.71,4.3 A3.2,3.2 0 0 1 9.12,5.28 Z " +
+        "M7.6,6 A1.6,1.6 0 1 1 4.4,6 A1.6,1.6 0 1 1 7.6,6";
 }

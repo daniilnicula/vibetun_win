@@ -23,39 +23,22 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- ==================== профили входа ==================== -->
-            <Grid Grid.Column="0" Margin="0,0,16,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <Grid Grid.Row="0">
-                    <TextBlock Text="{loc:Tr S0163}" Style="{StaticResource TxtCaption}" VerticalAlignment="Center" />
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Style="{StaticResource BtnIcon}" Content="+" FontSize="15" Command="{Binding NewProfileCommand}"
-                                ToolTip="{loc:Tr S0164}" />
-                        <Button Style="{StaticResource BtnIcon}" Content="✕" FontSize="11" Margin="2,0,0,0"
-                                Command="{Binding DeleteProfileCommand}" ToolTip="{loc:Tr S0165}" />
-                    </StackPanel>
-                </Grid>
-
-                <ListBox Grid.Row="1" Margin="0,8,0,0" MaxHeight="132" Style="{StaticResource ListNav}"
-                         ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Summary}" Style="{StaticResource TxtMuted}" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-                <ScrollViewer Grid.Row="2" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
+            <!-- ==================== параметры входа (профиль один) ==================== -->
+            <ScrollViewer Grid.Column="0" Margin="0,0,16,0" VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0,0,6,12" DataContext="{Binding SelectedProfile}">
-                        <TextBlock Text="{loc:Tr S0166}" Style="{StaticResource TxtCaption}" Margin="2,0,0,8" />
+                        <TextBlock Text="{loc:Tr S1001}" Style="{StaticResource TxtMuted}" Margin="0,0,0,4" />
+                        <Grid ctl:SegmentGroup.IsGroup="True" ctl:SegmentGroup.Radius="7">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton Style="{StaticResource SegToggle}" Content="PROXY"
+                                              IsChecked="{Binding IsDefaultProxy}" />
+                                <ToggleButton Style="{StaticResource SegToggleNeutral}" Content="DIRECT" Margin="2,0,0,0"
+                                              IsChecked="{Binding IsDefaultDirect}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{loc:Tr S1002}" Style="{StaticResource TxtMuted}"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                        <TextBlock Text="{loc:Tr S0166}" Style="{StaticResource TxtCaption}" Margin="2,14,0,8" />
 
                         <TextBlock Text="{loc:Tr S0027}" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,10"
@@ -143,24 +126,8 @@
                                           IsChecked="{Binding SniffTraffic}" />
                         </Grid>
 
-                        <!-- DNS переехал в отдельный раздел слева — здесь только ссылка туда -->
-                        <Grid Margin="0,14,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="DNS" Foreground="{DynamicResource TextPrimary}" />
-                                <TextBlock Text="{loc:Tr S0175}" Style="{StaticResource TxtMuted}"
-                                           TextWrapping="Wrap" Margin="0,2,0,0" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Content="{loc:Tr S0176}" Style="{StaticResource BtnGhost}" Padding="10,4"
-                                    Margin="8,0,0,0" VerticalAlignment="Center"
-                                    Command="{Binding DataContext.OpenDnsCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
-                        </Grid>
                     </StackPanel>
-                </ScrollViewer>
-            </Grid>
+            </ScrollViewer>
 
             <!-- ==================== правила и приложения ==================== -->
             <Grid Grid.Column="1">
@@ -266,8 +233,8 @@
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
 
-                                                    <CheckBox Style="{StaticResource Check}" VerticalAlignment="Center"
-                                                              IsChecked="{Binding Enabled}" ToolTip="{loc:Tr S0183}" />
+                                                    <ToggleButton Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                                                  IsChecked="{Binding Enabled}" ToolTip="{loc:Tr S0183}" />
 
                                                     <TextBox Grid.Column="1" Style="{StaticResource InputBox}" Margin="10,0,0,0"
                                                              Text="{Binding Pattern, UpdateSourceTrigger=LostFocus}" />
@@ -342,8 +309,8 @@
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
 
-                                                    <CheckBox Style="{StaticResource Check}" VerticalAlignment="Center"
-                                                              IsChecked="{Binding Enabled}" />
+                                                    <ToggleButton Style="{StaticResource Switch}" VerticalAlignment="Center"
+                                                                  IsChecked="{Binding Enabled}" />
 
                                                     <Border Grid.Column="1" Width="30" Height="30" CornerRadius="8" Margin="10,0,0,0"
                                                             Background="{DynamicResource CardBgAlt}">
