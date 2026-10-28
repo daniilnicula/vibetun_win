@@ -28,6 +28,14 @@
             <ctl:SlideHost SelectedKey="{Binding ConnectionTab}" AnimateHeight="True">
             <!-- ============================ вкладка Proxy ============================ -->
             <StackPanel ctl:SlideHost.Key="proxy">
+                <!-- Имя и адрес активного профиля — непосредственно над состоянием подключения.
+                     Карточка общая, поэтому те же данные видны и в мини-панели трея. -->
+                <StackPanel Margin="0,0,0,10">
+                    <TextBlock Text="{Binding ActiveProfileName}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding ActiveProfileSubtitle}" Style="{StaticResource TxtMuted}"
+                               TextWrapping="Wrap" Margin="0,3,0,0" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Ellipse Width="8" Height="8" VerticalAlignment="Center">
                         <Ellipse.Fill>

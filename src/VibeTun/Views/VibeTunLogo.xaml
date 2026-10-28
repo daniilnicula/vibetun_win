@@ -1,0 +1,54 @@
+<UserControl x:Class="VibeTun.Views.VibeTunLogo"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Векторный логотип: единая разметка для заголовка окна и splash-экрана. -->
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="256" Height="256">
+            <Rectangle Canvas.Left="16" Canvas.Top="16" Width="224" Height="224" RadiusX="55" RadiusY="55">
+                <Rectangle.Fill>
+                    <RadialGradientBrush Center="0.68,0.25" GradientOrigin="0.82,0.08" RadiusX="0.9" RadiusY="0.9">
+                        <GradientStop Color="#3A194D" Offset="0" />
+                        <GradientStop Color="#15183B" Offset="0.48" />
+                        <GradientStop Color="#071A2E" Offset="1" />
+                    </RadialGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- Левая мягкая ветвь V. -->
+            <Path Data="M70,95 L111,163 Q126,188 143,166 L174,128"
+                  StrokeThickness="36" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  StrokeLineJoin="Round">
+                <Path.Stroke>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#25E4D2" Offset="0" />
+                        <GradientStop Color="#438CF5" Offset="0.38" />
+                        <GradientStop Color="#A438ED" Offset="0.72" />
+                        <GradientStop Color="#F04FC1" Offset="1" />
+                    </LinearGradientBrush>
+                </Path.Stroke>
+            </Path>
+
+            <!-- Правая угловая ветвь V. -->
+            <Path Data="M190,72 H160
+                        Q139,72 139,93
+                        V143
+                        Q139,164 154,158
+                        L188,134
+                        Q195,129 188,124
+                        L158,102
+                        Q153,98 160,96
+                        L194,88
+                        Q206,85 206,73
+                        Q206,72 190,72 Z">
+                <Path.Fill>
+                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.35">
+                        <GradientStop Color="#6248ED" Offset="0" />
+                        <GradientStop Color="#D340E4" Offset="0.48" />
+                        <GradientStop Color="#FF5CA8" Offset="0.76" />
+                        <GradientStop Color="#FFAD73" Offset="1" />
+                    </LinearGradientBrush>
+                </Path.Fill>
+            </Path>
+        </Canvas>
+    </Viewbox>
+</UserControl>

@@ -32,23 +32,8 @@
         <Border Grid.Row="0" Background="{DynamicResource WindowBg}">
             <Grid>
                 <StackPanel Orientation="Horizontal" Margin="18,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
-                    <!-- значок: тайл и знак как в app.ico; цвета меняются с темой (LogoTile*, знак — LogoGradient = акцент) -->
-                    <Grid Width="22" Height="22">
-                        <Border CornerRadius="5" Background="{DynamicResource LogoTileBg}"
-                                BorderBrush="{DynamicResource LogoTileStroke}" BorderThickness="1" />
-                        <Border CornerRadius="4,4,0,0" Margin="1,1,1,0" Height="10" VerticalAlignment="Top"
-                                Background="{DynamicResource LogoGloss}" />
-                        <Viewbox Width="22" Height="22" Stretch="Uniform">
-                            <Canvas Width="24" Height="24">
-                                <Path Data="M 12.04,5.59 L 6.55,18.41 M 12.04,5.59 L 17.46,18.41"
-                                      Stroke="{DynamicResource LogoGradient}" StrokeThickness="3.18"
-                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
-                                <Path Data="M 9.75,12.35 L 13.69,18.47"
-                                      Stroke="{DynamicResource LogoGradient}" StrokeThickness="2.35"
-                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                            </Canvas>
-                        </Viewbox>
-                    </Grid>
+                    <!-- Единый векторный логотип приложения в окне и на splash-экране. -->
+                    <v:VibeTunLogo Width="22" Height="22" />
                     <TextBlock Text="VibeTun" Margin="10,0,0,0" FontSize="12.5" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
                 </StackPanel>
@@ -298,14 +283,6 @@
                     </Border>
                     </Grid>
 
-                    <StackPanel Grid.Row="1" Margin="14,0,14,10">
-                        <TextBlock Text="{loc:Tr S0139}" Style="{StaticResource TxtCaption}" Margin="2,0,0,6" />
-                        <TextBlock Text="{Binding ActiveProfileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                   Foreground="{DynamicResource TextPrimary}" />
-                        <TextBlock Text="{Binding ActiveProfileSubtitle}" Style="{StaticResource TxtMuted}"
-                                   TextWrapping="Wrap" Margin="0,3,0,0" />
-                    </StackPanel>
-
                     <v:ConnectionCard Grid.Row="2" Margin="12,0,12,12" />
                 </Grid>
             </Border>
@@ -372,22 +349,7 @@
         <!-- ============================= сплэш холодного старта ============================= -->
         <Grid x:Name="Splash" Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource WindowBg}" Visibility="Collapsed">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,10">
-                <Grid Width="56" Height="56" HorizontalAlignment="Center">
-                    <Border CornerRadius="13" Background="{DynamicResource LogoTileBg}"
-                            BorderBrush="{DynamicResource LogoTileStroke}" BorderThickness="1" />
-                    <Border CornerRadius="11,11,0,0" Margin="2,2,2,0" Height="26" VerticalAlignment="Top"
-                            Background="{DynamicResource LogoGloss}" />
-                    <Viewbox Width="56" Height="56" Stretch="Uniform">
-                        <Canvas Width="24" Height="24">
-                            <Path Data="M 12.04,5.59 L 6.55,18.41 M 12.04,5.59 L 17.46,18.41"
-                                  Stroke="{DynamicResource LogoGradient}" StrokeThickness="3.18"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
-                            <Path Data="M 9.75,12.35 L 13.69,18.47"
-                                  Stroke="{DynamicResource LogoGradient}" StrokeThickness="2.35"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                        </Canvas>
-                    </Viewbox>
-                </Grid>
+                <v:VibeTunLogo Width="56" Height="56" HorizontalAlignment="Center" />
                 <TextBlock Text="VibeTun" Margin="0,12,0,0" FontSize="20" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" />
                 <TextBlock x:Name="SplashStatus" Text="{loc:Tr S1005}" Margin="0,6,0,0"

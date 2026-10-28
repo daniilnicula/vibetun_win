@@ -17,6 +17,9 @@ public partial class CloseDialogWindow : DialogWindow
     /// <summary>Отметка «Запомнить мой выбор» — вызывающий код сохраняет выбранный режим.</summary>
     public bool RememberMyChoice => RememberBox.IsChecked == true;
 
+    /// <summary>Явный выбор пользователя: true — скрыть, false — выйти, null — только закрыть диалог.</summary>
+    public bool? CloseChoice { get; private set; }
+
     private void OnDrag(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed) DragMove();
@@ -24,19 +27,22 @@ public partial class CloseDialogWindow : DialogWindow
 
     private void OnHide(object sender, RoutedEventArgs e)
     {
+        CloseChoice = true;
         DialogResult = true;
         Close();
     }
 
     private void OnExit(object sender, RoutedEventArgs e)
     {
+        CloseChoice = false;
         DialogResult = false;
         Close();
     }
 
     private void OnCancel(object sender, RoutedEventArgs e)
     {
-        Close();   // DialogResult остаётся null — отмена, как по Esc
+        CloseChoice = null;
+        Close();   // Крестик не выбирает ни «Скрыть», ни «Закрыть приложение».
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 
 namespace VibeTun.Services;
@@ -39,9 +40,13 @@ public static class TunCleanup
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = $"-NoProfile -NonInteractive -Command \"Get-NetAdapter -Name '{AdapterNamePattern}' -ErrorAction SilentlyContinue | Remove-NetAdapter -Confirm:$false\"",
+                // Windows PowerShell 5.1 иначе выводит локализованные ошибки в OEM-кодировке,
+                // а .NET 8 по умолчанию читает их как UTF-8 — отсюда кракозябры в логовизоре.
+                Arguments = $"-NoProfile -NonInteractive -Command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-NetAdapter -Name '{AdapterNamePattern}' -ErrorAction SilentlyContinue | Remove-NetAdapter -Confirm:$false\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };

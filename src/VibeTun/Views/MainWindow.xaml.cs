@@ -873,8 +873,9 @@ public partial class MainWindow : Window
 
         // Спрашиваем: скрыть в трей или выйти из приложения.
         var dialog = new Dialogs.CloseDialogWindow { Owner = this };
-        var result = dialog.ShowDialog();
-        if (result is null) return;   // Esc — остаёмся в приложении
+        dialog.ShowDialog();
+        var result = dialog.CloseChoice;
+        if (result is null) return;   // Крестик или Esc закрывает только диалог.
         if (dialog.RememberMyChoice)
         {
             App.Settings.Current.CloseBehavior = result == true ? CloseBehavior.HideToTray : CloseBehavior.Exit;

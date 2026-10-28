@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VibeTun.Models;
@@ -19,8 +21,13 @@ namespace VibeTun.Views;
 public partial class PanelPage : UserControl
 {
     private readonly PanelEntry _entry;
+    private readonly DispatcherTimer _loadTimeout;
     private WebView2? _browser;
     private bool _busy;
+    private ulong _navigationId;
+    private string _navigationUri = "";
+    private bool _autoRetryUsed;
+    private bool _retryInProgress;
 
     /// <summary>Логин, отправленный на сайт, и ещё не предложенный к сохранению.</summary>
     private sealed record PendingLogin(string Host, string User, string Password, DateTime AtUtc);
@@ -33,6 +40,21 @@ public partial class PanelPage : UserControl
     {
         _entry = entry;
         InitializeComponent();
+        _loadTimeout = new DispatcherTimer { Interval = TimeSpan.FromSeconds(90) };
+        _loadTimeout.Tick += OnLoadTimeout;
+        var rotation = new DoubleAnimation(0, -360, new Duration(TimeSpan.FromMilliseconds(800)))
+        {
+            RepeatBehavior = RepeatBehavior.Forever,
+        };
+        LoadingRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, rotation);
+        UrlLoadingRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, rotation);
+    }
+
+    private void SetLoading(bool loading)
+    {
+        var visibility = loading ? Visibility.Visible : Visibility.Collapsed;
+        LoadingOverlay.Visibility = visibility;
+        UrlLoadingIndicator.Visibility = visibility;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e) => await EnsureBrowserAsync();
@@ -99,6 +121,7 @@ public partial class PanelPage : UserControl
     {
         if (_busy || _browser is not null) return;
         _busy = true;
+        SetLoading(true);
         try
         {
             var browser = new WebView2();
@@ -122,20 +145,45 @@ public partial class PanelPage : UserControl
 
             core.NavigationStarting += (_, args) =>
             {
+                _navigationId = args.NavigationId;
+                _navigationUri = args.Uri;
+                _loadTimeout.Stop();
+                _loadTimeout.Start();
+                ErrorOverlay.Visibility = Visibility.Collapsed;
+                if (!_retryInProgress) LoadingMessage.Visibility = Visibility.Collapsed;
+                SetLoading(true);
                 RememberUrl(args.Uri);
                 _offerShown = false;
+            };
+            // Завершение старой, уже отменённой навигации не должно отменять таймер новой.
+            core.NavigationCompleted += (_, args) =>
+            {
+                if (args.NavigationId != _navigationId) return;
+                _loadTimeout.Stop();
+                _retryInProgress = false;
+                _autoRetryUsed = false;
+                LoadingMessage.Visibility = Visibility.Collapsed;
+                ErrorOverlay.Visibility = Visibility.Collapsed;
+                SetLoading(false);
             };
             core.SourceChanged += (_, _) => SyncUrlBox();
 
             var url = Normalize(_entry.Url);
             if (url is not null)
             {
+                _autoRetryUsed = false;
                 UrlBox.Text = url;
                 core.Navigate(url);
+            }
+            else
+            {
+                SetLoading(false);
             }
         }
         catch (Exception ex)
         {
+            _loadTimeout.Stop();
+            SetLoading(false);
             // WebView2 Runtime отсутствует или не запустился — оставляем подсказку вместо браузера
             try { BrowserHost.Children.Clear(); } catch { /* ignore */ }
             _browser = null;
@@ -157,9 +205,59 @@ public partial class PanelPage : UserControl
         }
     }
 
+    private void OnLoadTimeout(object? sender, EventArgs e)
+    {
+        _loadTimeout.Stop();
+        if (_browser?.CoreWebView2 is not { } core || _navigationUri.Length == 0)
+        {
+            SetLoading(false);
+            return;
+        }
+
+        if (_autoRetryUsed)
+        {
+            _navigationId = 0;   // завершение остановленного запроса больше не обрабатываем
+            try { core.Stop(); } catch { /* браузер мог уже закрыться */ }
+            _retryInProgress = false;
+            LoadingMessage.Visibility = Visibility.Collapsed;
+            SetLoading(false);
+            ErrorMessage.Text = L.T("S1009");
+            ErrorOverlay.Visibility = Visibility.Visible;
+            return;
+        }
+
+        // Новый Navigate отменяет зависший запрос. Повтор только один; после успешной
+        // загрузки таймер отключается и никаких периодических обновлений не выполняется.
+        _autoRetryUsed = true;
+        _retryInProgress = true;
+        _navigationId = 0;   // отмена прежнего запроса не должна завершать повтор
+        LoadingMessage.Text = L.T("S1008");
+        LoadingMessage.Visibility = Visibility.Visible;
+        ErrorOverlay.Visibility = Visibility.Collapsed;
+        SetLoading(true);
+        try
+        {
+            core.Navigate(_navigationUri);
+        }
+        catch (Exception ex)
+        {
+            _retryInProgress = false;
+            LoadingMessage.Visibility = Visibility.Collapsed;
+            SetLoading(false);
+            ErrorMessage.Text = L.T("S1009");
+            ErrorOverlay.Visibility = Visibility.Visible;
+            App.LogCrash(ex);
+        }
+    }
+
     /// <summary>Выгрузить страницу (сворачивание в трей): освобождаем ресурсы браузера.</summary>
     public void UnloadBrowser()
     {
+        _loadTimeout.Stop();
+        _retryInProgress = false;
+        LoadingMessage.Visibility = Visibility.Collapsed;
+        ErrorOverlay.Visibility = Visibility.Collapsed;
+        SetLoading(false);
         var browser = _browser;
         _browser = null;
         if (browser is null) return;
@@ -243,6 +341,14 @@ public partial class PanelPage : UserControl
         _entry.Url = url;   // запоминаем последний введённый адрес за этой панелью
         App.Settings.SaveSoon();
         UrlBox.Text = url;
+        _autoRetryUsed = false;
+        _retryInProgress = false;
+        LoadingMessage.Visibility = Visibility.Collapsed;
+        ErrorOverlay.Visibility = Visibility.Collapsed;
+        // Реакция видна сразу, ещё до NavigationStarting: Enter и «Обновить» работают одинаково.
+        _loadTimeout.Stop();
+        _navigationId = 0;
+        SetLoading(true);
         if (_browser?.CoreWebView2 is { } core) core.Navigate(url);
         else _ = EnsureBrowserAsync();
     }

@@ -5126,5 +5126,13 @@
   "S1007": {
     "ru": "Перетащите, чтобы прикрепить панель к другому краю",
     "en": "Drag to dock the panel to another edge"
+  },
+  "S1008": {
+    "ru": "Сервер не ответил за 90 секунд. Повторяем загрузку…",
+    "en": "The server did not respond within 90 seconds. Retrying…"
+  },
+  "S1009": {
+    "ru": "Сервер не ответил после повторной попытки. Проверьте адрес и нажмите «Обновить».",
+    "en": "The server did not respond after the retry. Check the address and click Refresh."
   }
 }

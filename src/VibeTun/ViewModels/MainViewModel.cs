@@ -380,8 +380,7 @@ public sealed class MainViewModel : ObservableObject
         get
         {
             if (ActiveProfile is null) return L.T("S0690");
-            var route = Routing.ActiveProfile;
-            return $"{ActiveProfile.ProtocolLabel} · {ActiveProfile.AddressLabel} · {route.ListenAddress}:{route.ListenPort}";
+            return $"{ActiveProfile.ProtocolLabel} · {ActiveProfile.AddressLabel}";
         }
     }
 
