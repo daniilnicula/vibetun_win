@@ -5,7 +5,16 @@
              xmlns:ctl="clr-namespace:VibeTun.Views.Controls">
     <!-- карточка управления подключением: сайдбар главного окна и мини-панель у трея
          (TrayPanelWindow). Внешние отступы задаются в месте вставки. -->
-    <Border Style="{StaticResource Card}" Padding="14,12,14,12">
+    <Border Padding="14,12,14,12">
+        <Border.Style>
+            <Style TargetType="Border" BasedOn="{StaticResource Card}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Glass, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource CardGlass}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
         <StackPanel>
             <!-- переключатель режима: обычный прокси или обход DPI -->
             <Border Background="{DynamicResource CardBgAlt}" CornerRadius="9" Padding="3" Margin="0,0,0,12">

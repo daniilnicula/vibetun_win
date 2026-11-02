@@ -9,6 +9,8 @@
     <SolidColorBrush x:Key="WindowBg" Color="#191B1D" />
     <SolidColorBrush x:Key="PanelBg" Color="#1F2226" />
     <SolidColorBrush x:Key="CardBg" Color="#242830" />
+    <SolidColorBrush x:Key="PanelGlass" Color="#B81F2226" />
+    <SolidColorBrush x:Key="CardGlass" Color="#55242830" />
     <SolidColorBrush x:Key="CardBgAlt" Color="#2A2F38" />
     <SolidColorBrush x:Key="CardHover" Color="#2E343D" />
     <SolidColorBrush x:Key="InputBg" Color="#20242A" />
@@ -57,4 +59,9 @@
         <GradientStop Color="#889AB8" Offset="0" />
         <GradientStop Color="#677997" Offset="1" />
     </LinearGradientBrush>
+    <!-- логотип VibeTun: оттенки акцента (ColLogo* пересчитываются от акцентного цвета в ThemeService) -->
+    <Color x:Key="ColLogoTileTop">#2C3441</Color>
+    <Color x:Key="ColLogoTileMid">#171B22</Color>
+    <Color x:Key="ColLogoTileBottom">#090B0D</Color>
+    <Color x:Key="ColLogoHighlight">#B3BED1</Color>
 </ResourceDictionary>

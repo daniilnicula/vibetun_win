@@ -520,8 +520,8 @@
     "en": "Application DNS replaces the primary DNS in the application's own DNS queries and direct connections. In TUN mode, many programs query the Windows DNS service (svchost.exe) and keep using the primary DNS. If a website has an entry in “Domains”, that entry takes priority."
   },
   "S0130": {
-    "ru": "Цвет акцента",
-    "en": "Accent color"
+    "ru": "Акцент темы",
+    "en": "Theme accent"
   },
   "S0131": {
     "ru": "Свернуть",
@@ -5134,5 +5134,81 @@
   "S1009": {
     "ru": "Сервер не ответил после повторной попытки. Проверьте адрес и нажмите «Обновить».",
     "en": "The server did not respond after the retry. Check the address and click Refresh."
+  },
+  "S1010": {
+    "ru": "Из файла",
+    "en": "From file"
+  },
+  "S1011": {
+    "ru": "Импорт из файла (одной или нескольких)",
+    "en": "Import from file (one or more)"
+  },
+  "S1012": {
+    "ru": "Из буфера",
+    "en": "From clipboard"
+  },
+  "S1013": {
+    "ru": "Вставьте содержимое из буфера обмена",
+    "en": "Paste the contents from the clipboard"
+  },
+  "S1014": {
+    "ru": "Добавить вручную",
+    "en": "Add manually"
+  },
+  "S1015": {
+    "ru": "Вставьте содержимое вручную",
+    "en": "Paste the contents manually"
+  },
+  "S1016": {
+    "ru": "Выберите протокол для создания",
+    "en": "Choose a protocol to create"
+  },
+  "S1017": {
+    "ru": "Создать новую группу для профилей",
+    "en": "Create a new group for profiles"
+  },
+  "S1018": {
+    "ru": "Выберите файл (одной или нескольких)",
+    "en": "Choose one or more files"
+  },
+  "S1019": {
+    "ru": "Перетащите файл сюда",
+    "en": "Drop a file here"
+  },
+  "S1020": {
+    "ru": "или нажмите для выбора",
+    "en": "or click to choose"
+  },
+  "S1021": {
+    "ru": "Выбрать файл",
+    "en": "Choose file"
+  },
+  "S1022": {
+    "ru": "Содержимое...",
+    "en": "Content..."
+  },
+  "S1023": {
+    "ru": "Выберите протокол",
+    "en": "Choose a protocol"
+  },
+  "S1024": {
+    "ru": "Введите имя новой группы",
+    "en": "Enter a name for the new group"
+  },
+  "S1025": {
+    "ru": "Подписка по ссылке",
+    "en": "Subscription link"
+  },
+  "S1026": {
+    "ru": "Добавление подключения",
+    "en": "Add connection"
+  },
+  "S1027": {
+    "ru": "Не удалось прочитать файл: {0}",
+    "en": "Could not read the file: {0}"
+  },
+  "S1028": {
+    "ru": "Размытие левой панели",
+    "en": "Sidebar blur"
   }
 }

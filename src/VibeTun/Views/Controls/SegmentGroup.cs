@@ -65,6 +65,11 @@ public static class SegmentGroup
             DispatcherPriority.Background, new Action(() => slide.Sync(true)));
         foreach (var toggle in toggles)
         {
+            // цвет текста выбранного сегмента задаём прямо на элементе: триггер шаблона на нём не срабатывал
+            RoutedEventHandler text = (sender, _) => SyncText((ToggleButton)sender);
+            toggle.Checked += text;
+            toggle.Unchecked += text;
+            SyncText(toggle);
             toggle.Checked += refresh;
             toggle.Unchecked += refresh;
         }
@@ -75,6 +80,13 @@ public static class SegmentGroup
         grid.IsVisibleChanged += (_, _) => Reconcile(grid, slide);
         slide.Sync(false);
         Reconcile(grid, slide);
+    }
+
+    /// <summary>Выбранный сегмент — текст TextOnAccent (читается на акценте); остальные — цвет из стиля.</summary>
+    private static void SyncText(ToggleButton toggle)
+    {
+        if (toggle.IsChecked == true) toggle.SetResourceReference(Control.ForegroundProperty, "TextOnAccent");
+        else toggle.ClearValue(Control.ForegroundProperty);
     }
 
     private static void Reconcile(Grid grid, SlideMarker slide) =>

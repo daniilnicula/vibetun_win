@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Windows;
 using System.Windows.Data;
 using VibeTun.Models;
 using VibeTun.Services;
@@ -34,10 +35,10 @@ public sealed class ProfilesViewModel : ObservableObject
         EntriesView = CollectionViewSource.GetDefaultView(Entries);
         EntriesView.Filter = FilterEntry;
 
-        AddCommand = new AsyncRelayCommand(() => AddAsync());
+        AddCommand = new AsyncRelayCommand(p => AddAsync(p));
         AddFromClipboardCommand = new AsyncRelayCommand(() => AddFromClipboardAsync());
-        ImportFileCommand = new AsyncRelayCommand(ImportFromFileAsync);
-        CreateGroupCommand = new RelayCommand(_ => CreateGroup());
+        ImportFileCommand = new AsyncRelayCommand(p => OpenAddConnectionAsync(OriginOf(p), AddConnectionStep.File));
+        CreateGroupCommand = new AsyncRelayCommand(p => OpenAddConnectionAsync(OriginOf(p), AddConnectionStep.Group));
         CreateSubscriptionCommand = new AsyncRelayCommand(CreateSubscriptionAsync);
         EditCommand = new RelayCommand(p => Edit(p as ProfileItemVm ?? Selected),
             p => (p as ProfileItemVm ?? Selected) is not null);
@@ -120,7 +121,7 @@ public sealed class ProfilesViewModel : ObservableObject
     public RelayCommand ConnectCommand { get; }
     public RelayCommand ToggleFavoriteCommand { get; }
     public RelayCommand CopyLinkCommand { get; }
-    public RelayCommand CreateGroupCommand { get; }
+    public AsyncRelayCommand CreateGroupCommand { get; }
     public AsyncRelayCommand CreateSubscriptionCommand { get; }
     public AsyncRelayCommand AddCommand { get; }
     public AsyncRelayCommand AddFromClipboardCommand { get; }
@@ -235,10 +236,33 @@ public sealed class ProfilesViewModel : ObservableObject
     }
 
     // -------------------------------------------------------------------- CRUD
-    private Task AddAsync()
+    /// <summary>Экранный прямоугольник кнопки-источника (для анимации окна «Добавить подключение»).</summary>
+    private static Rect? OriginOf(object? parameter) =>
+        parameter is FrameworkElement element ? ScreenGeometry.Of(element) : null;
+
+    private Task AddAsync(object? origin) =>
+        OpenAddConnectionAsync(OriginOf(origin), AddConnectionStep.Menu);
+
+    /// <summary>
+    /// Окно «Добавить подключение» и его шаги. Все варианты (файл, буфер/вручную, протокол, группа)
+    /// выполняются здесь же, после закрытия окна.
+    /// </summary>
+    private Task OpenAddConnectionAsync(Rect? origin, AddConnectionStep start)
     {
-        var parsed = _dialogs.ImportProfiles();
-        AddParsed(parsed);
+        var defaultGroupName = L.F("S0957", Entries.OfType<ProfileGroupVm>().Count() + 1);
+        var choice = _dialogs.ChooseAddConnection(origin, start, defaultGroupName);
+        switch (choice.Action)
+        {
+            case AddConnectionAction.FromFile:
+            case AddConnectionAction.Paste:
+                return AddFromTextAsync(choice.Text ?? "");
+            case AddConnectionAction.Protocol:
+                CreateManual(choice.Protocol);
+                break;
+            case AddConnectionAction.Group:
+                CreateGroup(choice.GroupName);
+                break;
+        }
         return Task.CompletedTask;
     }
 
@@ -248,6 +272,18 @@ public sealed class ProfilesViewModel : ObservableObject
         try { text = System.Windows.Clipboard.GetText(); }
         catch { text = ""; }
 
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Notify?.Invoke(L.T("S0800"), true);
+            return;
+        }
+
+        await AddFromTextAsync(text);
+    }
+
+    /// <summary>Добавить профили из текста (ссылки, конфиги, JSON) или по ссылке на подписку.</summary>
+    private async Task AddFromTextAsync(string text)
+    {
         if (string.IsNullOrWhiteSpace(text))
         {
             Notify?.Invoke(L.T("S0800"), true);
@@ -525,24 +561,7 @@ public sealed class ProfilesViewModel : ObservableObject
         return uri.Scheme.ToLowerInvariant() + "://" + uri.Authority.ToLowerInvariant() + uri.PathAndQuery;
     }
 
-    private Task ImportFromFileAsync()
-    {
-        var path = _dialogs.OpenFile(L.T("S0804"));
-        if (path is null) return Task.CompletedTask;
-        try
-        {
-            var text = File.ReadAllText(path);
-            var parsed = _dialogs.ImportProfiles(text);
-            AddParsed(parsed);
-        }
-        catch (Exception ex)
-        {
-            _dialogs.Error(L.T("S0805"), ex.Message);
-        }
-        return Task.CompletedTask;
-    }
-
-    /// <summary>Добавление уже разобранных профилей (используется диалогом импорта); всегда вне групп.</summary>
+    /// <summary>Добавление уже разобранных профилей (используется окном «Добавить подключение»); всегда вне групп.</summary>
     public int AddParsed(IEnumerable<ProxyProfile> parsed)
     {
         var added = 0;
@@ -634,10 +653,8 @@ public sealed class ProfilesViewModel : ObservableObject
     }
 
     // ------------------------------------------------------------------ группы
-    private void CreateGroup()
+    private void CreateGroup(string? name)
     {
-        var nextName = L.F("S0957", Entries.OfType<ProfileGroupVm>().Count() + 1);
-        var name = _dialogs.PromptText(L.T("S0952"), L.T("S0958"), nextName);
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var definition = new ProfileGroupDefinition { Name = name.Trim() };

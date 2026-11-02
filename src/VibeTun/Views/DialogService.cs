@@ -19,10 +19,10 @@ public sealed class DialogService : IDialogService
         return window.ShowDialog() == true;
     }
 
-    public List<ProxyProfile> ImportProfiles(string? prefill = null)
+    public AddConnectionChoice ChooseAddConnection(Rect? origin, AddConnectionStep start, string defaultGroupName)
     {
-        var window = new ImportWindow(prefill) { Owner = _owner };
-        return window.ShowDialog() == true ? window.Profiles : new List<ProxyProfile>();
+        var window = new AddConnectionWindow(origin, start, defaultGroupName) { Owner = _owner };
+        return window.ShowDialog() == true ? window.Choice : new AddConnectionChoice(AddConnectionAction.Cancel);
     }
 
     public string? PromptText(string title, string caption, string initial = "")

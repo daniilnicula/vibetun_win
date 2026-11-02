@@ -135,14 +135,39 @@ public static class ThemeService
             ["ColAccentHover"] = hover,
             ["ColAccentPressed"] = pressed,
             ["Accent"] = Freeze(new SolidColorBrush(color)),
+            // на очень ярком акценте белый текст не читается — переключаем на тёмный
+            ["TextOnAccent"] = Freeze(new SolidColorBrush(TextOnAccentColor(color))),
             ["AccentHover"] = Freeze(new SolidColorBrush(hover)),
             ["AccentPressed"] = Freeze(new SolidColorBrush(pressed)),
             ["AccentSoft"] = Freeze(new SolidColorBrush(soft)),
-            ["LogoGradient"] = MakeGradient(hover, pressed)
+            ["LogoGradient"] = MakeGradient(hover, pressed),
+            // логотип в углу окна: тайл — тёмный оттенок акцента, блик — светлый оттенок акцента
+            ["ColLogoTileTop"] = Darken(color, 0.62f),
+            ["ColLogoTileMid"] = Darken(color, 0.80f),
+            ["ColLogoTileBottom"] = Darken(color, 0.92f),
+            ["ColLogoHighlight"] = Lighten(color, 0.45f)
         };
 
         _accentDict = dict;
         dicts.Add(dict);   // в конце — перекрывает палитру темы
+    }
+
+    /// <summary>Белый текст на акценте, если контраст с ним не ниже 4.5:1 (как для обычного текста), иначе тёмный.</summary>
+    internal static Color TextOnAccentColor(Color accent)
+    {
+        var lum = RelativeLuminance(accent);
+        var contrastWithWhite = 1.05 / (lum + 0.05);
+        return contrastWithWhite >= 4.5 ? Colors.White : Color.FromRgb(0x14, 0x17, 0x1C);
+    }
+
+    private static double RelativeLuminance(Color c)
+    {
+        static double Linear(byte v)
+        {
+            var x = v / 255.0;
+            return x <= 0.03928 ? x / 12.92 : Math.Pow((x + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * Linear(c.R) + 0.7152 * Linear(c.G) + 0.0722 * Linear(c.B);
     }
 
     private static SolidColorBrush Freeze(SolidColorBrush b)

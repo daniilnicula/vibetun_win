@@ -7,3 +7,4 @@ dist/
 *.userosscache
 *.sln.docstates
 TestResults/
+src/VibeTun/bin

@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shell;
 using VibeTun.Models;
 using VibeTun.Services;
 using VibeTun.Utils;
@@ -36,13 +37,13 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        // AllowsTransparency нельзя менять после создания HWND.
-        // Windows 11: обычное окно с системными углами; Windows 10: layered-окно
-        // с прозрачным фоном и обрезкой содержимого по скруглённому Border.
+        // Обычное (не layered) окно на всех версиях: акриловый блюр Windows 10 не обрезается
+        // по скруглённому Border у layered-окна, поэтому углы задаёт регион окна (SetWindowRgn).
+        // Windows 10: layered-окно с прозрачным фоном (как раньше) — на нём акрил выглядит нужным образом
         if (!_useSystemCorners)
         {
             AllowsTransparency = true;
-            Background = Brushes.Transparent;
+            Background = HitTestBrush;
         }
         UpdateRootChrome();
         PreviewKeyDown += OnPreviewKeyDown;
@@ -157,6 +158,7 @@ public partial class MainWindow : Window
     {
         _vm = new MainViewModel(new DialogService(this));
         DataContext = _vm;
+        _vm.Preferences.BlurChanged += ApplyBlur;
         L.Changed += OnLanguageChanged;
         Closed += (_, _) => L.Changed -= OnLanguageChanged;
 
@@ -594,18 +596,11 @@ public partial class MainWindow : Window
 
     private void UpdateRootChrome()
     {
-        if (_useSystemCorners)
-        {
-            RootBorder.CornerRadius = new CornerRadius(0);
-            RootBorder.Clip = null;
-            return;
-        }
-
-        var radius = WindowState == WindowState.Maximized ? 0 : 12;
-        RootBorder.CornerRadius = new CornerRadius(radius);
-        if (RootBorder.ActualWidth <= 0 || RootBorder.ActualHeight <= 0) return;
-        RootBorder.Clip = new RectangleGeometry(
-            new Rect(0, 0, RootBorder.ActualWidth, RootBorder.ActualHeight), radius, radius);
+        // углы острые: на Windows 10 — всегда; на Windows 11 — системные углы, при блюре регион окна 12 px
+        RootBorder.CornerRadius = new CornerRadius(0);
+        RootBorder.Clip = null;
+        var round = _useSystemCorners && _glass && WindowState != WindowState.Maximized;
+        AcrylicBackdrop.SetCornerRadius(this, round ? 12 : 0);
     }
 
     // ------------------------------------------------------------- списки «Панели»/«SSH»
@@ -732,6 +727,11 @@ public partial class MainWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+        // блюр левой панели: системный акрил; без него панель остаётся непрозрачной
+        // акрил включаем один раз на весь сеанс: повторные SetWindowCompositionAttribute на layered-окне
+        // со временем темнят фон. Выключенный блюр просто закрывает окно непрозрачным фоном темы.
+        _acrylicOk = AcrylicBackdrop.Apply(this);
+        ApplyBlur(App.Settings.Current.BlurSidebar);
         // HwndSource.FromHwnd надёжнее PresentationSource.FromVisual: последний возвращает null,
         // если HWND создан до Show (запуск свёрнутым в трей и т.п.), и хук тогда не установится
         if (HwndSource.FromHwnd(new WindowInteropHelper(this).Handle) is HwndSource source)
@@ -740,6 +740,46 @@ public partial class MainWindow : Window
         // На Windows 11 не используем layered-окно: DWM скругляет его сам,
         // при этом сохраняется совместимость с FancyZones.
         if (_useSystemCorners) ApplyDwmRoundCorners();
+    }
+
+    /// <summary>Прозрачная левая панель с размытием (акрил) или непрозрачная, если акрил недоступен.</summary>
+    /// <summary>
+    /// Почти прозрачная кисть: WPF не пропускает клики через неё, в отличие от Brushes.Transparent.
+    /// </summary>
+    private static readonly Brush HitTestBrush = new SolidColorBrush(Color.FromArgb(0x01, 0, 0, 0));
+
+    private bool _glass;
+
+    /// <summary>Переключатель «Размытие левой панели» в настройках: включает или выключает акрил.</summary>
+    private bool _acrylicOk;
+
+    /// <summary>Переключатель «Размытие левой панели»: только слои WPF, сам акрил не переустанавливаем.</summary>
+    private void ApplyBlur(bool on) => ApplyGlass(on && _acrylicOk);
+
+    private void ApplyGlass(bool glass)
+    {
+        _glass = glass;
+        if (glass)
+        {
+            // над размытием никаких затемняющих слоёв: сайдбар, шапка и подвал прозрачные
+            SidebarTint.Background = HitTestBrush;
+            HeaderTint.Background = HitTestBrush;
+            NavFade.Background = HitTestBrush;
+            RootBorder.Background = HitTestBrush;
+            // фон самого окна тоже должен быть почти прозрачным: после выключения там стоял непрозрачный WindowBg
+            Background = HitTestBrush;
+            ConnectionPanel.Glass = true;
+        }
+        else
+        {
+            SidebarTint.SetResourceReference(Border.BackgroundProperty, "PanelBg");
+            HeaderTint.SetResourceReference(Border.BackgroundProperty, "PanelBg");
+            NavFade.SetResourceReference(Border.BackgroundProperty, "PanelBg");
+            RootBorder.SetResourceReference(Border.BackgroundProperty, "WindowBg");
+            SetResourceReference(BackgroundProperty, "WindowBg");
+            ConnectionPanel.Glass = false;
+        }
+        UpdateRootChrome();
     }
 
     /// <summary>DWMWA_WINDOW_CORNER_PREFERENCE = ROUND (только Windows 11).</summary>

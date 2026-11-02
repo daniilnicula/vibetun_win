@@ -179,6 +179,9 @@ public sealed class AppSettings
     /// <summary>Акцентный цвет интерфейса в формате #AARRGGBB; null — цвет темы по умолчанию.</summary>
     public string? AccentColor { get; set; }
 
+    /// <summary>Размытие фона за левой панелью (системный акрил). По умолчанию выключено.</summary>
+    public bool BlurSidebar { get; set; } = false;
+
     /// <summary>Панели (браузеры) и SSH-подключения (терминалы) из выпадающих списков навигации.</summary>
     public List<PanelEntry> Panels { get; set; } = new();
     public List<SshEntry> SshItems { get; set; } = new();

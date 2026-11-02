@@ -35,6 +35,20 @@ public sealed class SettingsViewModel : ObservableObject
 
     public event Action<string, bool>? Notify;
     public event Action? ThemeChanged;
+    public event Action<bool>? BlurChanged;
+
+    public bool BlurSidebar
+    {
+        get => _settings.Current.BlurSidebar;
+        set
+        {
+            if (_settings.Current.BlurSidebar == value) return;
+            _settings.Current.BlurSidebar = value;
+            _settings.SaveSoon();
+            Raise();
+            BlurChanged?.Invoke(value);
+        }
+    }
 
     /// <summary>
     /// «Сбросить настройки» заменил весь settings.json значениями по умолчанию. MainViewModel
@@ -711,6 +725,7 @@ public sealed class SettingsViewModel : ObservableObject
         _settings.SaveSoon();
         ThemeService.Apply(_settings.Current.Theme);
         ThemeService.ApplyAccent(_settings.Current.AccentColor);
+        BlurChanged?.Invoke(_settings.Current.BlurSidebar);
         L.SetLanguage(_settings.Current.Language);
         Raise(null);
         AutostartService.Apply(false, false);

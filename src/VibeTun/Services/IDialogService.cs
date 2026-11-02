@@ -1,7 +1,38 @@
 using System.Collections.Generic;
+using System.Windows;
 using VibeTun.Models;
 
 namespace VibeTun.Services;
+
+/// <summary>Шаг окна «Добавить подключение»: главное меню или один из вариантов.</summary>
+public enum AddConnectionStep
+{
+    Menu,
+    File,
+    Paste,
+    Protocol,
+    Group
+}
+
+/// <summary>Что выбрал пользователь в окне «Добавить подключение».</summary>
+public enum AddConnectionAction
+{
+    Cancel,
+    /// <summary>Текст из выбранных файлов (<see cref="AddConnectionChoice.Text"/>).</summary>
+    FromFile,
+    /// <summary>Текст, вставленный в поле (из буфера или вручную).</summary>
+    Paste,
+    /// <summary>Протокол для ручного создания профиля (<see cref="AddConnectionChoice.Protocol"/>).</summary>
+    Protocol,
+    /// <summary>Создание группы (<see cref="AddConnectionChoice.GroupName"/>).</summary>
+    Group
+}
+
+public sealed record AddConnectionChoice(
+    AddConnectionAction Action,
+    string? Text = null,
+    string? Protocol = null,
+    string? GroupName = null);
 
 public enum SubscriptionImportAction
 {
@@ -11,7 +42,11 @@ public enum SubscriptionImportAction
     AddProfilesToGroup
 }
 
-public sealed record SubscriptionGroupOption(string Id, string Name);
+public sealed record SubscriptionGroupOption(string Id, string Name)
+{
+    /// <summary>Поле выбора показывает имя группы, а не строку записи (ComboBox иначе выводит ToString()).</summary>
+    public override string ToString() => Name;
+}
 
 public sealed record SubscriptionImportChoice(
     SubscriptionImportAction Action,
@@ -42,8 +77,11 @@ public interface IDialogService
     /// <summary>Редактор профиля. true — если пользователь сохранил.</summary>
     bool EditProfile(ProxyProfile profile, LatencyService latency);
 
-    /// <summary>Импорт: возвращает разобранные профили (или пустой список, если отменили).</summary>
-    List<ProxyProfile> ImportProfiles(string? prefill = null);
+    /// <summary>
+    /// Окно «Добавить подключение» (меню и его шаги). <paramref name="origin"/> — экранный прямоугольник
+    /// кнопки, из которой окно выросло (в DIP); null — окно появляется из центра.
+    /// </summary>
+    AddConnectionChoice ChooseAddConnection(Rect? origin, AddConnectionStep start, string defaultGroupName);
 
     string? PromptText(string title, string caption, string initial = "");
 

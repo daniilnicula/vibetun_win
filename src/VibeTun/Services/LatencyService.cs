@@ -99,7 +99,8 @@ public sealed class LatencyService
             var hostBytes = Encoding.ASCII.GetBytes(ProbeHost);
             var req = new List<byte> { 0x05, 0x01, 0x00, 0x03, (byte)hostBytes.Length };
             req.AddRange(hostBytes);
-            req.AddRange(BitConverter.GetBytes((ushort)ProbePort).Reverse());   // сетевой порядок
+            req.Add((byte)(ProbePort >> 8));     // порт в сетевом порядке (старший байт первым)
+            req.Add((byte)(ProbePort & 0xFF));
             await socket.SendAsync(req.ToArray(), SocketFlags.None, linked.Token);
 
             var head = await RecvExactAsync(socket, 4, linked.Token);
