@@ -191,6 +191,19 @@ public sealed class SettingsViewModel : ObservableObject
     /// поднимаем PropertyChanged, чтобы комбобокс в настройках перечитал значение.</summary>
     public void OnCloseBehaviorChangedExternally() => Raise(nameof(CloseBehavior));
 
+    /// <summary>Перезапуск с правами администратора происходит на старте приложения (App.OnStartup).</summary>
+    public bool RunAsAdmin
+    {
+        get => _settings.Current.RunAsAdmin;
+        set
+        {
+            if (_settings.Current.RunAsAdmin == value) return;
+            _settings.Current.RunAsAdmin = value;
+            _settings.SaveSoon();
+            Raise();
+        }
+    }
+
     public bool RememberState
     {
         get => _settings.Current.RememberState;

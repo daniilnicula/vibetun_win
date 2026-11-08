@@ -155,7 +155,7 @@
                         </Grid>
                     </Border>
 
-                    <ctl:SlideHost Grid.Row="1" Margin="0,12,0,0" SelectedKey="{Binding RoutingTab}">
+                    <ctl:SlideHost Grid.Row="1" Margin="0,12,0,0" SelectedKey="{Binding RoutingTab}" UniformSize="True">
                         <!-- домены, IP, regex -->
                         <ScrollViewer ctl:SlideHost.Key="domains" VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="0,0,4,14">

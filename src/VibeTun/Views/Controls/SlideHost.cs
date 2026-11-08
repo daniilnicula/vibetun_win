@@ -47,6 +47,16 @@ public class SlideHost : Grid
         set => SetValue(AnimateHeightProperty, value);
     }
 
+    /// <summary>
+    /// Единый размер контейнера под самую большую страницу: неактивные страницы прячутся через
+    /// Hidden вместо Collapsed и продолжают участвовать в измерении. Использовать только
+    /// для контейнеров фиксированной высоты — с переменной высотой (AnimateHeight) Hidden-страницы
+    /// резервировали бы место под себя.
+    /// </summary>
+    public bool UniformSize { get; set; }
+
+    private Visibility HiddenVisibility => UniformSize ? Visibility.Hidden : Visibility.Collapsed;
+
     /// <summary>Листать по вертикали (страницы уезжают вверх/вниз), а не по горизонтали.</summary>
     public bool Vertical { get; set; }
 
@@ -86,7 +96,7 @@ public class SlideHost : Grid
         var page = FindPage(key);
         foreach (UIElement child in Children)
         {
-            child.Visibility = ReferenceEquals(child, page) ? Visibility.Visible : Visibility.Collapsed;
+            child.Visibility = ReferenceEquals(child, page) ? Visibility.Visible : HiddenVisibility;
             var move = MoveOf(child);
             move.BeginAnimation(TranslateTransform.XProperty, null);
             move.BeginAnimation(TranslateTransform.YProperty, null);
@@ -123,7 +133,7 @@ public class SlideHost : Grid
         Motion.Run(fromMove, property, fromStart, -direction * size, Motion.Slide,
             EasingMode.EaseInOut, () =>
             {
-                if (!ReferenceEquals(_current, from)) from.Visibility = Visibility.Collapsed;
+                if (!ReferenceEquals(_current, from)) from.Visibility = HiddenVisibility;
             });
 
         _current = to;

@@ -211,6 +211,9 @@ public sealed class AppSettings
     public bool RunAtStartup { get; set; }
     public bool StartMinimized { get; set; }
 
+    /// <summary>При старте перезапускать себя с правами администратора (UAC).</summary>
+    public bool RunAsAdmin { get; set; }
+
     /// <summary>Что делать при закрытии окна по крестику.</summary>
     public CloseBehavior CloseBehavior { get; set; } = CloseBehavior.Ask;
     public bool TrayHintShown { get; set; }

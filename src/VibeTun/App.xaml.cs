@@ -63,6 +63,16 @@ public partial class App : Application
         ThemeService.ApplyAccent(Settings.Current.AccentColor, Settings.Current.UseSystemAccent);
         Motion.SetSpeed(Settings.Current.AnimationSpeed);
 
+        // настройка «запускать от имени администратора»: сразу перезапускаемся с правами,
+        // чтобы пользователю не приходилось делать это вручную. Флаг --elevated защищает от
+        // бесконечного цикла, --restarted даёт новому экземпляру подождать освобождения мьютекса.
+        if (Settings.Current.RunAsAdmin && !IsAdministrator() &&
+            !e.Args.Any(a => a.Equals("--elevated", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (TryStartElevated()) { Shutdown(); return; }
+            // отказ от UAC — продолжаем без прав
+        }
+
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += (_, args) => WriteCrashLog(args.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, args) =>
@@ -186,6 +196,36 @@ public partial class App : Application
         catch (Exception ex)
         {
             LogCrash(ex);
+        }
+    }
+
+    // --------------------------------------------------- запуск от имени администратора
+    private static bool IsAdministrator()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        return new System.Security.Principal.WindowsPrincipal(identity)
+            .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+    }
+
+    /// <summary>Поднять новый экземпляр через UAC (verb runas). False — пользователь отклонил запрос.</summary>
+    private static bool TryStartElevated()
+    {
+        try
+        {
+            var exe = AppPaths.ExecutablePath;
+            if (string.IsNullOrEmpty(exe)) return false;
+            Process.Start(new ProcessStartInfo(exe, "--restarted --elevated")
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WorkingDirectory = Path.GetDirectoryName(exe) ?? "",
+            });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogCrash(ex);
+            return false;
         }
     }
 }

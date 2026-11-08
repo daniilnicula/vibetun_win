@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows.Threading;
 using VibeTun.Models;
 using VibeTun.Services;
@@ -302,8 +303,9 @@ public sealed class RoutingViewModel : ObservableObject
             .Select(set => set.Id)
             .ToHashSet(StringComparer.Ordinal);
         // Скрытое хранилище глобального списка приложений — в списке наборов не показываем.
+        // Считаем служебным и прежний русский файл «Приложения.json» (миграция на английское имя).
         var appsIds = storedSets
-            .Where(set => set.BuiltIn && set.Name == RouteStore.SetApps)
+            .Where(set => set.BuiltIn && (set.Name == RouteStore.SetApps || set.Name == RouteStore.LegacySetApps))
             .Select(set => set.Id)
             .ToHashSet(StringComparer.Ordinal);
 
@@ -325,8 +327,23 @@ public sealed class RoutingViewModel : ObservableObject
 
         // Приложения глобальные, не привязаны к наборам: живут в скрытом служебном наборе.
         // Списки приложений внутри обычных наборов больше не используются — очищаем (начинаем с чистого листа).
-        _appsSet = storedSets.FirstOrDefault(set => appsIds.Contains(set.Id))
-                   ?? RouteStore.AppsSet();
+        var newAppsSet = storedSets.FirstOrDefault(set => set.BuiltIn && set.Name == RouteStore.SetApps);
+        var oldAppsSet = storedSets.FirstOrDefault(set => set.BuiltIn && set.Name == RouteStore.LegacySetApps);
+        if (newAppsSet is not null && oldAppsSet is not null)
+        {
+            // Оба есть: оставляем новый, старый файл удаляем.
+            _store.Delete(oldAppsSet);
+        }
+        else if (oldAppsSet is not null)
+        {
+            // Только старый: переносим содержимое в application.json, прежний файл удаляем.
+            var legacyPath = Path.Combine(AppPaths.RoutesDir, oldAppsSet.FileName);
+            oldAppsSet.Name = RouteStore.SetApps;
+            oldAppsSet.FileName = "";
+            _store.Save(oldAppsSet);
+            try { File.Delete(legacyPath); } catch { /* ignore */ }
+        }
+        _appsSet = newAppsSet ?? oldAppsSet ?? RouteStore.AppsSet();
         Apps.Clear();
         foreach (var app in _appsSet.Apps)
         {

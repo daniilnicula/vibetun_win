@@ -82,6 +82,12 @@
                                 <ComboBoxItem Tag="Exit" Content="{loc:Tr S0204}" />
                             </ComboBox>
                         </Grid>
+
+                        <Grid Margin="0,14,0,0">
+                            <TextBlock Text="{loc:Tr S1052}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                            <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right"
+                                          IsChecked="{Binding RunAsAdmin}" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 

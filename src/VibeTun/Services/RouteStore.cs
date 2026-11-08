@@ -14,7 +14,10 @@ public sealed class RouteStore
     public const string SetBypassRu = "Обход РФ";
     public const string SetBlockedOnly = "Только заблокированное";
     public const string SetAdBlock = "Блокировка рекламы";
-    public const string SetApps = "Приложения";
+    /// <summary>Служебный скрытый набор приложений; имя — имя файла, поэтому на английском.</summary>
+    public const string SetApps = "application";
+    /// <summary>Прежнее русское имя служебного набора (файл «Приложения.json») — используется для миграции.</summary>
+    public const string LegacySetApps = "Приложения";
 
     public List<RouteSet> LoadSets()
     {
