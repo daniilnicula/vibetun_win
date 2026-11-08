@@ -14,6 +14,7 @@ public sealed class RouteStore
     public const string SetBypassRu = "Обход РФ";
     public const string SetBlockedOnly = "Только заблокированное";
     public const string SetAdBlock = "Блокировка рекламы";
+    public const string SetApps = "Приложения";
 
     public List<RouteSet> LoadSets()
     {
@@ -244,22 +245,32 @@ public sealed class RouteStore
                 R("patreon.com", RouteAction.Proxy), R("onlyfans.com", RouteAction.Proxy),
                 R("pornhub.com", RouteAction.Proxy), R("xvideos.com", RouteAction.Proxy)
             }
-        },
-
-        new RouteSet
-        {
-            Name = SetAdBlock,
-            BuiltIn = true,
-            Description = L.T("S0513"),
-            Rules = new List<RouteRule>
-            {
-                R(@"^(.+\.)?(doubleclick|googleadservices|googlesyndication|google-analytics|adservice)\.(net|com|google\.com)$", RouteAction.Block, MatchKind.Regex, "Google Ads"),
-                R(@"^(.+\.)?(adnxs|adsrvr|advertising|adform|criteo|taboola|outbrain|rubiconproject|pubmatic|smartadserver|yieldmo)\.", RouteAction.Block, MatchKind.Regex),
-                R(@"^(.+\.)?(an|ads|ad|banners)\.yandex\.(ru|net|com)$", RouteAction.Block, MatchKind.Regex, L.T("S0514")),
-                R(@"^(.+\.)?(mc\.yandex\.ru|ads\.vk\.com|ad\.mail\.ru|top-fwz1\.mail\.ru|r\.mail\.ru)$", RouteAction.Block, MatchKind.Regex),
-                R(@"^(.+\.)?(sentry\.io|tracker|tracking|metrics|analytics|telemetry)\.", RouteAction.Block, MatchKind.Regex)
-            }
         }
+    };
+
+    /// <summary>Правила независимой блокировки рекламы; в список наборов больше не входят.</summary>
+    public static RouteSet AdBlockSet() => new()
+    {
+        Name = SetAdBlock,
+        BuiltIn = true,
+        Description = L.T("S0513"),
+        Rules = new List<RouteRule>
+        {
+            R(@"^(.+\.)?(doubleclick|googleadservices|googlesyndication|google-analytics|adservice)\.(net|com|google\.com)$", RouteAction.Block, MatchKind.Regex, "Google Ads"),
+            R(@"^(.+\.)?(adnxs|adsrvr|advertising|adform|criteo|taboola|outbrain|rubiconproject|pubmatic|smartadserver|yieldmo)\.", RouteAction.Block, MatchKind.Regex),
+            R(@"^(.+\.)?(an|ads|ad|banners)\.yandex\.(ru|net|com)$", RouteAction.Block, MatchKind.Regex, L.T("S0514")),
+            R(@"^(.+\.)?(mc\.yandex\.ru|ads\.vk\.com|ad\.mail\.ru|top-fwz1\.mail\.ru|r\.mail\.ru)$", RouteAction.Block, MatchKind.Regex),
+            R(@"^(.+\.)?(sentry\.io|tracker|tracking|metrics|analytics|telemetry)\.", RouteAction.Block, MatchKind.Regex)
+        }
+    };
+
+    /// <summary>Скрытое хранилище списка приложений; в список наборов не входит. Приложения глобальные —
+    /// не привязаны к выбранному набору, как и правила блокировки рекламы.</summary>
+    public static RouteSet AppsSet() => new()
+    {
+        Name = SetApps,
+        BuiltIn = true,
+        Rules = new List<RouteRule>()
     };
 
     private static RouteRule R(string pattern, RouteAction action, MatchKind kind = MatchKind.Domain, string? note = null)

@@ -4,7 +4,7 @@
         xmlns:dlg="clr-namespace:VibeTun.Views.Dialogs"
              xmlns:loc="clr-namespace:VibeTun.Services"
         Title="{loc:Tr S0010}" Width="620" Height="600" MinWidth="520" MinHeight="420"
-        WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="False"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner" Background="Transparent" AllowsTransparency="True"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">

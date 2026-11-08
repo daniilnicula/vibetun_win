@@ -415,8 +415,11 @@
                                 HorizontalAlignment="Right" Click="OnAccentReset" />
                     </Grid>
 
-                    <TextBlock Text="{loc:Tr S0148}" Style="{StaticResource TxtMuted}"
-                               TextWrapping="Wrap" Margin="0,8,0,0" />
+                    <Grid Margin="0,10,0,0">
+                        <TextBlock Text="{loc:Tr S0148}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                        <ToggleButton x:Name="SystemAccentToggle" Style="{StaticResource Switch}"
+                                      HorizontalAlignment="Right" Click="OnAccentSystemToggle" />
+                    </Grid>
                 </StackPanel>
             </Border>
         </Border>

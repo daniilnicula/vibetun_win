@@ -416,8 +416,8 @@
     "en": "Keep DNS unchanged and return (Esc)"
   },
   "S0104": {
-    "ru": "DNS для всех: через него ядро узнаёт адреса сайтов, если у домена или приложения нет своего. Выбор сохраняется и применяется сразу: активное подключение перезапускается автоматически.",
-    "en": "DNS for all: the core uses it to resolve websites unless a domain or application has its own DNS. Changes are saved and applied immediately; the active connection restarts automatically."
+    "ru": "DNS для всех: через него ядро узнаёт адреса сайтов, если у домена или приложения нет своего.",
+    "en": "DNS for all: the core uses it to resolve websites unless a domain or application has its own DNS."
   },
   "S0105": {
     "ru": "Сейчас:",
@@ -592,8 +592,8 @@
     "en": "Default"
   },
   "S0148": {
-    "ru": "Сохраняется сразу и действует для всех тем.",
-    "en": "Saved immediately and applied to all themes."
+    "ru": "Использовать системные цвета Windows",
+    "en": "Use Windows system colors"
   },
   "S0149": {
     "ru": "Открыть адрес и обновить страницу",
@@ -764,8 +764,8 @@
     "en": "Русский"
   },
   "S0191": {
-    "ru": "Лимит строк логов",
-    "en": "Log line limit"
+    "ru": "Лимит строк логов, отображаемых в интерфейсе",
+    "en": "Log lines shown in the app"
   },
   "S0192": {
     "ru": "Только в окне приложения. В файл записываются все логи.",
@@ -1098,6 +1098,14 @@
   "S0274": {
     "ru": "{0} правил · {1} приложений",
     "en": "{0} rules · {1} applications"
+  },
+  "S1050": {
+    "ru": "{0} правил",
+    "en": "{0} rules"
+  },
+  "S1051": {
+    "ru": "{0} приложений",
+    "en": "{0} applications"
   },
   "S0275": {
     "ru": "не найдено",

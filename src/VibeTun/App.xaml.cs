@@ -60,7 +60,7 @@ public partial class App : Application
         Settings.Load();
         L.SetLanguage(Settings.Current.Language);
         ThemeService.Apply(Settings.Current.Theme);
-        ThemeService.ApplyAccent(Settings.Current.AccentColor);
+        ThemeService.ApplyAccent(Settings.Current.AccentColor, Settings.Current.UseSystemAccent);
         Motion.SetSpeed(Settings.Current.AnimationSpeed);
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;

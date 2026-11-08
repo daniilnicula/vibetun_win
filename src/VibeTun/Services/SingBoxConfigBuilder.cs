@@ -38,6 +38,7 @@ public static class SingBoxConfigBuilder
     /// и прямые подключения идут через свой DNS вместо основного.</param>
     /// <param name="domainDns">Домены со своим DNS (раздел «DNS» → «Домены»), в порядке списка: DNS-запросы
     /// к ним и прямые подключения к ним идут через свой DNS. Записи доменов важнее записей приложений.</param>
+    /// <param name="appRules">Глобальный список приложений (вкладка «Приложения»): независим от выбранного набора.</param>
     public static ConfigBuildResult Build(
         ProxyProfile profile,
         RouteProfile route,
@@ -47,7 +48,9 @@ public static class SingBoxConfigBuilder
         int clashApiPort,
         string logFile,
         IReadOnlyList<AppDnsRoute>? appDns = null,
-        IReadOnlyList<DomainDnsRoute>? domainDns = null)
+        IReadOnlyList<DomainDnsRoute>? domainDns = null,
+        IReadOnlyList<RouteRule>? adBlockRules = null,
+        IReadOnlyList<AppRule>? appRules = null)
     {
         var result = new ConfigBuildResult { ClashApiPort = clashApiPort };
         _ = result;
@@ -217,7 +220,7 @@ public static class SingBoxConfigBuilder
         // DNS-правил (route.default_domain_resolver), поэтому нужны правила resolve — см. AddDnsResolve
         root["route"] = BuildRoute(route, routeSet, modern, allowProcessPath,
             modernDns ? resolverTag : null, tunnelCidrs,
-            modern && modernDns ? dnsRuleGroups : null);
+            modern && modernDns ? dnsRuleGroups : null, adBlockRules, appRules);
 
         // -------------------------------------------------------- experimental
         var experimental = new JsonObject
@@ -1493,7 +1496,8 @@ public static class SingBoxConfigBuilder
 
     // ------------------------------------------------------------------- route
     private static JsonNode BuildRoute(RouteProfile route, RouteSet? set, bool modern, bool allowProcessPath,
-        string? domainResolver, List<string>? tunnelCidrs = null, IReadOnlyList<DnsRuleGroup>? dnsGroups = null)
+        string? domainResolver, List<string>? tunnelCidrs = null, IReadOnlyList<DnsRuleGroup>? dnsGroups = null,
+        IReadOnlyList<RouteRule>? adBlockRules = null, IReadOnlyList<AppRule>? appRules = null)
     {
         var rules = new JsonArray();
 
@@ -1525,11 +1529,21 @@ public static class SingBoxConfigBuilder
 
         var userRules = set?.Rules.Where(r => r.Enabled && !string.IsNullOrWhiteSpace(r.Pattern)).ToList() ?? new();
         var domainNodes = BuildJsonRules(userRules, modern);
+        // Блокировка рекламы — отдельная функция, а не альтернатива выбранному набору.
+        // Её правила идут первыми, чтобы DIRECT/PROXY из набора или приложения не отменяли BLOCK.
+        var adBlockNodes = route.BlockAds
+            ? BuildJsonRules((adBlockRules ?? RouteStore.AdBlockSet().Rules)
+                .Where(rule => rule.Enabled && !string.IsNullOrWhiteSpace(rule.Pattern)).ToList(), modern)
+            : new List<JsonNode>();
+        foreach (var node in adBlockNodes) rules.Add(node);
 
-        var appRules = set?.Apps.Where(a => a.Enabled && (!string.IsNullOrWhiteSpace(a.ProcessName) || !string.IsNullOrWhiteSpace(a.Path))).ToList()
-                       ?? new List<AppRule>();
+        // Приложения глобальные: передаются отдельно от набора (вкладка «Приложения» независимая).
+        var enabledApps = appRules ?? set?.Apps;
+        var appRulesList = enabledApps is null
+            ? new List<AppRule>()
+            : enabledApps.Where(a => a.Enabled && (!string.IsNullOrWhiteSpace(a.ProcessName) || !string.IsNullOrWhiteSpace(a.Path))).ToList();
         var appNodes = new List<JsonNode>();
-        foreach (var app in appRules)
+        foreach (var app in appRulesList)
         {
             // Поля одного правила в sing-box объединяются по И: если и process_name, и process_path
             // лежат в одном объекте, правило умрёт при первом же обновлении программы (путь

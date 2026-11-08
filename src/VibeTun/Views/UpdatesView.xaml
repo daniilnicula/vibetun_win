@@ -17,8 +17,6 @@
 
             <StackPanel>
                 <TextBlock Text="{loc:Tr S0137}" Style="{StaticResource TxtH1}" />
-                <TextBlock Text="{loc:Tr S0254}"
-                           Style="{StaticResource TxtMuted}" Margin="0,3,0,0" />
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">

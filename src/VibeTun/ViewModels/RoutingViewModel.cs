@@ -18,6 +18,8 @@ public sealed class RoutingViewModel : ObservableObject
     private string _newRulePattern = "";
     private MatchKind _newRuleKind = MatchKind.Domain;
     private RouteAction _newRuleAction = RouteAction.Proxy;
+    private string _newAdBlockPattern = "";
+    private MatchKind _newAdBlockKind = MatchKind.Domain;
     private string _appSearch = "";
 
     public RoutingViewModel(RouteStore store, IDialogService dialogs)
@@ -34,6 +36,7 @@ public sealed class RoutingViewModel : ObservableObject
         };
 
         AddRuleCommand = new RelayCommand(_ => AddRule(), _ => !string.IsNullOrWhiteSpace(NewRulePattern));
+        AddAdBlockRuleCommand = new RelayCommand(_ => AddAdBlockRule(), _ => !string.IsNullOrWhiteSpace(NewAdBlockPattern));
         RemoveRuleCommand = new RelayCommand(p => RemoveRule(p as RuleItemVm));
         AddAppFromExeCommand = new AsyncRelayCommand(AddAppFromExeAsync);
         AddAppFromProcessesCommand = new AsyncRelayCommand(AddAppsFromProcessesAsync);
@@ -49,6 +52,7 @@ public sealed class RoutingViewModel : ObservableObject
     public ObservableCollection<RouteProfileItemVm> Profiles { get; } = new();
     public ObservableCollection<RouteSetItemVm> Sets { get; } = new();
     public ObservableCollection<RuleItemVm> Rules { get; } = new();
+    public ObservableCollection<RuleItemVm> AdBlockRules { get; } = new();
     public ObservableCollection<AppRuleItemVm> Apps { get; } = new();
     public ObservableCollection<AppRuleItemVm> FilteredApps { get; } = new();
 
@@ -59,6 +63,7 @@ public sealed class RoutingViewModel : ObservableObject
     public event Action? RulesPersisted;
 
     public RelayCommand AddRuleCommand { get; }
+    public RelayCommand AddAdBlockRuleCommand { get; }
     public RelayCommand RemoveRuleCommand { get; }
     public AsyncRelayCommand AddAppFromExeCommand { get; }
     public AsyncRelayCommand AddAppFromProcessesCommand { get; }
@@ -138,6 +143,47 @@ public sealed class RoutingViewModel : ObservableObject
         _ => "—"
     };
 
+    public string NewAdBlockPattern
+    {
+        get => _newAdBlockPattern;
+        set
+        {
+            if (!SetProperty(ref _newAdBlockPattern, value)) return;
+            AddAdBlockRuleCommand.RaiseCanExecuteChanged();
+
+            // тип записи определяется автоматически по введённому тексту
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                var (_, kind) = Text.NormalizeUserPattern(value);
+                if (_newAdBlockKind != kind)
+                {
+                    _newAdBlockKind = kind;
+                    Raise(nameof(NewAdBlockKind));
+                    Raise(nameof(NewAdBlockKindLabel));
+                }
+            }
+        }
+    }
+
+    public MatchKind NewAdBlockKind
+    {
+        get => _newAdBlockKind;
+        private set
+        {
+            if (!SetProperty(ref _newAdBlockKind, value)) return;
+            Raise(nameof(NewAdBlockKindLabel));
+        }
+    }
+
+    public string NewAdBlockKindLabel => _newAdBlockKind switch
+    {
+        MatchKind.Domain => L.T("S0270"),
+        MatchKind.Ip => "IP",
+        MatchKind.Regex => "regex",
+        MatchKind.Keyword => L.T("S0272"),
+        _ => "—"
+    };
+
     public RouteAction NewRuleAction
     {
         get => _newRuleAction;
@@ -193,7 +239,7 @@ public sealed class RoutingViewModel : ObservableObject
 
     private string _routingTab = "domains";
 
-    /// <summary>Открытая вкладка правой части: «domains» — домены и IP, «apps» — приложения.</summary>
+    /// <summary>Открытая вкладка: «domains», «apps» или независимая «adblock».</summary>
     public string RoutingTab
     {
         get => _routingTab;
@@ -202,6 +248,7 @@ public sealed class RoutingViewModel : ObservableObject
             if (!SetProperty(ref _routingTab, value)) return;
             Raise(nameof(IsDomainsTab));
             Raise(nameof(IsAppsTab));
+            Raise(nameof(IsAdBlockTab));
         }
     }
 
@@ -226,20 +273,84 @@ public sealed class RoutingViewModel : ObservableObject
         }
     }
 
-    public string RulesCountText => L.F("S0274", Rules.Count, Apps.Count);
+    public bool IsAdBlockTab
+    {
+        get => _routingTab == "adblock";
+        set
+        {
+            if (value) RoutingTab = "adblock";
+            else Raise(nameof(IsAdBlockTab));
+        }
+    }
+
+    public string RulesCountText => L.F("S1050", Rules.Count);
+
+    /// <summary>Счётчик вкладки «Приложения» — список глобальный, не относится к выбранному набору.</summary>
+    public string AppsCountText => L.F("S1051", Apps.Count);
 
     // ------------------------------------------------------------------ загрузка
+    private RouteSet? _adBlockSet;
+    private RouteSet? _appsSet;
+
     public void Load()
     {
         _store.SeedBuiltInsIfNeeded();
 
+        var storedSets = _store.LoadSets();
+        var legacyAdBlockIds = storedSets
+            .Where(set => set.BuiltIn && set.Name == RouteStore.SetAdBlock)
+            .Select(set => set.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        // Скрытое хранилище глобального списка приложений — в списке наборов не показываем.
+        var appsIds = storedSets
+            .Where(set => set.BuiltIn && set.Name == RouteStore.SetApps)
+            .Select(set => set.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
         Sets.Clear();
-        foreach (var set in _store.LoadSets())
+        foreach (var set in storedSets.Where(set => !legacyAdBlockIds.Contains(set.Id) && !appsIds.Contains(set.Id)))
             Sets.Add(new RouteSetItemVm(set));
+
+        // Старый встроенный набор становится скрытым хранилищем настроек отдельной функции.
+        // Благодаря этому пользовательские правки рекламных правил не теряются при обновлении.
+        _adBlockSet = storedSets.FirstOrDefault(set => legacyAdBlockIds.Contains(set.Id))
+                      ?? RouteStore.AdBlockSet();
+        AdBlockRules.Clear();
+        foreach (var rule in _adBlockSet.Rules)
+        {
+            var vm = new RuleItemVm(rule);
+            vm.Changed += ScheduleSave;
+            AdBlockRules.Add(vm);
+        }
+
+        // Приложения глобальные, не привязаны к наборам: живут в скрытом служебном наборе.
+        // Списки приложений внутри обычных наборов больше не используются — очищаем (начинаем с чистого листа).
+        _appsSet = storedSets.FirstOrDefault(set => appsIds.Contains(set.Id))
+                   ?? RouteStore.AppsSet();
+        Apps.Clear();
+        foreach (var app in _appsSet.Apps)
+        {
+            var vm = new AppRuleItemVm(app);
+            vm.Changed += ScheduleSave;
+            Apps.Add(vm);
+        }
+        foreach (var set in Sets.Where(s => s.Model.Apps.Count > 0))
+        {
+            set.Model.Apps.Clear();
+            _store.Save(set.Model);
+            set.Refresh();
+        }
 
         Profiles.Clear();
         foreach (var profile in _store.LoadProfiles())
         {
+            // Раньше блокировка была отдельным набором. Сохраняем её состояние при переходе
+            // на независимый переключатель, а обычную маршрутизацию возвращаем к «Обходу РФ».
+            if (profile.RouteSetId is { } routeSetId && legacyAdBlockIds.Contains(routeSetId))
+            {
+                profile.BlockAds = true;
+                profile.RouteSetId = null;
+            }
             var vm = new RouteProfileItemVm(profile);
             vm.Changed += ScheduleSave;
             Profiles.Add(vm);
@@ -260,10 +371,14 @@ public sealed class RoutingViewModel : ObservableObject
 
     public RouteSet? ActiveSet => SelectedSet?.Model;
 
+    public IReadOnlyList<RouteRule>? ActiveAdBlockRules => _adBlockSet?.Rules;
+
+    /// <summary>Глобальный список приложений — вкладка «Приложения» не зависит от выбранного набора.</summary>
+    public IReadOnlyList<AppRule>? ActiveApps => _appsSet?.Apps;
+
     private void LoadSetContents()
     {
         Rules.Clear();
-        Apps.Clear();
         var set = SelectedSet?.Model;
         if (set is not null)
         {
@@ -272,12 +387,6 @@ public sealed class RoutingViewModel : ObservableObject
                 var vm = new RuleItemVm(rule);
                 vm.Changed += ScheduleSave;
                 Rules.Add(vm);
-            }
-            foreach (var app in set.Apps)
-            {
-                var vm = new AppRuleItemVm(app);
-                vm.Changed += ScheduleSave;
-                Apps.Add(vm);
             }
         }
         ApplyAppFilter();
@@ -305,6 +414,7 @@ public sealed class RoutingViewModel : ObservableObject
         _saveTimer.Stop();
         _saveTimer.Start();
         Raise(nameof(RulesCountText));
+        Raise(nameof(AppsCountText));
         Raise(nameof(ShowTunHint));
         SettingsChanged?.Invoke();
     }
@@ -315,9 +425,18 @@ public sealed class RoutingViewModel : ObservableObject
         {
             var set = SelectedSet.Model;
             set.Rules = Rules.Select(r => r.Model).ToList();
-            set.Apps = Apps.Select(a => a.Model).ToList();
             _store.Save(set);
             SelectedSet.Refresh();
+        }
+        if (_adBlockSet is not null)
+        {
+            _adBlockSet.Rules = AdBlockRules.Select(rule => rule.Model).ToList();
+            _store.Save(_adBlockSet);
+        }
+        if (_appsSet is not null)
+        {
+            _appsSet.Apps = Apps.Select(app => app.Model).ToList();
+            _store.Save(_appsSet);
         }
         _store.SaveProfiles(Profiles.Select(p => p.Model).ToList());
 
@@ -343,6 +462,25 @@ public sealed class RoutingViewModel : ObservableObject
 
         Rules.Insert(0, vm);
         NewRulePattern = "";
+        ScheduleSave();
+    }
+
+    private void AddAdBlockRule()
+    {
+        var pattern = NewAdBlockPattern.Trim();
+        if (pattern.Length == 0) return;
+
+        var model = new RouteRule
+        {
+            Pattern = pattern,
+            Kind = NewAdBlockKind,
+            Action = RouteAction.Block
+        };
+        var vm = new RuleItemVm(model);
+        vm.Changed += ScheduleSave;
+
+        AdBlockRules.Insert(0, vm);
+        NewAdBlockPattern = "";
         ScheduleSave();
     }
 

@@ -10,16 +10,34 @@ namespace VibeTun.Views.Dialogs;
 public partial class SubscriptionImportWindow : DialogWindow
 {
     private readonly IReadOnlyList<SubscriptionGroupOption> _groups;
+    private bool _syncingGroupSelection;
 
-    public SubscriptionImportWindow(string subscriptionName, int profileCount, IReadOnlyList<SubscriptionGroupOption> groups)
+    public SubscriptionImportWindow(string subscriptionName, string defaultGroupName, int profileCount,
+        IReadOnlyList<SubscriptionGroupOption> groups)
     {
         InitializeComponent();
         _groups = groups;
         GroupSelector.ItemsSource = groups;
         GroupSelector.SelectedIndex = -1;
-        GroupSelector.SelectionChanged += (_, _) => GroupError.Visibility = Visibility.Collapsed;
-        if (groups.Count == 0) NewGroupName.Text = subscriptionName;
-        NewGroupName.TextChanged += (_, _) => GroupError.Visibility = Visibility.Collapsed;
+        NewGroupName.Text = defaultGroupName;
+        GroupSelector.SelectionChanged += (_, _) =>
+        {
+            GroupError.Visibility = Visibility.Collapsed;
+            if (_syncingGroupSelection || GroupSelector.SelectedItem is null) return;
+            // Выбор существующей группы отменяет предложенное имя новой группы.
+            _syncingGroupSelection = true;
+            NewGroupName.Text = "";
+            _syncingGroupSelection = false;
+        };
+        NewGroupName.TextChanged += (_, _) =>
+        {
+            GroupError.Visibility = Visibility.Collapsed;
+            if (_syncingGroupSelection || string.IsNullOrWhiteSpace(NewGroupName.Text)) return;
+            // И наоборот: ручной ввод означает создание новой группы, а не выбранную в списке.
+            _syncingGroupSelection = true;
+            GroupSelector.SelectedIndex = -1;
+            _syncingGroupSelection = false;
+        };
         Message.Text = L.F("S0978", subscriptionName, profileCount);
     }
 

@@ -56,9 +56,9 @@ public sealed class DialogService : IDialogService
     }
 
     public SubscriptionImportChoice ChooseSubscriptionImport(
-        string subscriptionName, int profileCount, IReadOnlyList<SubscriptionGroupOption> groups)
+        string subscriptionName, string defaultGroupName, int profileCount, IReadOnlyList<SubscriptionGroupOption> groups)
     {
-        var window = new SubscriptionImportWindow(subscriptionName, profileCount, groups) { Owner = _owner };
+        var window = new SubscriptionImportWindow(subscriptionName, defaultGroupName, profileCount, groups) { Owner = _owner };
         return window.ShowDialog() == true ? window.Choice : new SubscriptionImportChoice(SubscriptionImportAction.Cancel);
     }
 

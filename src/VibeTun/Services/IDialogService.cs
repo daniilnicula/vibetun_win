@@ -102,7 +102,7 @@ public interface IDialogService
     ProfileGroupDeleteChoice ChooseProfileGroupDeletion(string groupName, int profileCount);
 
     SubscriptionImportChoice ChooseSubscriptionImport(
-        string subscriptionName, int profileCount, IReadOnlyList<SubscriptionGroupOption> groups);
+        string subscriptionName, string defaultGroupName, int profileCount, IReadOnlyList<SubscriptionGroupOption> groups);
 
     void Info(string title, string text);
 

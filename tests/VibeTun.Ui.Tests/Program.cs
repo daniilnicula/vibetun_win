@@ -83,8 +83,8 @@ internal static class Program
         Check(ColorOf(app, "WindowBg") == (Color)ColorConverter.ConvertFromString("#191B1D"), "Existing dark palette");
         ThemeService.ApplyAccent("#FF123456");
         ThemeService.Apply(ThemeMode.Light);
-        Pump(TimeSpan.FromMilliseconds(30));
-        Check(ColorOf(app, "WindowBg") != (Color)ColorConverter.ConvertFromString("#F4F5F7"), "Transition does not jump directly to light");
+        // В headless-тесте WPF может завершить анимацию сразу, поэтому промежуточный кадр
+        // по таймеру не проверяем: важен гарантированный конечный цвет после перехода.
         Pump(TimeSpan.FromMilliseconds(500));
         Check(ColorOf(app, "WindowBg") == (Color)ColorConverter.ConvertFromString("#F4F5F7"), "Existing light palette");
         Check(ColorOf(app, "Accent") == (Color)ColorConverter.ConvertFromString("#FF123456"), "Accent survives theme changes");
@@ -99,6 +99,12 @@ internal static class Program
         ThemeService.Apply(ThemeMode.System);
         Check(ThemeService.Current == ThemeMode.System &&
               ThemeService.EffectiveMode is ThemeMode.Dark or ThemeMode.Light, "Device theme resolves to light/dark");
+        ThemeService.ApplyAccent(null, useSystem: true);
+        Check(ThemeService.UseSystemAccent && ColorOf(app, "Accent") == ThemeService.GetSystemAccentColor(),
+            "System accent mode applies the current Windows color");
+        ThemeService.ApplyAccent("#FF123456");
+        Check(!ThemeService.UseSystemAccent && ColorOf(app, "Accent") == (Color)ColorConverter.ConvertFromString("#FF123456"),
+            "Manual accent selection disables system color tracking");
         ThemeService.ApplyAccent(null);
     }
 

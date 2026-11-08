@@ -542,11 +542,14 @@ public partial class MainWindow : Window
     private void SyncAccentFlyout()
     {
         var stored = App.Settings.Current.AccentColor;
-        var color = !string.IsNullOrWhiteSpace(stored) && ThemeService.TryParseColor(stored!, out var c)
-            ? c
-            : ThemeService.DefaultAccent;
+        var color = App.Settings.Current.UseSystemAccent
+            ? ThemeService.GetSystemAccentColor()
+            : !string.IsNullOrWhiteSpace(stored) && ThemeService.TryParseColor(stored!, out var c)
+                ? c
+                : ThemeService.DefaultAccent;
 
         _syncingAccent = true;
+        SystemAccentToggle.IsChecked = App.Settings.Current.UseSystemAccent;
         ColorMath.ToHsv(color, out var hue, out var sat, out var val);
         if (sat > 0.001) AccentWheel.Hue = hue;   // у серого оттенок не определён: круг не прыгает
         AccentWheel.Saturation = sat;
@@ -570,6 +573,8 @@ public partial class MainWindow : Window
         UpdateAccentPreview(color);
 
         var hex = color.ToString();   // #AARRGGBB
+        App.Settings.Current.UseSystemAccent = false;
+        SystemAccentToggle.IsChecked = false;
         ThemeService.ApplyAccent(hex);
         App.Settings.Current.AccentColor = hex;
         App.Settings.SaveSoon();
@@ -584,8 +589,19 @@ public partial class MainWindow : Window
 
     private void OnAccentReset(object sender, RoutedEventArgs e)
     {
+        App.Settings.Current.UseSystemAccent = false;
         App.Settings.Current.AccentColor = null;
         ThemeService.ApplyAccent(null);
+        App.Settings.SaveSoon();
+        SyncAccentFlyout();
+    }
+
+    private void OnAccentSystemToggle(object sender, RoutedEventArgs e)
+    {
+        if (_syncingAccent) return;
+        var useSystem = SystemAccentToggle.IsChecked == true;
+        App.Settings.Current.UseSystemAccent = useSystem;
+        ThemeService.ApplyAccent(App.Settings.Current.AccentColor, useSystem);
         App.Settings.SaveSoon();
         SyncAccentFlyout();
     }

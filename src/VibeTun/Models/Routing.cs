@@ -179,6 +179,9 @@ public sealed class AppSettings
     /// <summary>Акцентный цвет интерфейса в формате #AARRGGBB; null — цвет темы по умолчанию.</summary>
     public string? AccentColor { get; set; }
 
+    /// <summary>Использовать акцент Windows и обновлять его при смене системных настроек.</summary>
+    public bool UseSystemAccent { get; set; }
+
     /// <summary>Размытие фона за левой панелью (системный акрил). По умолчанию выключено.</summary>
     public bool BlurSidebar { get; set; } = false;
 

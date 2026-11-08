@@ -34,8 +34,6 @@
                             <TextBox Style="{StaticResource InputBox}" Width="100" HorizontalAlignment="Right"
                                      Text="{Binding LogLimit, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}" />
                         </Grid>
-                        <TextBlock Text="{loc:Tr S0192}" Style="{StaticResource TxtMuted}"
-                                   TextWrapping="Wrap" Margin="0,6,0,0" />
                         <Border Height="1" Background="{DynamicResource Divider}" Margin="0,14" />
 
                         <Grid>
@@ -84,8 +82,6 @@
                                 <ComboBoxItem Tag="Exit" Content="{loc:Tr S0204}" />
                             </ComboBox>
                         </Grid>
-                        <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                   Text="{loc:Tr S0205}" />
                     </StackPanel>
                 </Border>
 

@@ -664,7 +664,7 @@ public sealed class MainViewModel : ObservableObject
             // а также домены и приложения со своим DNS
             var build = SingBoxConfigBuilder.Build(_activeProfile, Dns.ApplyTo(route), Routing.ActiveSet,
                 App.Settings.Current, Core.Info, clashPort, Path.Combine(AppPaths.LogsDir, "core.log"),
-                Dns.AppRoutes(), Dns.DomainRoutes());
+                Dns.AppRoutes(), Dns.DomainRoutes(), Routing.ActiveAdBlockRules, Routing.ActiveApps);
 
             foreach (var warning in build.Warnings) AppendLog(L.T("S0705") + warning);
 

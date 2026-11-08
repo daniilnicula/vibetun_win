@@ -334,7 +334,11 @@ public sealed class ProfilesViewModel : ObservableObject
                 .Where(group => !group.IsSubscription)
                 .Select(group => new SubscriptionGroupOption(group.Id, group.Name))
                 .ToList();
-            var choice = _dialogs.ChooseSubscriptionImport(subscription.Name, subscription.Profiles.Count, groups);
+            var defaultGroupName = Uri.TryCreate(url, UriKind.Absolute, out var subscriptionUri)
+                ? subscriptionUri.Host
+                : subscription.Name;
+            var choice = _dialogs.ChooseSubscriptionImport(
+                subscription.Name, defaultGroupName, subscription.Profiles.Count, groups);
             if (choice.Action == SubscriptionImportAction.Cancel) return;
 
             switch (choice.Action)

@@ -90,6 +90,7 @@ public static class ThemeService
         Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
         {
             if (Current == ThemeMode.System) Apply(Current);
+            if (UseSystemAccent) ApplyAccent(null, useSystem: true);
         }));
     }
 
@@ -102,13 +103,40 @@ public static class ThemeService
     /// <summary>Цвет акцента по умолчанию: #FF758AAC (для кнопки «по умолчанию» в пикере).</summary>
     public static Color DefaultAccent => Color.FromRgb(0x75, 0x8A, 0xAC);
 
+    /// <summary>Режим автоматического отслеживания акцентного цвета Windows.</summary>
+    public static bool UseSystemAccent { get; private set; }
+
+    /// <summary>Текущий акцент Windows (DWM хранит DWORD в порядке ABGR), без прозрачности.</summary>
+    public static Color GetSystemAccentColor()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
+            if (key?.GetValue("AccentColor") is int value)
+                return Color.FromRgb((byte)(value & 0xFF), (byte)((value >> 8) & 0xFF), (byte)((value >> 16) & 0xFF));
+        }
+        catch { /* ниже есть системная кисть и цвет по умолчанию */ }
+
+        try
+        {
+            var color = SystemParameters.WindowGlassColor;
+            color.A = 0xFF;
+            return color;
+        }
+        catch { return DefaultAccent; }
+    }
+
     /// <summary>
     /// Применить пользовательский акцент поверх палитры темы (или убрать override, если
-    /// <paramref name="hex"/> пуст). Прозрачность (AA) сохраняется как есть.
+    /// <paramref name="hex"/> пуст). В системном режиме цвет берётся из Windows и обновляется
+    /// по событию UserPreferenceChanged, без таймера и периодического опроса.
     /// </summary>
-    public static void ApplyAccent(string? hex)
+    public static void ApplyAccent(string? hex, bool useSystem = false)
     {
-        _accentHex = string.IsNullOrWhiteSpace(hex) ? null : hex;
+        UseSystemAccent = useSystem;
+        _accentHex = useSystem
+            ? GetSystemAccentColor().ToString()
+            : string.IsNullOrWhiteSpace(hex) ? null : hex;
         if (Application.Current is { } app) ReapplyAccent(app);
     }
 

@@ -429,6 +429,19 @@ public sealed class RouteProfileItemVm : ObservableObject
         }
     }
 
+    /// <summary>Независимая блокировка рекламы: работает вместе с выбранным набором правил.</summary>
+    public bool BlockAds
+    {
+        get => _model.BlockAds;
+        set
+        {
+            if (_model.BlockAds == value) return;
+            _model.BlockAds = value;
+            Raise();
+            Changed?.Invoke();
+        }
+    }
+
     public bool IsSelected
     {
         get => _isSelected;

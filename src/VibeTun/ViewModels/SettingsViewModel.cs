@@ -724,7 +724,7 @@ public sealed class SettingsViewModel : ObservableObject
         _settings.Current.InstalledExeSha256 = installedSha;
         _settings.SaveSoon();
         ThemeService.Apply(_settings.Current.Theme);
-        ThemeService.ApplyAccent(_settings.Current.AccentColor);
+        ThemeService.ApplyAccent(_settings.Current.AccentColor, _settings.Current.UseSystemAccent);
         BlurChanged?.Invoke(_settings.Current.BlurSidebar);
         L.SetLanguage(_settings.Current.Language);
         Raise(null);
