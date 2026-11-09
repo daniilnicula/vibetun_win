@@ -37,15 +37,17 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        // Обычное (не layered) окно на всех версиях: акриловый блюр Windows 10 не обрезается
-        // по скруглённому Border у layered-окна, поэтому углы задаёт регион окна (SetWindowRgn).
-        // Windows 10: layered-окно с прозрачным фоном (как раньше) — на нём акрил выглядит нужным образом
+        // Тип окна диктует DWM, а не наши предпочтения: живой акрил Windows 10 рисует размытие
+        // только в layered-окне (в обычном — сплошная светлая заливка), а системный бэкдроп
+        // Windows 11 (mica) — только в обычном. Поэтому на Windows 10 остаётся layered-окно.
         if (!_useSystemCorners)
         {
             AllowsTransparency = true;
             Background = HitTestBrush;
         }
         UpdateRootChrome();
+        // смена темы во время работы: синхронизируем вариант mica (тёмная/светлая)
+        ThemeService.ThemeChanged += () => Safe(AcrylicBackdrop.SyncTheme);
         PreviewKeyDown += OnPreviewKeyDown;
         ApplyNavOrder(App.Settings.Current.NavOrder);
         // страховка для «Развернуть»: после изменения состояния окна дожимаем его до рабочей
@@ -606,17 +608,15 @@ public partial class MainWindow : Window
         SyncAccentFlyout();
     }
 
-    /// <summary>На Windows 10 обрезаем содержимое по Border; на Windows 11 углами
-    /// управляет DWM. В развёрнутом состоянии ручное скругление снимается.</summary>
+    /// <summary>Углами окна управляет DWM (Windows 11) или никто — квадратные углы у
+    /// layered-окна Windows 10, где живёт акрил. Регион окна не задаём: на Windows 11 он
+    /// портит системную тень, на Windows 10 ломал акрил.</summary>
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs e) => UpdateRootChrome();
 
     private void UpdateRootChrome()
     {
-        // углы острые: на Windows 10 — всегда; на Windows 11 — системные углы, при блюре регион окна 12 px
         RootBorder.CornerRadius = new CornerRadius(0);
         RootBorder.Clip = null;
-        var round = _useSystemCorners && _glass && WindowState != WindowState.Maximized;
-        AcrylicBackdrop.SetCornerRadius(this, round ? 12 : 0);
     }
 
     // ------------------------------------------------------------- списки «Панели»/«SSH»
@@ -732,20 +732,19 @@ public partial class MainWindow : Window
         => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     // ------------------------------------------------------------- разворот окна
-    // Окно без рамки (WindowStyle=None + AllowsTransparency): при WindowState.Maximized WPF
+    // Окно без рамки (WindowStyle=None + WindowChrome): при WindowState.Maximized WPF
     // растягивает окно на весь монитор, и оно залезает под панель задач — как фуллскрин,
     // который такому приложению не положен. Две защиты:
     //  1) перехватываем WM_GETMINMAXINFO и ограничиваем максимум рабочей областью монитора;
     //  2) после разворачивания дополнительно прижимаем окно к рабочей области через SetWindowPos —
-    //     на слоёных окнах (AllowsTransparency) система местами игнорирует ограничение из п. 1.
+    //     местами система игнорирует ограничение из п. 1.
     // «Развернуть» ведёт себя как обычное разворачивание, панель задач остаётся видимой.
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        // блюр левой панели: системный акрил; без него панель остаётся непрозрачной
-        // акрил включаем один раз на весь сеанс: повторные SetWindowCompositionAttribute на layered-окне
-        // со временем темнят фон. Выключенный блюр просто закрывает окно непрозрачным фоном темы.
+        // блюр левой панели: системный акрил; без него панель остаётся непрозрачной.
+        // Один вызов на весь сеанс: AcrylicBackdrop.Apply сам выбирает API под ОС.
         _acrylicOk = AcrylicBackdrop.Apply(this);
         ApplyBlur(App.Settings.Current.BlurSidebar);
         // HwndSource.FromHwnd надёжнее PresentationSource.FromVisual: последний возвращает null,
@@ -753,8 +752,7 @@ public partial class MainWindow : Window
         if (HwndSource.FromHwnd(new WindowInteropHelper(this).Handle) is HwndSource source)
             source.AddHook(WndProc);
 
-        // На Windows 11 не используем layered-окно: DWM скругляет его сам,
-        // при этом сохраняется совместимость с FancyZones.
+        // Скругление углов на Windows 11 делает сам DWM (регион при блюре — в UpdateRootChrome)
         if (_useSystemCorners) ApplyDwmRoundCorners();
     }
 
@@ -777,12 +775,24 @@ public partial class MainWindow : Window
         _glass = glass;
         if (glass)
         {
-            // над размытием никаких затемняющих слоёв: сайдбар, шапка и подвал прозрачные
-            SidebarTint.Background = HitTestBrush;
-            HeaderTint.Background = HitTestBrush;
-            NavFade.Background = HitTestBrush;
+            if (_useSystemCorners)
+            {
+                // Windows 11: поверх mica — полупрозрачный оттенок темы. Mica тонируется от обоев,
+                // но без слоя темы фон выглядит чужеродно; слишком плотный слой убивает фактуру.
+                SidebarTint.SetResourceReference(Border.BackgroundProperty, "PanelGlassBlur");
+                HeaderTint.SetResourceReference(Border.BackgroundProperty, "PanelGlassBlur");
+                NavFade.SetResourceReference(Border.BackgroundProperty, "PanelGlassBlur");
+            }
+            else
+            {
+                // Windows 10: над живым акрилом затемняющих слоёв нет — панель прозрачная,
+                // цвет и размытие даёт сам accent acrylic
+                SidebarTint.Background = HitTestBrush;
+                HeaderTint.Background = HitTestBrush;
+                NavFade.Background = HitTestBrush;
+            }
             RootBorder.Background = HitTestBrush;
-            // фон самого окна тоже должен быть почти прозрачным: после выключения там стоял непрозрачный WindowBg
+            // фон самого окна почти прозрачный: после выключения там стоял непрозрачный WindowBg
             Background = HitTestBrush;
             ConnectionPanel.Glass = true;
         }

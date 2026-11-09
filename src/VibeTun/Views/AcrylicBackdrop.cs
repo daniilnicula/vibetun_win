@@ -2,24 +2,101 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using System.Windows.Media;
 
 namespace VibeTun.Views;
 
 /// <summary>
-/// Системный акриловый фон окна (размытие того, что находится за окном). Работает на Windows 10 1803+
-/// и на Windows 11. Если система не поддерживает — возвращает false, и окно остаётся непрозрачным.
+/// Системный бэкдроп окна (материал за прозрачными участками окна).
+/// Windows 11 получает Mica через DWMWA_SYSTEMBACKDROP_TYPE — тёмную или светлую по теме
+/// приложения (вариант выбирается атрибутом DWMWA_USE_IMMERSIVE_DARK_MODE; без него mica
+/// всегда светлая). Windows 10 получает accent acrylic: он даёт живое тёмное размытие,
+/// но только в layered-окне (AllowsTransparency, см. MainWindow) — в обычном окне рисует
+/// сплошную светлую заливку. Запасной вариант на обеих — то, что поддерживает система;
+/// если ничего не применилось, возвращает false и окно остаётся непрозрачным.
 /// </summary>
-internal static class AcrylicBackdrop
+public static class AcrylicBackdrop
 {
     private const int WcaAccentPolicy = 19;
     private const int AccentEnableAcrylicBlurBehind = 4;
 
+    private const int DwmwaUseImmersiveDarkMode = 19;  // вариант mica: 1 — тёмная, 0 — светлая
+    private const int DwmwaSystemBackdropType = 38;
+    private const int DwmsbtMainWindow = 2;            // mica: тонируется от обоев (в тёмной теме — тёмная)
+    private const int DwmsbtTransientWindow = 3;       // acrylic: официальный бэкдроп Windows 11 (светлый)
+
     public static bool Apply(Window window)
     {
         if (Environment.OSVersion.Version < new Version(10, 0, 17134)) return false;
-        // GradientColor в формате AABBGGRR; почти прозрачный — цвет задаёт тема поверх
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+            return ApplyWin11(window);
+        // GradientColor в формате AABBGGRR; почти прозрачный — цвет задаёт тема поверх.
+        // Важно: живой акрил рисует размытие только в layered-окне (см. MainWindow).
         return SetAccent(window, AccentEnableAcrylicBlurBehind, 2, 0x01000000);
+    }
+
+    /// <summary>Переключение темы во время работы: синхронизируем вариант mica (тёмный/светлый).</summary>
+    public static void SyncTheme()
+    {
+        try
+        {
+            if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)) return;
+            if (Application.Current?.MainWindow is not { } window) return;
+            SetDarkMode(window, IsDarkTheme());
+        }
+        catch { /* вид окна от этого не зависит */ }
+    }
+
+    private static bool ApplyWin11(Window window)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero) return false;
+
+            var dark = IsDarkTheme();
+            SetDarkMode(hwnd, dark);
+
+            if (SetSystemBackdrop(window, DwmsbtMainWindow)) return true;
+
+            // запасные варианты: официальный acrylic (светлый по рецепту), затем старый accent API
+            if (SetSystemBackdrop(window, DwmsbtTransientWindow)) return true;
+            return SetAccent(window, AccentEnableAcrylicBlurBehind, 2, 0x01000000);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Тёмная тема приложения (Dark/Black/System+тёмная система): для неё mica тёмная.</summary>
+    private static bool IsDarkTheme() => Services.ThemeService.EffectiveMode != Models.ThemeMode.Light;
+
+    private static int SetDarkMode(Window window, bool dark)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero) return -1;
+        return SetDarkMode(hwnd, dark);
+    }
+
+    private static int SetDarkMode(IntPtr hwnd, bool dark)
+    {
+        int value = dark ? 1 : 0;
+        return DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref value, sizeof(int));
+    }
+
+
+    private static bool SetSystemBackdrop(Window window, int backdropType)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero) return false;
+            return DwmSetWindowAttribute(hwnd, DwmwaSystemBackdropType, ref backdropType, sizeof(int)) == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool SetAccent(Window window, int state, int flags, uint gradient)
@@ -76,44 +153,9 @@ internal static class AcrylicBackdrop
         public int SizeOfData;
     }
 
-    /// <summary>
-    /// Скругление углов через регион окна: акриловый фон не обрезается WPF-клипом, поэтому углы
-    /// окна задаём самим HWND. radius = 0 — снять регион (развёрнутое окно).
-    /// </summary>
-    public static void SetCornerRadius(Window window, double radiusDip)
-    {
-        try
-        {
-            var hwnd = new WindowInteropHelper(window).Handle;
-            if (hwnd == IntPtr.Zero) return;
-            if (radiusDip <= 0)
-            {
-                SetWindowRgn(hwnd, IntPtr.Zero, true);
-                return;
-            }
-            // размер ещё не известен (окно не разложено) — не создаём регион 1×1
-            if (window.ActualWidth <= 0 || window.ActualHeight <= 0) return;
-
-            var scale = PresentationSource.FromVisual(window)?.CompositionTarget?.TransformToDevice.M11 ?? 1;
-            var width = (int)Math.Round(window.ActualWidth * scale) + 1;
-            var height = (int)Math.Round(window.ActualHeight * scale) + 1;
-            var diameter = (int)Math.Round(radiusDip * 2 * scale);
-            var region = CreateRoundRectRgn(0, 0, width, height, diameter, diameter);
-            // после SetWindowRgn система сама владеет регионом, удалять его не нужно
-            SetWindowRgn(hwnd, region, true);
-        }
-        catch
-        {
-            // без региона окно остаётся прямоугольным — это не ломает работу
-        }
-    }
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowRgn(IntPtr hwnd, IntPtr region, bool redraw);
-
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int widthEllipse, int heightEllipse);
-
     [DllImport("user32.dll")]
     private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 }

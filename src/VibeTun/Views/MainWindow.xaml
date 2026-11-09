@@ -19,7 +19,7 @@
                             UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
 
-    <!-- Windows 10: прозрачное окно + скруглённый Border с клипом. Windows 11: углы DWM. -->
+    <!-- Тип окна выбирает MainWindow по версии ОС: Windows 11 — обычное (mica), Windows 10 — layered (живой акрил). -->
     <Border x:Name="RootBorder" CornerRadius="0" Background="#01000000"
             SizeChanged="OnRootSizeChanged">
         <Grid>
@@ -284,7 +284,11 @@
                         </ListBoxItem>
 
                     </ListBox>
-                    <Border x:Name="NavFade" Height="26" VerticalAlignment="Bottom" Background="{DynamicResource PanelBg}"
+                    </Grid>
+
+                    <!-- затемнение над карточкой: во всю ширину панели, иначе градиент не доходит до краёв -->
+                    <Border x:Name="NavFade" Grid.Row="0" Height="26" VerticalAlignment="Bottom"
+                            Background="{DynamicResource PanelBg}"
                             IsHitTestVisible="False" Margin="0,0,0,2">
                         <Border.OpacityMask>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
@@ -293,7 +297,6 @@
                             </LinearGradientBrush>
                         </Border.OpacityMask>
                     </Border>
-                    </Grid>
 
                     <v:ConnectionCard x:Name="ConnectionPanel" Grid.Row="2" Margin="12,0,12,12" />
                 </Grid>

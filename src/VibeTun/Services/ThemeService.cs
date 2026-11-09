@@ -57,7 +57,12 @@ public static class ThemeService
         _palette = replacement;
         dicts.Insert(0, replacement);
         ReapplyAccent(app);
+        // вариант системной mica (тёмная/светлая) следует за темой приложения (подписчик — MainWindow)
+        ThemeChanged?.Invoke();
     }
+
+    /// <summary>Тема применена (включая переключение по смене системной темы).</summary>
+    public static event Action? ThemeChanged;
 
     private static void AnimateBrush(Brush target, Brush previous)
     {

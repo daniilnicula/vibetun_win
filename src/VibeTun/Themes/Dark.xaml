@@ -10,6 +10,8 @@
     <SolidColorBrush x:Key="PanelBg" Color="#1F2226" />
     <SolidColorBrush x:Key="CardBg" Color="#242830" />
     <SolidColorBrush x:Key="PanelGlass" Color="#B81F2226" />
+    <!-- тот же оттенок, но прозрачнее: поверх системного acrylic, чтобы блюр просвечивал -->
+    <SolidColorBrush x:Key="PanelGlassBlur" Color="#261F2226" />
     <SolidColorBrush x:Key="CardGlass" Color="#55242830" />
     <SolidColorBrush x:Key="CardBgAlt" Color="#2A2F38" />
     <SolidColorBrush x:Key="CardHover" Color="#2E343D" />
