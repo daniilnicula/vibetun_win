@@ -96,6 +96,9 @@ public partial class App : Application
 
         _ = _window.InitializeAsync();
         StartPipeListener();
+
+        // сетевой облик (User-Agent): режим из настроек, свежая версия браузера раз в сутки, фоном и молча
+        NetworkPersonaService.Initialize(Settings.Current.PersonaMode);
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

@@ -151,8 +151,7 @@ public static class DpiIconService
 
         var client = new HttpClient(handler) { Timeout = Timeout };
         // часть сайтов отдаёт значок только «настоящему» браузеру
-        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", NetworkPersonaService.UserAgent);
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/png,image/svg+xml,*/*");
         return client;
     }

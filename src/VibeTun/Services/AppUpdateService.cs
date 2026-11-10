@@ -22,7 +22,7 @@ public sealed class AppReleaseInfo
     public string TargetCommitish { get; init; } = "";
     public DateTime PublishedAt { get; init; }
     public string Body { get; init; } = "";
-    public string AssetName { get; init; } = "VibeTun.exe";
+    public string AssetName { get; init; } = ConstantsService.PreferredAssetName;
     public string DownloadUrl { get; init; } = "";
     public long AssetSize { get; init; }
     public string? AssetSha256 { get; init; }
@@ -39,10 +39,10 @@ public sealed class AppReleaseInfo
 /// </summary>
 public static class AppUpdateService
 {
-    public const string Repo = "daniilnicula/vibetun_win";
-    private const string ApiReleasesUrl = $"https://api.github.com/repos/{Repo}/releases?per_page=100";
-    private const string WebReleasesUrl = $"https://github.com/{Repo}/releases";
-    private const string AtomReleasesUrl = $"https://github.com/{Repo}/releases.atom";
+    public const string Repo = ConstantsService.AppRepo;
+    private const string ApiReleasesUrl = $"https://api.github.com/repos/{ConstantsService.AppRepo}/releases?per_page=100";
+    private const string WebReleasesUrl = $"https://github.com/{ConstantsService.AppRepo}/releases";
+    private const string AtomReleasesUrl = $"https://github.com/{ConstantsService.AppRepo}/releases.atom";
 
     private static string? _cachedExeSha256;
 
@@ -57,8 +57,9 @@ public static class AppUpdateService
         if (!useSystemProxy) handler.Proxy = null;
 
         var client = new HttpClient(handler) { Timeout = timeout };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("VibeTun-Updater/1.2");
-        client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        // сетевой облик — общий для всех запросов приложения (см. ConstantsService)
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(NetworkPersonaService.UserAgent);
+        client.DefaultRequestHeaders.Accept.ParseAdd(ConstantsService.GithubAccept);
         return client;
     }
 
@@ -169,17 +170,15 @@ public static class AppUpdateService
 
                     var isExe = aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
                     var isWinZip = aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
-                                   !aName.Contains("android", StringComparison.OrdinalIgnoreCase) &&
-                                   !aName.Contains("linux", StringComparison.OrdinalIgnoreCase) &&
-                                   !aName.Contains("darwin", StringComparison.OrdinalIgnoreCase) &&
-                                   !aName.Contains("macos", StringComparison.OrdinalIgnoreCase);
+                                   !ConstantsService.NonWindowsAssetKeywords.Any(k =>
+                                       aName.Contains(k, StringComparison.OrdinalIgnoreCase));
 
                     if (!isExe && !isWinZip) continue;
 
                     // Предпочитаем VibeTun.exe или любой .exe перед .zip
                     var betterMatch = downloadUrl is null ||
                                       (isExe && !assetName!.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) ||
-                                      aName.Equals("VibeTun.exe", StringComparison.OrdinalIgnoreCase);
+                                      aName.Equals(ConstantsService.PreferredAssetName, StringComparison.OrdinalIgnoreCase);
                     if (betterMatch && !string.IsNullOrWhiteSpace(aUrl))
                     {
                         assetName = aName;
@@ -202,8 +201,8 @@ public static class AppUpdateService
                 if (isAndroidBranch || hasOnlyAndroidAssets) continue;
                 if (!isWindowsBranch && totalAssets > 0) continue;
 
-                assetName = "VibeTun.exe";
-                downloadUrl = $"https://github.com/{Repo}/releases/download/{Uri.EscapeDataString(tag)}/VibeTun.exe";
+                assetName = ConstantsService.PreferredAssetName;
+                downloadUrl = $"https://github.com/{Repo}/releases/download/{Uri.EscapeDataString(tag)}/{ConstantsService.PreferredAssetName}";
             }
 
             result.Add(new AppReleaseInfo
@@ -214,7 +213,7 @@ public static class AppUpdateService
                 TargetCommitish = commitish,
                 PublishedAt = publishedAt,
                 Body = body,
-                AssetName = assetName ?? "VibeTun.exe",
+                AssetName = assetName ?? ConstantsService.PreferredAssetName,
                 DownloadUrl = downloadUrl,
                 AssetSize = assetSize,
                 AssetSha256 = assetSha256,

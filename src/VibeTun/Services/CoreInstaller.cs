@@ -11,8 +11,8 @@ namespace VibeTun.Services;
 /// <summary>Скачивание ядра sing-box (официального или расширенной сборки) с GitHub.</summary>
 public static class CoreInstaller
 {
-    public const string UpstreamRepo = "SagerNet/sing-box";
-    public const string ExtendedRepo = "shtorm-7/sing-box-extended";
+    public const string UpstreamRepo = ConstantsService.SingBoxRepo;
+    public const string ExtendedRepo = ConstantsService.SingBoxExtendedRepo;
 
     /// <summary>
     /// Форк с полной поддержкой AmneziaWG 2.0/3.x — включая random_trailers и disable_cookies,
@@ -21,7 +21,7 @@ public static class CoreInstaller
     /// лежат плоско в эндпоинте <c>wireguard</c>, как в .conf. Рядом с sing-box.exe в архиве лежит
     /// libcronet.dll — его переносит CopySiblings.
     /// </summary>
-    public const string AwgRepo = "Leadaxe/sing-box-lx";
+    public const string AwgRepo = ConstantsService.AwgRepo;
 
     private static HttpClient Client()
     {
@@ -29,8 +29,9 @@ public static class CoreInstaller
         {
             Timeout = TimeSpan.FromMinutes(5)
         };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("VibeTun/1.0");
-        client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        // сетевой облик — общий для всех запросов приложения (см. ConstantsService)
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(NetworkPersonaService.UserAgent);
+        client.DefaultRequestHeaders.Accept.ParseAdd(ConstantsService.GithubAccept);
         return client;
     }
 
@@ -43,7 +44,7 @@ public static class CoreInstaller
     public static async Task<string> GetLatestTagAsync(CoreFlavor flavor, CancellationToken ct = default, string? repo = null)
     {
         using var client = Client();
-        using var resp = await client.GetAsync($"https://api.github.com/repos/{RepoName(flavor, repo)}/releases/latest", ct);
+        using var resp = await client.GetAsync(string.Format(ConstantsService.GithubApiLatestReleaseUrl, RepoName(flavor, repo)), ct);
         resp.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
         return doc.RootElement.GetProperty("tag_name").GetString() ?? "";
@@ -68,7 +69,7 @@ public static class CoreInstaller
         CancellationToken ct = default, string? repo = null)
     {
         using var client = Client();
-        using var resp = await client.GetAsync($"https://api.github.com/repos/{RepoName(flavor, repo)}/releases/latest", ct);
+        using var resp = await client.GetAsync(string.Format(ConstantsService.GithubApiLatestReleaseUrl, RepoName(flavor, repo)), ct);
         resp.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
 

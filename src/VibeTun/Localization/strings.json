@@ -5222,5 +5222,57 @@
   "S1028": {
     "ru": "Размытие левой панели",
     "en": "Sidebar blur"
+  },
+  "S1053": {
+    "ru": "Маскировка запросов",
+    "en": "Request camouflage"
+  },
+  "S1054": {
+    "ru": "Обновить сейчас",
+    "en": "Refresh now"
+  },
+  "S1055": {
+    "ru": "Версия браузера подтягивается автоматически раз в сутки.",
+    "en": "The browser version is refreshed automatically once a day."
+  },
+  "S1056": {
+    "ru": "Сетевой облик обновлён: ",
+    "en": "Network persona refreshed: "
+  },
+  "S1057": {
+    "ru": "Не удалось обновить облик — оставлен прежний",
+    "en": "Could not refresh the persona — keeping the previous one"
+  },
+  "S1058": {
+    "ru": "Обновлён: ",
+    "en": "Refreshed: "
+  },
+  "S1060": {
+    "ru": "Под кого маскироваться",
+    "en": "Masquerade as"
+  },
+  "S1061": {
+    "ru": "Авто",
+    "en": "Auto"
+  },
+  "S1062": {
+    "ru": "Google Chrome",
+    "en": "Google Chrome"
+  },
+  "S1063": {
+    "ru": "Mozilla Firefox",
+    "en": "Mozilla Firefox"
+  },
+  "S1064": {
+    "ru": "Microsoft Edge",
+    "en": "Microsoft Edge"
+  },
+  "S1065": {
+    "ru": "Без маскировки (VibeTun)",
+    "en": "No camouflage (VibeTun)"
+  },
+  "S1066": {
+    "ru": "Сейчас: ",
+    "en": "Current: "
   }
 }

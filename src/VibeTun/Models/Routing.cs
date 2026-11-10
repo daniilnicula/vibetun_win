@@ -224,6 +224,9 @@ public sealed class AppSettings
     public string? CoreVersion { get; set; }
     public bool AutoUpdateCore { get; set; } = true;
 
+    /// <summary>Под кого маскировать исходящие HTTP-запросы: auto | chrome | firefox | edge | app.</summary>
+    public string PersonaMode { get; set; } = "auto";
+
     /// <summary>Точный замер задержки через ядро (запускает ядро на время теста).</summary>
     public bool PreciseLatencyTest { get; set; } = true;
 

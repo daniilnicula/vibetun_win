@@ -31,6 +31,68 @@ public sealed class SettingsViewModel : ObservableObject
         ResetSettingsCommand = new RelayCommand(_ => ResetSettings());
         ChooseCustomFolderCommand = new RelayCommand(_ => PickCustomStorage());
         RestartNowCommand = new RelayCommand(_ => RestartRequested?.Invoke());
+        RefreshPersonaCommand = new AsyncRelayCommand(RefreshPersonaAsync, () => !PersonaBusy && PersonaMode != "app");
+    }
+
+    // ----------------------------------------------------------- сетевой облик
+    private bool _personaBusy;
+
+    public AsyncRelayCommand RefreshPersonaCommand { get; }
+
+    public bool PersonaBusy
+    {
+        get => _personaBusy;
+        set
+        {
+            if (!SetProperty(ref _personaBusy, value)) return;
+            RefreshPersonaCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>Под кого маскировать исходящие запросы: auto | chrome | firefox | edge | app.</summary>
+    public string PersonaMode
+    {
+        get => _settings.Current.PersonaMode;
+        set
+        {
+            if (_settings.Current.PersonaMode == value) return;
+            _settings.Current.PersonaMode = value;
+            _settings.SaveSoon();
+            NetworkPersonaService.SetMode(value);
+            Raise();
+            RaisePersona();
+        }
+    }
+
+    /// <summary>Текущий User-Agent, которым подписаны исходящие запросы.</summary>
+    public string PersonaUaText => NetworkPersonaService.UserAgent;
+
+    /// <summary>Когда облик в последний раз обновлялся; в режиме «без маскировки» не показываем.</summary>
+    public string PersonaAgeText => NetworkPersonaService.Mode == "app" || NetworkPersonaService.RefreshedAtUtc is null
+        ? ""
+        : L.T("S1058") + NetworkPersonaService.RefreshedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+
+    private async Task RefreshPersonaAsync()
+    {
+        PersonaBusy = true;
+        try
+        {
+            var ok = await NetworkPersonaService.RefreshNowAsync();
+            RaisePersona();
+            Notify?.Invoke(ok ? L.T("S1056") + NetworkPersonaService.UserAgent : L.T("S1057"), !ok);
+        }
+        finally
+        {
+            PersonaBusy = false;
+        }
+    }
+
+    private void RaisePersona()
+    {
+        Raise(nameof(PersonaMode));
+        Raise(nameof(PersonaUaText));
+        Raise(nameof(PersonaAgeText));
+        RefreshPersonaCommand.RaiseCanExecuteChanged();
     }
 
     public event Action<string, bool>? Notify;

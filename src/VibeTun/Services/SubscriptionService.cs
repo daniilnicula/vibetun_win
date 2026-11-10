@@ -41,7 +41,8 @@ public sealed class SubscriptionService
             {
                 using var client = CreateClient(useProxy);
                 using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-                request.Headers.UserAgent.ParseAdd("VibeTun/1.2.0");
+                // сетевой облик — общий браузерный UA, чтобы сервер подписки не видел VPN-клиента
+                request.Headers.UserAgent.ParseAdd(NetworkPersonaService.UserAgent);
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json", 0.9));
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.5));
