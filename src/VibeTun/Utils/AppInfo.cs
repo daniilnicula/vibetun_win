@@ -15,7 +15,7 @@ public static class AppInfo
     public const string BuildStamp = "panels-timeout";
 
     /// <summary>Тег релиза на GitHub (daniilnicula/vibetun_win), которому соответствует эта сборка по умолчанию.</summary>
-    public const string DefaultReleaseTag = "26.11.2S";
+    public const string DefaultReleaseTag = "26.11.11G";
 
     public static string ReleaseTag
     {

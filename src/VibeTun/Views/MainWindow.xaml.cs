@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -7,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using System.Windows.Shell;
 using VibeTun.Models;
 using VibeTun.Services;
@@ -33,6 +35,8 @@ public partial class MainWindow : Window
     private double _normalMinWidth;
     private double _normalMinHeight;
     private bool _splashMode;   // true от сплэша до конца морфинга: геометрию сохранять нельзя
+    // во сколько раз сплэш меньше будущего окна: из его рамки окно потом растёт (масштаб обеих осей один)
+    private double _splashScale = 1.0;
 
     public MainWindow()
     {
@@ -104,23 +108,44 @@ public partial class MainWindow : Window
             _normalMinHeight = MinHeight;
             MinWidth = 0;
             MinHeight = 0;
-            Width = 400;
-            Height = 300;
-            if (!IsMaximizedSaved() && TryGetSavedRect(out var saved))
+            MainContent.Opacity = 0;
+            Splash.Visibility = Visibility.Visible;
+            if (IsMaximizedSaved())
             {
-                // сплэш встаёт в центр будущего окна — морфинг будет симметричным ростом без перелёта
-                WindowStartupLocation = WindowStartupLocation.Manual;
-                Left = ClampToScreen(saved.X + (saved.Width - Width) / 2, Width,
-                    SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenWidth);
-                Top = ClampToScreen(saved.Y + (saved.Height - Height) / 2, Height,
-                    SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenHeight);
+                // развёрнутому окну расти некуда — сплэш просто появится и сменится кроссфейдом
+                Width = 400;
+                Height = 300;
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
             }
             else
             {
-                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                // Сплэш — точная уменьшенная копия будущего окна: из такой рамки окно растёт
+                // симметрично от центра, и масштаб содержимого весь рост совпадает с размером окна.
+                var target = TargetWindowSize();
+                _splashScale = SplashScaleOf(target.Width);
+                Width = Math.Round(target.Width * _splashScale);
+                Height = Math.Round(target.Height * _splashScale);
+                // Содержимое раскладывается сразу в итоговом размере, хотя окно пока маленькое
+                // (лишнее обрежется рамкой окна). Во время роста меняется только масштаб —
+                // пересчитывать вёрстку всего приложения на каждом кадре слишком дорого.
+                RootBorder.Width = target.Width;
+                RootBorder.Height = target.Height;
+                RootBorder.HorizontalAlignment = HorizontalAlignment.Left;
+                RootBorder.VerticalAlignment = VerticalAlignment.Top;
+                if (TryGetSavedRect(out var saved))
+                {
+                    // сплэш встаёт в центр будущего окна — рост пойдёт симметрично, без перелёта
+                    WindowStartupLocation = WindowStartupLocation.Manual;
+                    Left = ClampToScreen(saved.X + (saved.Width - Width) / 2, Width,
+                        SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenWidth);
+                    Top = ClampToScreen(saved.Y + (saved.Height - Height) / 2, Height,
+                        SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenHeight);
+                }
+                else
+                {
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                }
             }
-            MainContent.Opacity = 0;
-            Splash.Visibility = Visibility.Visible;
         }
     }
 
@@ -161,6 +186,11 @@ public partial class MainWindow : Window
         _vm = new MainViewModel(new DialogService(this));
         DataContext = _vm;
         _vm.Preferences.BlurChanged += ApplyBlur;
+        // «Системные цвета Windows» переключили в настройках — открытый пикер показывает новый цвет
+        _vm.Preferences.AccentChanged += () =>
+        {
+            if (AccentOverlay.Visibility == Visibility.Visible) SyncAccentFlyout();
+        };
         L.Changed += OnLanguageChanged;
         Closed += (_, _) => L.Changed -= OnLanguageChanged;
 
@@ -244,6 +274,22 @@ public partial class MainWindow : Window
     private static double ClampToScreen(double value, double size, double areaMin, double areaSize)
         => areaSize <= size ? areaMin : Math.Clamp(value, areaMin, areaMin + areaSize - size);
 
+    private static string Diag(string line) => "[diag] " + line;
+
+    /// <summary>Размер, который окно примет после загрузки: сохранённый в настройках или из разметки.</summary>
+    private Size TargetWindowSize()
+    {
+        var settings = App.Settings.Current;
+        return new Size(settings.WindowWidth > 600 ? settings.WindowWidth : _normalWidth,
+            settings.WindowHeight > 400 ? settings.WindowHeight : _normalHeight);
+    }
+
+    /// <summary>
+    /// Во сколько раз сплэш меньше будущего окна. Окно растёт ровно из рамки сплэша, поэтому
+    /// масштаб один по обеим осям; границы не дают сплэшу выродиться на очень большом окне.
+    /// </summary>
+    private static double SplashScaleOf(double width) => Math.Clamp(460.0 / width, 0.3, 0.6);
+
     /// <summary>Сплэш холодного старта: строка статуса + плавно догоняющая полоска.</summary>
     private void OnStartupProgress(double fraction, string statusKey)
     {
@@ -251,20 +297,31 @@ public partial class MainWindow : Window
         Motion.To(SplashProgress, ProgressBar.ValueProperty, fraction * 100, Motion.Scaled(300));
     }
 
-    /// <summary>Морфинг сплэша в полное окно: сначала геометрия, потом кроссфейд в реальный UI.</summary>
+    /// <summary>
+    /// Рост сплэша в полное окно: рамка и содержимое растут вместе, сплэш уходит кроссфейдом.
+    /// Растёт само окно (иначе системный фон — mica или акрил — появился бы сразу большим
+    /// прямоугольником), но содержимое за это время не перевёрстывается: оно разложено в итоговом
+    /// размере ещё на сплэше и лишь масштабируется тем же коэффициентом, на который выросло окно.
+    /// Пересчёт вёрстки всего приложения на каждом кадре стоит дороже кадра — оттого окно раньше
+    /// и расширялось рывками, по очереди в разные стороны. Рамка и содержимое идут вместе не
+    /// потому, что запущены одинаковые анимации, а потому, что на каждом шаге считаются
+    /// из одного и того же значения хода (см. <see cref="GrowFromCenterAsync"/>).
+    /// </summary>
     private async Task MorphFromSplashAsync()
     {
         Motion.To(SplashProgress, ProgressBar.ValueProperty, 100, Motion.Scaled(260));
+        var grow = Motion.Scaled(520);
         if (IsMaximizedSaved())
         {
             // развёрнутое окно не растёт, а просто появляется — плавно только кроссфейд
             WindowState = WindowState.Maximized;
+            Motion.Run(MainContent, OpacityProperty, 0, 1, Motion.Scaled(420));
+            Motion.Run(Splash, OpacityProperty, 1, 0, Motion.Scaled(300));
+            await Task.Delay(grow);
         }
         else
         {
-            var settings = App.Settings.Current;
-            var w = settings.WindowWidth > 600 ? settings.WindowWidth : _normalWidth;
-            var h = settings.WindowHeight > 400 ? settings.WindowHeight : _normalHeight;
+            var target = TargetWindowSize();
             double endLeft, endTop;
             if (TryGetSavedRect(out var saved))
             {
@@ -275,30 +332,118 @@ public partial class MainWindow : Window
             else
             {
                 // сохранённой геометрии нет — растём из центра вокруг текущей середины
-                endLeft = Left + (Width - w) / 2;
-                endTop = Top + (Height - h) / 2;
+                endLeft = Left + (Width - target.Width) / 2;
+                endTop = Top + (Height - target.Height) / 2;
             }
             WindowStartupLocation = WindowStartupLocation.Manual;
-            var grow = Motion.Scaled(600);
-            Motion.Run(this, LeftProperty, Left, endLeft, grow, EasingMode.EaseInOut);
-            Motion.Run(this, TopProperty, Top, endTop, grow, EasingMode.EaseInOut);
-            Motion.Run(this, WidthProperty, Width, w, grow, EasingMode.EaseInOut);
-            Motion.Run(this, HeightProperty, Height, h, grow, EasingMode.EaseInOut);
-            await Task.Delay(grow);
-            // страховка: итоговая геометрия выставляется явно, а не только держится анимацией
-            Left = endLeft;
-            Top = endTop;
-            Width = w;
-            Height = h;
+            await GrowFromCenterAsync(endLeft, endTop, target.Width, target.Height, grow, () =>
+            {
+                // кроссфейд начинается с первого настоящего кадра роста: сплэш уходит
+                // за его первую половину, и интерфейс виден уже в полный размер
+                Motion.Run(MainContent, OpacityProperty, 0, 1, Motion.Scaled(420));
+                Motion.Run(Splash, OpacityProperty, 1, 0, Motion.Scaled(300));
+            });
         }
+        // минимумы возвращаются после роста: пока окно меньше минимума, они его распёрли бы
         MinWidth = _normalMinWidth;
         MinHeight = _normalMinHeight;
-        var fade = Motion.Scaled(260);
-        Motion.Run(MainContent, OpacityProperty, 0, 1, fade);
-        Motion.Run(Splash, OpacityProperty, 1, 0, fade);
-        await Task.Delay(fade);
         Splash.Visibility = Visibility.Collapsed;
+        Splash.Opacity = 1;
         _splashMode = false;
+    }
+
+    /// <summary>Рост окна из сплэша уже идёт: второй запуск ни к чему.</summary>
+    private bool _growing;
+
+    /// <summary>
+    /// Рост окна от центра: шаг за шагом задаём и прямоугольник окна, и масштаб содержимого —
+    /// из одного значения хода, чтобы рамка и содержимое не расходились. Содержимое при этом не
+    /// перевёрстывается: оно разложено в итоговом размере ещё на сплэше и только масштабируется,
+    /// поэтому шаг стоит дёшево. Рост начинается с первого настоящего кадра: пока приложение
+    /// не нарисовало интерфейс ни разу, шаги всё равно не попадут на экран, а время съедят —
+    /// и окно распахнется одним рывком.
+    /// </summary>
+    private Task GrowFromCenterAsync(double endLeft, double endTop, double endWidth, double endHeight,
+        TimeSpan duration, Action? started = null)
+    {
+        if (_growing) return Task.CompletedTask;
+        _growing = true;
+        var startWidth = Width;
+        var startHeight = Height;
+        // содержимое разложено в итоговом размере, поэтому масштаб ровно по размеру окна
+        var scale = new ScaleTransform(startWidth / endWidth, startHeight / endHeight);
+        RootBorder.RenderTransform = scale;
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+        var finished = new TaskCompletionSource();
+        // предел: если отрисовка совсем встала, рост всё равно закончится итоговой геометрией
+        var limit = TimeSpan.FromMilliseconds(duration.TotalMilliseconds * 3 + 500);
+        var clock = new Stopwatch();
+        DispatcherTimer? timer = null;
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var steps = 0;
+
+        void Finish()
+        {
+            if (timer is not null) timer.Stop();
+            _growing = false;
+            // итоговая геометрия выставляется явно, а не только держится последним шагом
+            Left = endLeft;
+            Top = endTop;
+            Width = endWidth;
+            Height = endHeight;
+            // содержимое снова растягивается по окну и рисуется без масштаба
+            RootBorder.RenderTransform = null;
+            RootBorder.Width = double.NaN;
+            RootBorder.Height = double.NaN;
+            RootBorder.HorizontalAlignment = HorizontalAlignment.Stretch;
+            RootBorder.VerticalAlignment = VerticalAlignment.Stretch;
+            finished.TrySetResult();
+        }
+
+        void OnStep(object? sender, EventArgs args)
+        {
+            steps++;
+            // отсчёт идёт с первого шага: время до него приложение занималось своей первой
+            // отрисовкой и в рост не входило, иначе рост начинался бы сразу с середины
+            if (!clock.IsRunning) clock.Start();
+            var time = clock.Elapsed;
+            var part = Math.Clamp(time.TotalMilliseconds / duration.TotalMilliseconds, 0, 1);
+            var step = ease.Ease(part);
+            var width = startWidth + (endWidth - startWidth) * step;
+            var height = startHeight + (endHeight - startHeight) * step;
+            // середина будущего окна неподвижна: рамка расходится от неё в обе стороны
+            Left = endLeft + (endWidth - width) / 2;
+            Top = endTop + (endHeight - height) / 2;
+            Width = width;
+            Height = height;
+            scale.ScaleX = width / endWidth;
+            scale.ScaleY = height / endHeight;
+            GetWindowRect(hwnd, out var rect);
+            AppLog.Write(Diag(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "step {0} t={1} part={2:0.###} wpf={3:0.#}x{4:0.#} hwnd={5}x{6} ({7:0.#}->{8:0.#})",
+                steps, clock.ElapsedMilliseconds, part, width, height,
+                rect.Right - rect.Left, rect.Bottom - rect.Top, startWidth, endWidth)));
+            if (part < 1 && !_closed && time < limit) return;
+            Finish();
+        }
+
+        var began = false;
+        void OnFirstFrame(object? sender, EventArgs args)
+        {
+            if (began) return;
+            began = true;
+            CompositionTarget.Rendering -= OnFirstFrame;
+            started?.Invoke();
+            timer = new DispatcherTimer(TimeSpan.FromMilliseconds(15), DispatcherPriority.Render, OnStep, Dispatcher);
+            timer.Start();
+        }
+
+        CompositionTarget.Rendering += OnFirstFrame;
+        // страховка: если кадров нет вовсе, рост всё равно начнётся — окно не должно застрять сплэшем
+        var fallback = new DispatcherTimer(TimeSpan.FromMilliseconds(1200), DispatcherPriority.Normal,
+            (sender, args) => { ((DispatcherTimer)sender).Stop(); OnFirstFrame(sender, args); }, Dispatcher);
+        fallback.Start();
+        return finished.Task;
     }
 
     public void PrepareForSystemShutdown() => _vm?.PrepareForSystemShutdown();
@@ -580,6 +725,7 @@ public partial class MainWindow : Window
         ThemeService.ApplyAccent(hex);
         App.Settings.Current.AccentColor = hex;
         App.Settings.SaveSoon();
+        _vm?.Preferences.RaiseAccent();   // ручной цвет выключает системный: переключатель в настройках следует
     }
 
     private void UpdateAccentPreview(Color color)
@@ -595,16 +741,19 @@ public partial class MainWindow : Window
         App.Settings.Current.AccentColor = null;
         ThemeService.ApplyAccent(null);
         App.Settings.SaveSoon();
+        _vm?.Preferences.RaiseAccent();
         SyncAccentFlyout();
     }
 
+    /// <summary>
+    /// «Использовать системные цвета Windows» в пикере. Сам режим живёт в настройках
+    /// (<see cref="SettingsViewModel.UseSystemAccent"/>): тот же переключатель есть на вкладке
+    /// «Настройки», и оба меняют одно свойство.
+    /// </summary>
     private void OnAccentSystemToggle(object sender, RoutedEventArgs e)
     {
-        if (_syncingAccent) return;
-        var useSystem = SystemAccentToggle.IsChecked == true;
-        App.Settings.Current.UseSystemAccent = useSystem;
-        ThemeService.ApplyAccent(App.Settings.Current.AccentColor, useSystem);
-        App.Settings.SaveSoon();
+        if (_syncingAccent || _vm is null) return;
+        _vm.Preferences.UseSystemAccent = SystemAccentToggle.IsChecked == true;
         SyncAccentFlyout();
     }
 
@@ -743,8 +892,10 @@ public partial class MainWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        // блюр левой панели: системный акрил; без него панель остаётся непрозрачной.
-        // Один вызов на весь сеанс: AcrylicBackdrop.Apply сам выбирает API под ОС.
+        // блюр левой панели: системный бэкдроп; без него панель остаётся непрозрачной.
+        // AcrylicBackdrop.Apply сам выбирает API под ОС и сообщает, доступен ли бэкдроп. Mica на
+        // Windows 11 после этого не трогаем; живой акрил Windows 10 ApplyBlur оставляет включённым
+        // только при включённом размытии (без него окно зря платило бы за акрил при перетаскивании).
         _acrylicOk = AcrylicBackdrop.Apply(this);
         ApplyBlur(App.Settings.Current.BlurSidebar);
         // HwndSource.FromHwnd надёжнее PresentationSource.FromVisual: последний возвращает null,
@@ -756,23 +907,141 @@ public partial class MainWindow : Window
         if (_useSystemCorners) ApplyDwmRoundCorners();
     }
 
-    /// <summary>Прозрачная левая панель с размытием (акрил) или непрозрачная, если акрил недоступен.</summary>
     /// <summary>
     /// Почти прозрачная кисть: WPF не пропускает клики через неё, в отличие от Brushes.Transparent.
     /// </summary>
     private static readonly Brush HitTestBrush = new SolidColorBrush(Color.FromArgb(0x01, 0, 0, 0));
 
+    /// <summary>Левая панель с размытием: оно включено в настройках и доступно в системе.</summary>
     private bool _glass;
 
-    /// <summary>Переключатель «Размытие левой панели» в настройках: включает или выключает акрил.</summary>
+    /// <summary>Системный бэкдроп (акрил или mica) удалось назначить окну; без него панель всегда непрозрачная.</summary>
     private bool _acrylicOk;
 
-    /// <summary>Переключатель «Размытие левой панели»: только слои WPF, сам акрил не переустанавливаем.</summary>
+    /// <summary>Переключатель «Размытие левой панели» в настройках.</summary>
     private void ApplyBlur(bool on) => ApplyGlass(on && _acrylicOk);
 
     private void ApplyGlass(bool glass)
     {
         _glass = glass;
+        RenderGlass(glass);
+    }
+
+    // ------------------------------------------------------- кадр во время перетаскивания
+    // Windows 10: живой акрил композитор пересчитывает на каждый сдвиг окна. Если при этом WPF
+    // отрисовывает содержимое асинхронно, оно отстаёт от HWND — на резком рывке окно «плывёт».
+    // Лечится не снятием размытия, а синхронизацией кадра (см. SynchronizeFrameWithDwm).
+
+    /// <summary>Windows 10 с включённым размытием: только такое окно и стоит синхронизировать.</summary>
+    private bool IsLegacyGlass() => !_useSystemCorners && _glass;
+
+    /// <summary>Идёт синхронизация кадра: повторный вход из вложенного цикла диспетчера не нужен.</summary>
+    private bool _syncingFrame;
+
+    /// <summary>Сколько миллисекунд текущее перетаскивание уже простояло в ожидании кадра DWM.</summary>
+    private double _flushWaitedMs;
+
+    /// <summary>Дольше этого кадр DWM не ждём: перетаскивание не должно вставать из-за ожидания.</summary>
+    private const int FlushTimeoutMs = 100;
+
+    /// <summary>Ожидание кадра DWM, запущенное в фоне (одно на всё окно).</summary>
+    private static Task<int>? _flushTask;
+
+    /// <summary>
+    /// Дождаться кадра DWM, но не дольше <see cref="FlushTimeoutMs"/>. Ожидание идёт в отдельном
+    /// потоке: на части машин DwmFlush не возвращается, пока не придёт новый кадр, — вызов прямо
+    /// в WndProc остановил бы само перетаскивание. Незавершённое ожидание не дублируется: новый
+    /// поток запускается, только когда предыдущее ожидание закончилось.
+    /// </summary>
+    private static bool WaitForDwmFrame()
+    {
+        if (_flushTask is null || _flushTask.IsCompleted) _flushTask = Task.Run(DwmFlush);
+        try
+        {
+            return _flushTask.Wait(FlushTimeoutMs);
+        }
+        catch
+        {
+            return false;   // DWM недоступен — синхронизировать кадр нечем, окно ведёт себя как обычно
+        }
+    }
+
+    /// <summary>
+    /// Windows 10: дождаться, пока содержимое окна окажется нарисованным на новой позиции.
+    /// Пока окно тащат, Windows крутит свой цикл — двигает HWND и ждёт следующего сообщения, —
+    /// а WPF рисует по своему таймеру: кадр приходит позже, чем DWM забирает окно, и содержимое
+    /// отстаёт от рамки. Поэтому на каждом сообщении перемещения: выполняем накопившуюся работу
+    /// диспетчера, пустым Invoke с приоритетом Render завершаем проход отрисовки и ждём, пока DWM
+    /// представит кадр, — следующий сдвиг не начинается, пока предыдущий кадр не на экране.
+    /// Страховка: если перетаскивание уже простояло в ожидании 200 мс, до конца перетаскивания
+    /// синхронизация уступает отрисовке — лучше пропущенный кадр, чем накопленная задержка.
+    /// В покое акрил и кадры не трогаются, на Windows 11 (mica) тоже.
+    /// </summary>
+    private void SynchronizeFrameWithDwm()
+    {
+        if (_syncingFrame || _flushWaitedMs > 200) return;
+
+        _syncingFrame = true;
+        try
+        {
+            // накопившаяся работа диспетчера (компоновка, анимации), затем сам проход отрисовки
+            Dispatcher.Invoke(static () => { },
+                System.Windows.Threading.DispatcherPriority.ContextIdle);
+            Dispatcher.Invoke(static () => { },
+                System.Windows.Threading.DispatcherPriority.Render);
+            var before = DateTime.UtcNow;
+            WaitForDwmFrame();
+            _flushWaitedMs += (DateTime.UtcNow - before).TotalMilliseconds;
+        }
+        finally
+        {
+            _syncingFrame = false;
+        }
+    }
+
+    /// <summary>Windows 10: отложенное снятие акрила (см. <see cref="SetLegacyAcrylic"/>).</summary>
+    private System.Windows.Threading.DispatcherTimer? _legacyAcrylicOff;
+
+    /// <summary>
+    /// Windows 10: живой акрил держим включённым, только пока он виден (AcrylicBackdrop.SetLegacyAcrylic).
+    /// Включается он сразу — до того, как слои окна станут прозрачными. Снимается с небольшой задержкой,
+    /// когда кадр с закрашенными слоями уже на экране: иначе на миг сквозь окно был бы виден рабочий
+    /// стол без размытия. Во время перетаскивания акрил остаётся включённым: отставание окна снимает
+    /// синхронизация кадра с DWM (SynchronizeFrameWithDwm), а не снятие размытия.
+    /// </summary>
+    private void SetLegacyAcrylic(bool on)
+    {
+        if (_useSystemCorners || !_acrylicOk) return;
+        if (on)
+        {
+            _legacyAcrylicOff?.Stop();
+            AcrylicBackdrop.SetLegacyAcrylic(this, true);
+            return;
+        }
+
+        if (_legacyAcrylicOff is null)
+        {
+            _legacyAcrylicOff = new System.Windows.Threading.DispatcherTimer(
+                System.Windows.Threading.DispatcherPriority.Normal)
+            {
+                Interval = TimeSpan.FromMilliseconds(60)
+            };
+            _legacyAcrylicOff.Tick += (_, _) =>
+            {
+                _legacyAcrylicOff?.Stop();
+                if (_closed) return;
+                // за это время размытие могли вернуть — тогда акрил не трогаем
+                if (!_glass) AcrylicBackdrop.SetLegacyAcrylic(this, false);
+            };
+        }
+        _legacyAcrylicOff.Stop();
+        _legacyAcrylicOff.Start();
+    }
+
+    /// <summary>Слои окна: прозрачные под размытие либо непрозрачные, цветом темы.</summary>
+    private void RenderGlass(bool glass)
+    {
+        SetLegacyAcrylic(glass);
         if (glass)
         {
             if (_useSystemCorners)
@@ -815,6 +1084,8 @@ public partial class MainWindow : Window
     {
         const int WM_GETMINMAXINFO = 0x0024;
         const int WM_SIZE = 0x0005;
+        const int WM_MOVING = 0x0216;
+        const int WM_ENTERSIZEMOVE = 0x0231;
         const int SIZE_MAXIMIZED = 2;
 
         if (msg == WM_GETMINMAXINFO)
@@ -842,6 +1113,19 @@ public partial class MainWindow : Window
             // окно только что развернулось — проверим и, если залезло под панель задач, дожмём
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,
                 new Action(ClampMaximizedToWorkArea));
+        }
+        else if (msg == WM_ENTERSIZEMOVE)
+        {
+            // новое перетаскивание: бюджет ожидания кадров начинается заново
+            _flushWaitedMs = 0;
+        }
+        else if (msg == WM_MOVING && IsLegacyGlass())
+        {
+            // Windows 10: живой акрил остаётся включённым — панель не перекрашивается. Отставание
+            // снимает синхронизация кадра: WPF успевал отрисовать кадр позже, чем DWM собирал окно,
+            // и содержимое отставало от HWND при резком движении. Сначала даём осесть отложенной
+            // работе диспетчера, затем форсируем проход отрисовки и ждём, пока DWM представит кадр.
+            SynchronizeFrameWithDwm();
         }
 
         return IntPtr.Zero;
@@ -928,6 +1212,10 @@ public partial class MainWindow : Window
     [DllImport("user32.dll")]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
         int x, int y, int cx, int cy, uint uFlags);
+
+    /// <summary>Ждёт, пока DWM представит текущий кадр композиции (синхронизация с перетаскиванием).</summary>
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmFlush();
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {

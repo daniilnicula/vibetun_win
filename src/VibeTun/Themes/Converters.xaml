@@ -11,6 +11,7 @@
     <utils:BoolToVisConv x:Key="BoolToVis" />
     <utils:InvBoolToVisConv x:Key="InvBoolToVis" />
     <utils:InverseBoolConv x:Key="InvBool" />
+    <!-- StrToVis: Visible при ПУСТОЙ строке; «показать, когда текст есть» — ConverterParameter=invert -->
     <utils:NullOrEmptyToVisConv x:Key="StrToVis" />
     <utils:NullToVisConv x:Key="NullToVis" />
     <utils:NotNullToVisConv x:Key="NotNullToVis" />

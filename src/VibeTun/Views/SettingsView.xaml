@@ -29,6 +29,17 @@
                                 <ComboBoxItem Tag="en" Content="English" />
                             </ComboBox>
                         </Grid>
+
+                        <!-- акцент приложения следует за цветом Windows; тот же переключатель — в пикере цвета в заголовке окна -->
+                        <Grid Margin="0,14,0,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr S0148}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S1087}" />
+                            </StackPanel>
+                            <ToggleButton x:Name="SystemAccentSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right"
+                                          IsChecked="{Binding UseSystemAccent}" />
+                        </Grid>
+
                         <Grid Margin="0,14,0,0">
                             <TextBlock Text="{loc:Tr S0191}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
                             <TextBox Style="{StaticResource InputBox}" Width="100" HorizontalAlignment="Right"
@@ -47,11 +58,13 @@
                         </Grid>
 
                         <Grid Margin="0,14,0,0">
-                            <TextBlock Text="{loc:Tr S0195}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr S0195}" Style="{StaticResource Txt}" VerticalAlignment="Center"
+                                           AutomationProperties.AutomationId="RememberStateLabel" />
+                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0196}" />
+                            </StackPanel>
                             <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right" IsChecked="{Binding RememberState}" />
                         </Grid>
-                        <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                   Text="{loc:Tr S0196}" />
 
                         <Border Height="1" Background="{DynamicResource Divider}" Margin="0,14" />
 
@@ -65,16 +78,20 @@
                                       Value="{Binding AnimationSpeed}" ToolTip="{loc:Tr S0198}" />
 
                         <Grid Margin="0,14,0,0">
-                            <TextBlock Text="{loc:Tr S0199}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr S0199}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0200}" />
+                            </StackPanel>
                             <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right" IsChecked="{Binding PreciseLatencyTest}" />
                         </Grid>
-                        <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                   Text="{loc:Tr S0200}" />
 
                         <Border Height="1" Background="{DynamicResource Divider}" Margin="0,14" />
 
                         <Grid>
-                            <TextBlock Text="{loc:Tr S0201}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr S0201}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0205}" />
+                            </StackPanel>
                             <ComboBox Style="{StaticResource Combo}" Width="230" HorizontalAlignment="Right"
                                       SelectedValuePath="Tag" SelectedValue="{Binding CloseBehavior}">
                                 <ComboBoxItem Tag="Ask" Content="{loc:Tr S0202}" />
@@ -101,24 +118,58 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{loc:Tr S1060}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
-                            <ComboBox Grid.Column="1" Style="{StaticResource Combo}" Width="200"
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr S1060}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                                <!-- каким заголовком User-Agent запросы подписаны прямо сейчас -->
+                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{Binding PersonaUaText}" />
+                            </StackPanel>
+                            <ComboBox x:Name="PersonaCombo" Grid.Column="1" Style="{StaticResource Combo}" Width="200"
                                       SelectedValuePath="Tag" SelectedValue="{Binding PersonaMode}">
                                 <ComboBoxItem Tag="auto" Content="{loc:Tr S1061}" />
                                 <ComboBoxItem Tag="chrome" Content="{loc:Tr S1062}" />
                                 <ComboBoxItem Tag="firefox" Content="{loc:Tr S1063}" />
                                 <ComboBoxItem Tag="edge" Content="{loc:Tr S1064}" />
-                                <ComboBoxItem Tag="app" Content="{loc:Tr S1065}" />
+                                <!-- «честный» режим: подсказка предупреждает ещё до выбора -->
+                                <ComboBoxItem Tag="app" Content="{loc:Tr S1065}" ToolTip="{Binding PersonaWarningText}" />
                             </ComboBox>
                         </Grid>
 
-                        <Grid Margin="0,10,0,0">
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding PersonaAgeText}" Style="{StaticResource TxtMuted}" />
-                                <TextBlock Text="{loc:Tr S1055}" Style="{StaticResource TxtMuted}" TextWrapping="Wrap"
-                                           Margin="0,2,0,0" />
-                            </StackPanel>
-                            <Button Content="{loc:Tr S1054}" Style="{StaticResource BtnGhost}" HorizontalAlignment="Right"
+                        <!-- без маскировки заголовок называет приложение: предупреждение видно всё время, пока режим выбран -->
+                        <Border x:Name="PersonaWarning" Margin="0,10,0,0" Padding="10,8" CornerRadius="8"
+                                Background="{DynamicResource WarningSoft}"
+                                Visibility="{Binding PersonaIsApp, Converter={StaticResource BoolToVis}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Viewbox Width="15" Height="15" VerticalAlignment="Top" Margin="0,1,0,0">
+                                    <Canvas Width="16" Height="16">
+                                        <Path Data="M8,1.8 L15,14 H1 Z" Stroke="{DynamicResource Warning}" StrokeThickness="1.4"
+                                              StrokeLineJoin="Round" />
+                                        <Path Data="M8,6.4 V9.8 M8,11.9 V12" Stroke="{DynamicResource Warning}" StrokeThickness="1.5"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                    </Canvas>
+                                </Viewbox>
+                                <TextBlock Grid.Column="1" Margin="8,0,0,0" TextWrapping="Wrap" FontSize="12"
+                                           Text="{Binding PersonaWarningText}" Foreground="{DynamicResource Warning}" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Текст и кнопка стоят на одной линии: пояснение и время обновления — один абзац
+                             в левой колонке (раньше это были две строки, и пустая первая сдвигала вторую
+                             ниже кнопки), кнопка — в правой; оба выровнены по центру строки. -->
+                        <Grid x:Name="PersonaRefreshRow" Margin="0,10,0,0"
+                              Visibility="{Binding PersonaIsApp, Converter={StaticResource InvBoolToVis}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource TxtMuted}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="0,0,12,0">
+                                <Run Text="{loc:Tr S1055}" /> <Run Text="{Binding PersonaAgeText, Mode=OneWay}" />
+                            </TextBlock>
+                            <Button Grid.Column="1" Content="{loc:Tr S1054}" Style="{StaticResource BtnGhost}"
                                     VerticalAlignment="Center" Command="{Binding RefreshPersonaCommand}" />
                         </Grid>
                     </StackPanel>
@@ -130,9 +181,13 @@
                         <TextBlock Text="{loc:Tr S0227}" Style="{StaticResource TxtH2}" />
 
                         <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding CoreVersionText}" TextWrapping="Wrap" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextPrimary}" />
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                       Margin="0,0,12,0" Foreground="{DynamicResource TextPrimary}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Button Content="{loc:Tr S0228}" Style="{StaticResource BtnGhost}" Command="{Binding CheckCoreCommand}" />
                                 <Button Content="{loc:Tr S0229}" Style="{StaticResource BtnGhost}" Margin="8,0,0,0"
                                         Command="{Binding RestoreBundledCoreCommand}" />
@@ -142,16 +197,23 @@
                         </Grid>
 
                         <TextBlock Text="{Binding CorePathText}" Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,10,0,0" />
+                        <!-- Какая сборка запущена и откуда она: расширенная ставится из одного из двух репозиториев.
+                             Строка занимает всю ширину карточки: слева от трёх кнопок ей тесно, в окне стандартного
+                             размера она ломалась бы на несколько строк. Без ядра строки нет (invert: см. Converters.xaml). -->
+                        <TextBlock x:Name="CoreSourceLine" Text="{Binding CoreSourceText}" Style="{StaticResource TxtMuted}"
+                                   TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Visibility="{Binding CoreSourceText, Converter={StaticResource StrToVis}, ConverterParameter=invert}" />
                         <TextBlock Text="{Binding CoreSupportText}" Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0" />
                         <TextBlock Text="{Binding BundledCoresText}" Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0" />
 
                         <Grid Margin="0,16,0,0">
-                            <TextBlock Text="{loc:Tr S0231}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr S0231}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0232}" />
+                            </StackPanel>
                             <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right"
                                           IsChecked="{Binding IsExtendedFlavor}" />
                         </Grid>
-                        <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                   Text="{loc:Tr S0232}" />
 
                         <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                             <Button Content="{loc:Tr S0233}" Style="{StaticResource BtnGhost}" Command="{Binding ChooseCoreFileCommand}" />

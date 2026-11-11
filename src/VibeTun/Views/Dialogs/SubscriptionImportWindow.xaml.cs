@@ -9,35 +9,13 @@ namespace VibeTun.Views.Dialogs;
 
 public partial class SubscriptionImportWindow : DialogWindow
 {
-    private readonly IReadOnlyList<SubscriptionGroupOption> _groups;
-    private bool _syncingGroupSelection;
-
     public SubscriptionImportWindow(string subscriptionName, string defaultGroupName, int profileCount,
         IReadOnlyList<SubscriptionGroupOption> groups)
     {
         InitializeComponent();
-        _groups = groups;
-        GroupSelector.ItemsSource = groups;
-        GroupSelector.SelectedIndex = -1;
-        NewGroupName.Text = defaultGroupName;
-        GroupSelector.SelectionChanged += (_, _) =>
-        {
-            GroupError.Visibility = Visibility.Collapsed;
-            if (_syncingGroupSelection || GroupSelector.SelectedItem is null) return;
-            // Выбор существующей группы отменяет предложенное имя новой группы.
-            _syncingGroupSelection = true;
-            NewGroupName.Text = "";
-            _syncingGroupSelection = false;
-        };
-        NewGroupName.TextChanged += (_, _) =>
-        {
-            GroupError.Visibility = Visibility.Collapsed;
-            if (_syncingGroupSelection || string.IsNullOrWhiteSpace(NewGroupName.Text)) return;
-            // И наоборот: ручной ввод означает создание новой группы, а не выбранную в списке.
-            _syncingGroupSelection = true;
-            GroupSelector.SelectedIndex = -1;
-            _syncingGroupSelection = false;
-        };
+        // здесь группа обязательна: кнопка ниже кладёт профили именно в группу
+        TargetGroup.SetGroups(groups, optional: false);
+        TargetGroup.NewName = defaultGroupName;
         Message.Text = L.F("S0978", subscriptionName, profileCount);
     }
 
@@ -49,30 +27,14 @@ public partial class SubscriptionImportWindow : DialogWindow
 
     private void OnAddToGroup(object sender, RoutedEventArgs e)
     {
-        var name = NewGroupName.Text?.Trim() ?? "";
-        if (name.Length > 0)
+        var (groupId, newGroupName) = TargetGroup.Selection;
+        if (groupId is null && newGroupName is null)
         {
-            var matchingGroup = _groups.FirstOrDefault(group =>
-                string.Equals(group.Name, name, StringComparison.CurrentCultureIgnoreCase));
-            if (matchingGroup is not null)
-            {
-                Choice = new SubscriptionImportChoice(SubscriptionImportAction.AddProfilesToGroup, matchingGroup.Id);
-            }
-            else
-            {
-                Choice = new SubscriptionImportChoice(SubscriptionImportAction.AddProfilesToGroup, NewGroupName: name);
-            }
-        }
-        else if (GroupSelector.SelectedItem is SubscriptionGroupOption selected)
-        {
-            Choice = new SubscriptionImportChoice(SubscriptionImportAction.AddProfilesToGroup, selected.Id);
-        }
-        else
-        {
-            GroupError.Visibility = Visibility.Visible;
+            TargetGroup.ShowError();
             return;
         }
 
+        Choice = new SubscriptionImportChoice(SubscriptionImportAction.AddProfilesToGroup, groupId, newGroupName);
         DialogResult = true;
         Close();
     }

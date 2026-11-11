@@ -694,14 +694,26 @@
     </Style>
 
     <!-- ============================== ScrollBar ============================== -->
-    <!-- тонкая полоса 8 px (примерно вдвое уже системной 17 px). MinWidth/MinHeight обязательны:
-         системный стиль WPF ставит минимум 17 px, и одного Width полоса не делает тоньше.
-         Цвет — акцент темы с прозрачностью, ярче при наведении и перетаскивании -->
+    <!-- Единый вид прокрутки для всего приложения. Видимая полоса — 6 px, а между ней и содержимым
+         всегда один и тот же зазор 8 px. Зазор входит в саму полосу (её ширина в раскладке 6 + 8 = 14 px),
+         поэтому он одинаков в каждом списке и окне и появляется только вместе с полосой: вьюхам не нужны
+         собственные правые отступы «под скроллбар». Зазор прозрачный, но кликабельный: ползунок можно
+         взять и за него, тонкая полоса не становится мелкой мишенью.
+         MinWidth/MinHeight обязательны: системный стиль WPF ставит минимум 17 px, и одного Width мало.
+         Цвет — акцент темы с прозрачностью, ярче при наведении и перетаскивании. -->
+    <sys:Double x:Key="ScrollBarExtent">14</sys:Double>
+    <Thickness x:Key="ScrollBarGapV">8,0,0,0</Thickness>
+    <Thickness x:Key="ScrollBarGapH">0,8,0,0</Thickness>
+
     <Style x:Key="SbThumb" TargetType="Thumb">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border x:Name="sbBody" Background="{DynamicResource Accent}" CornerRadius="2.5" Opacity="0.45" />
+                    <!-- Padding ползунка — зазор до содержимого: слева у вертикальной полосы, сверху у горизонтальной -->
+                    <Grid Background="Transparent">
+                        <Border x:Name="sbBody" Margin="{TemplateBinding Padding}" Background="{DynamicResource Accent}"
+                                CornerRadius="3" Opacity="0.45" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="sbBody" Property="Opacity" Value="0.7" />
@@ -718,15 +730,16 @@
 
     <Style TargetType="ScrollBar">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Width" Value="8" />
-        <Setter Property="MinWidth" Value="8" />
+        <Setter Property="Width" Value="{StaticResource ScrollBarExtent}" />
+        <Setter Property="MinWidth" Value="{StaticResource ScrollBarExtent}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
                     <Grid Background="Transparent">
                         <Track x:Name="PART_Track" IsDirectionReversed="True">
                             <Track.Thumb>
-                                <Thumb Style="{StaticResource SbThumbV}" />
+                                <Thumb x:Name="sbThumb" Style="{StaticResource SbThumbV}"
+                                       Padding="{StaticResource ScrollBarGapV}" />
                             </Track.Thumb>
                             <Track.IncreaseRepeatButton>
                                 <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
@@ -738,15 +751,60 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="Orientation" Value="Horizontal">
-                            <!-- горизонтальная полоса: ширина по содержимому, высота 8 px (минимумы системного стиля сбрасываем) -->
+                            <!-- горизонтальная полоса: ширина по содержимому, высота та же 6 + 8 px,
+                                 зазор сверху (минимумы системного стиля сбрасываем) -->
                             <Setter Property="Width" Value="Auto" />
                             <Setter Property="MinWidth" Value="0" />
-                            <Setter Property="Height" Value="8" />
-                            <Setter Property="MinHeight" Value="8" />
+                            <Setter Property="Height" Value="{StaticResource ScrollBarExtent}" />
+                            <Setter Property="MinHeight" Value="{StaticResource ScrollBarExtent}" />
                             <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
                             <Setter TargetName="PART_Track" Property="Orientation" Value="Horizontal" />
+                            <Setter TargetName="sbThumb" Property="Padding" Value="{StaticResource ScrollBarGapH}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============================== ScrollViewer ============================== -->
+    <!-- Общий стиль прокручиваемой области — неявный, действует на каждый ScrollViewer приложения,
+         включая те, что внутри ListBox, ComboBox и многострочных полей. Раскладка стандартная
+         (содержимое, вертикальная и горизонтальная полосы); отличие одно: угол между двумя полосами
+         прозрачный, а не системного светло-серого цвета, который в тёмной теме выглядит заплаткой.
+         Зазор до содержимого задаёт сама полоса (см. выше), поэтому здесь его нет. -->
+    <Style TargetType="ScrollViewer">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollViewer">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Column="0" Grid.Row="0"
+                                                Margin="{TemplateBinding Padding}"
+                                                Content="{TemplateBinding Content}"
+                                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                CanHorizontallyScroll="False" CanVerticallyScroll="False" />
+                        <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0"
+                                   AutomationProperties.AutomationId="VerticalScrollBar" Cursor="Arrow"
+                                   Minimum="0" Maximum="{TemplateBinding ScrollableHeight}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}"
+                                   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+                        <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Column="0" Grid.Row="1" Orientation="Horizontal"
+                                   AutomationProperties.AutomationId="HorizontalScrollBar" Cursor="Arrow"
+                                   Minimum="0" Maximum="{TemplateBinding ScrollableWidth}"
+                                   ViewportSize="{TemplateBinding ViewportWidth}"
+                                   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" />
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -1053,9 +1111,58 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
-                    <Border Background="{DynamicResource TooltipBg}" CornerRadius="7" Padding="9,6">
-                        <ContentPresenter />
+                    <!-- длинная подсказка переносится по словам, а не уходит одной строкой за край экрана -->
+                    <Border Background="{DynamicResource TooltipBg}" CornerRadius="7" Padding="9,6" MaxWidth="380">
+                        <ContentPresenter>
+                            <ContentPresenter.Resources>
+                                <!-- текст подсказки берёт её цвет, а не общий TextPrimary из стиля TextBlock -->
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type ToolTip}}}" />
+                                    <Setter Property="TextWrapping" Value="Wrap" />
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                     </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Значок «i» рядом с названием настройки: пояснение показывается подсказкой по наведению,
+         а не серой строкой под переключателем. Использование:
+         <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr KEY}" /> -->
+    <Style x:Key="InfoHint" TargetType="ContentControl">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+        <Setter Property="Margin" Value="6,1,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Help" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
+        <Setter Property="ToolTipService.ShowDuration" Value="30000" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <!-- прозрачная подложка: наведение ловится всем кружком, а не только линиями -->
+                    <Grid Background="Transparent">
+                        <Viewbox>
+                            <Canvas Width="16" Height="16">
+                                <Ellipse Canvas.Left="1" Canvas.Top="1" Width="14" Height="14"
+                                         Stroke="{TemplateBinding Foreground}" StrokeThickness="1.3" />
+                                <Ellipse Canvas.Left="7.1" Canvas.Top="4" Width="1.8" Height="1.8"
+                                         Fill="{TemplateBinding Foreground}" />
+                                <Path Data="M8,7.4 V11.4" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            </Canvas>
+                        </Viewbox>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

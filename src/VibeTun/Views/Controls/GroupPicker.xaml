@@ -1,0 +1,18 @@
+<UserControl x:Class="VibeTun.Views.Controls.GroupPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:VibeTun.Services">
+    <!-- Выбор группы для добавляемых профилей: существующая или новая по имени. Один и тот же блок стоит
+         в окне импорта подписки и внизу окна «Добавить подключение». Подписи выставляет код (SetGroups). -->
+    <StackPanel>
+        <TextBlock x:Name="ExistingCaption" Style="{StaticResource TxtCaption}" />
+        <ComboBox x:Name="GroupSelector" Style="{StaticResource Combo}" Margin="0,6,0,0"
+                  DisplayMemberPath="Name" />
+        <TextBlock x:Name="NewCaption" Style="{StaticResource TxtCaption}" Margin="0,12,0,0" />
+        <TextBox x:Name="NewGroupName" Style="{StaticResource InputBox}" Margin="0,6,0,0"
+                 Tag="{loc:Tr S0984}" />
+        <TextBlock x:Name="GroupError" Text="{loc:Tr S0985}" Style="{StaticResource TxtMuted}"
+                   TextWrapping="Wrap" Margin="0,6,0,0" Visibility="Collapsed"
+                   Foreground="{DynamicResource Danger}" />
+    </StackPanel>
+</UserControl>

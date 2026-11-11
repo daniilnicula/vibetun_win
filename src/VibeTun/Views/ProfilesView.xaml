@@ -318,6 +318,7 @@
                 </Button>
                 <Button Style="{StaticResource BtnPrimary}" Command="{Binding AddCommand}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Height="29" Width="34"
                         Margin="7,0,0,0" Padding="0" ToolTip="{loc:Tr S0153}"
+                        AutomationProperties.AutomationId="AddProfileButton"
                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
                     <Path Width="15" Height="15" Stretch="Uniform" Data="M8,2.5 V13.5 M2.5,8 H13.5"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"

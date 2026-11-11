@@ -66,7 +66,20 @@ public static class BundledCores
 
             var marker = $"{resource}:{stream.Length}";
             if (File.Exists(target) && stamp.TryGetValue(resource, out var known) && known == marker)
+            {
+                // Файл развёрнут прошлым запуском. Если у него нет записи об источнике (ядро поставила
+                // версия приложения, которая её ещё не вела, либо файл с тех пор заменили), один раз
+                // сверяем его с вшитой копией — чтобы «Настройки» показывали источник, а не догадку.
+                if (CoreSourceStore.Find(target) is null)
+                {
+                    var same = await SameAsBundledAsync(stream, target, ct);
+                    CoreSourceStore.Record(target, new CoreSourceInfo
+                    {
+                        Kind = same ? CoreSourceInfo.KindBundled : CoreSourceInfo.KindUnknown
+                    });
+                }
                 continue;
+            }
 
             progress?.Report(L.F("S0284", Path.GetFileName(target)));
             var temp = target + ".tmp";
@@ -79,6 +92,8 @@ public static class BundledCores
                 File.Move(temp, target, true);
                 stamp[resource] = marker;
                 extracted.Add(target);
+                // вшитая копия легла поверх прежнего файла: теперь источник ядра — само приложение
+                CoreSourceStore.Record(target, new CoreSourceInfo { Kind = CoreSourceInfo.KindBundled });
             }
             catch
             {
@@ -90,6 +105,34 @@ public static class BundledCores
         if (extracted.Count > 0) WriteStamp(stamp);
         return extracted;
     }
+
+    /// <summary>Совпадает ли файл на диске побайтно с вшитой (Brotli-сжатой) копией ядра.</summary>
+    private static async Task<bool> SameAsBundledAsync(Stream resource, string path, CancellationToken ct)
+    {
+        try
+        {
+            await using var brotli = new BrotliStream(resource, CompressionMode.Decompress, leaveOpen: true);
+            await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true);
+
+            var expected = new byte[81920];
+            var actual = new byte[81920];
+            while (true)
+            {
+                var wanted = await brotli.ReadAtLeastAsync(expected, expected.Length, throwOnEndOfStream: false, ct);
+                var got = await file.ReadAtLeastAsync(actual, actual.Length, throwOnEndOfStream: false, ct);
+                if (wanted != got) return false;
+                if (wanted == 0) return true;
+                if (!SameBytes(expected, actual, wanted)) return false;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool SameBytes(byte[] left, byte[] right, int count) =>
+        left.AsSpan(0, count).SequenceEqual(right.AsSpan(0, count));
 
     /// <summary>Убирает распакованные копии, чтобы при следующем запуске они развернулись заново.</summary>
     public static void RemoveExtracted()

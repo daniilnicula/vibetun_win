@@ -19,9 +19,10 @@ public sealed class DialogService : IDialogService
         return window.ShowDialog() == true;
     }
 
-    public AddConnectionChoice ChooseAddConnection(Rect? origin, AddConnectionStep start, string defaultGroupName)
+    public AddConnectionChoice ChooseAddConnection(Rect? origin, AddConnectionStep start, string defaultGroupName,
+        IReadOnlyList<SubscriptionGroupOption> groups)
     {
-        var window = new AddConnectionWindow(origin, start, defaultGroupName) { Owner = _owner };
+        var window = new AddConnectionWindow(origin, start, defaultGroupName, groups) { Owner = _owner };
         return window.ShowDialog() == true ? window.Choice : new AddConnectionChoice(AddConnectionAction.Cancel);
     }
 

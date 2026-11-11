@@ -795,8 +795,12 @@
                                 </Border>
 
                                 <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{loc:Tr S0112}" Style="{StaticResource Txt}" FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{loc:Tr S0112}" Style="{StaticResource Txt}" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <!-- зачем обходу свой DNS — подсказкой, а не абзацем под списком -->
+                                        <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0117}" />
+                                    </StackPanel>
                                     <TextBlock Text="{loc:Tr S0113}" Style="{StaticResource TxtMuted}"
                                                Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
@@ -810,14 +814,10 @@
                                 </ComboBox>
                             </Grid>
 
-                            <StackPanel Margin="68,0,14,14">
-                                <TextBox Style="{StaticResource InputBox}" Margin="0,0,0,8" Tag="https://cloudflare-dns.com/dns-query"
-                                         ToolTip="{loc:Tr S0116}"
-                                         Text="{Binding DpiDohUrl}"
-                                         Visibility="{Binding DpiDohIsCustom, Converter={StaticResource BoolToVis}}" />
-                                <TextBlock Style="{StaticResource TxtMuted}" TextWrapping="Wrap"
-                                           Text="{loc:Tr S0117}" />
-                            </StackPanel>
+                            <TextBox Style="{StaticResource InputBox}" Margin="68,0,14,14" Tag="https://cloudflare-dns.com/dns-query"
+                                     ToolTip="{loc:Tr S0116}"
+                                     Text="{Binding DpiDohUrl}"
+                                     Visibility="{Binding DpiDohIsCustom, Converter={StaticResource BoolToVis}}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -1161,6 +1161,8 @@ public sealed class MainViewModel : ObservableObject
             ConnectTimeout = TimeSpan.FromSeconds(8)
         };
         using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+        // проверочные запросы подписаны тем же обликом, что и остальные запросы приложения
+        http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", NetworkPersonaService.UserAgent);
 
         foreach (var url in ConnectivityProbes)
         {

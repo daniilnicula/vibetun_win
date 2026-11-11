@@ -17,6 +17,7 @@ namespace VibeTun.Views;
 public static class AcrylicBackdrop
 {
     private const int WcaAccentPolicy = 19;
+    private const int AccentDisabled = 0;
     private const int AccentEnableAcrylicBlurBehind = 4;
 
     private const int DwmwaUseImmersiveDarkMode = 19;  // вариант mica: 1 — тёмная, 0 — светлая
@@ -32,6 +33,22 @@ public static class AcrylicBackdrop
         // GradientColor в формате AABBGGRR; почти прозрачный — цвет задаёт тема поверх.
         // Важно: живой акрил рисует размытие только в layered-окне (см. MainWindow).
         return SetAccent(window, AccentEnableAcrylicBlurBehind, 2, 0x01000000);
+    }
+
+    /// <summary>
+    /// Windows 10: включить или снять живой акрил у окна, которому он уже назначался в <see cref="Apply"/>.
+    /// Композитор пересчитывает такое размытие на каждый сдвиг окна, поэтому акрил включён, только
+    /// пока он действительно виден: главное окно снимает его при выключенном «Размытии левой панели»
+    /// (см. MainWindow.RenderGlass). При перетаскивании размытие остаётся — отставание окна снимает
+    /// синхронизация кадра с DWM (MainWindow.SynchronizeFrameWithDwm), а не снятие акрила.
+    /// На Windows 11 ничего не делает: там бэкдроп (mica) рисует сам DWM.
+    /// </summary>
+    public static bool SetLegacyAcrylic(Window window, bool enabled)
+    {
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)) return false;
+        return enabled
+            ? SetAccent(window, AccentEnableAcrylicBlurBehind, 2, 0x01000000)
+            : SetAccent(window, AccentDisabled, 0, 0);
     }
 
     /// <summary>Переключение темы во время работы: синхронизируем вариант mica (тёмный/светлый).</summary>

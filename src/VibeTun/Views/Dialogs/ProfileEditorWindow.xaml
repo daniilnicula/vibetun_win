@@ -29,8 +29,8 @@
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="18,0,14,0">
-            <StackPanel Margin="0,0,4,12">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="18,0,18,0">
+            <StackPanel Margin="0,0,0,12">
 
                 <!-- имя и протокол -->
                 <Grid>
@@ -50,8 +50,10 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- StrToVis без параметра показывает элемент при ПУСТОЙ строке: подсказке нужен invert -->
                 <TextBlock Text="{Binding ProtocolHint}" Style="{StaticResource TxtMuted}" TextWrapping="Wrap"
-                           Margin="0,8,0,0" Visibility="{Binding ProtocolHint, Converter={StaticResource StrToVis}}" />
+                           Margin="0,8,0,0" AutomationProperties.AutomationId="ProfileProtocolHint"
+                           Visibility="{Binding ProtocolHint, Converter={StaticResource StrToVis}, ConverterParameter=invert}" />
 
                 <!-- сервер -->
                 <Grid Margin="0,14,0,0">
@@ -565,7 +567,8 @@
                                VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="{loc:Tr S0015}" Style="{StaticResource BtnGhost}" Click="OnCancel" />
+                    <Button Content="{loc:Tr S0015}" Style="{StaticResource BtnGhost}" Click="OnCancel"
+                            AutomationProperties.AutomationId="ProfileEditorCancel" />
                     <Button Content="{loc:Tr S0069}" Style="{StaticResource BtnPrimary}" Margin="8,0,0,0" Click="OnSave" />
                 </StackPanel>
             </Grid>

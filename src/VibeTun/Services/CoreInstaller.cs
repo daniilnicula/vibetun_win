@@ -1,5 +1,4 @@
 using System.IO;
-using System.IO.Compression;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -60,12 +59,12 @@ public static class CoreInstaller
         _ => "amd64"
     };
 
-    /// <summary>Архив точно для нашей архитектуры (и не «-purego», чтобы не взять урезанную сборку).</summary>
-    private static bool IsArchMatch(string assetName, string arch) =>
-        assetName.Contains($"-windows-{arch}.zip", StringComparison.OrdinalIgnoreCase) ||
-        assetName.Contains($"-windows-{arch}-", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Архив ядра под Windows из последнего релиза репозитория.</summary>
+    /// <param name="Tag">Тег релиза — показывается в «Настройках» как источник ядра.</param>
+    /// <param name="Sha256">SHA-256 архива из поля <c>digest</c> релиза; у старых релизов его нет.</param>
+    public sealed record CoreAsset(string Url, string Name, string Tag, string? Sha256);
 
-    public static async Task<(string Url, string Name)> ResolveWindowsAssetAsync(CoreFlavor flavor,
+    public static async Task<CoreAsset> ResolveWindowsAssetAsync(CoreFlavor flavor,
         CancellationToken ct = default, string? repo = null)
     {
         using var client = Client();
@@ -76,11 +75,18 @@ public static class CoreInstaller
         if (!doc.RootElement.TryGetProperty("assets", out var assets))
             throw new InvalidOperationException(L.T("S0285"));
 
+        var tag = doc.RootElement.TryGetProperty("tag_name", out var tagProp) && tagProp.ValueKind == JsonValueKind.String
+            ? tagProp.GetString() ?? ""
+            : "";
+
         var candidates = assets.EnumerateArray()
             .Select(a => new
             {
                 Name = a.GetProperty("name").GetString() ?? "",
-                Url = a.GetProperty("browser_download_url").GetString() ?? ""
+                Url = a.GetProperty("browser_download_url").GetString() ?? "",
+                Digest = a.TryGetProperty("digest", out var digest) && digest.ValueKind == JsonValueKind.String
+                    ? digest.GetString()
+                    : null
             })
             .Where(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             .Where(a => a.Name.Contains("windows", StringComparison.OrdinalIgnoreCase))
@@ -89,28 +95,38 @@ public static class CoreInstaller
         if (candidates.Count == 0)
             throw new InvalidOperationException(L.T("S0286"));
 
-        var arch = GoArch();
-        bool Plain(string n) => !n.Contains("purego", StringComparison.OrdinalIgnoreCase);
+        // Основной архив нашей архитектуры, а не его вариант («-legacy-windows-7», «-purego»): в списке
+        // релиза варианты стоят раньше, и на Windows 10/11 ставилась сборка для Windows 7.
+        var asset = candidates[CoreAssetPicker.Pick(candidates.Select(a => a.Name).ToList(), GoArch())];
 
-        var asset = candidates.FirstOrDefault(a => IsArchMatch(a.Name, arch) && Plain(a.Name))
-                    ?? candidates.FirstOrDefault(a => IsArchMatch(a.Name, arch))
-                    ?? candidates.FirstOrDefault(a => Plain(a.Name))
-                    ?? candidates.First();
-
-        return (asset.Url, asset.Name);
+        return new CoreAsset(asset.Url, asset.Name, tag, AppUpdateService.ParseSha256Digest(asset.Digest));
     }
 
     /// <summary>Куда класть ядро: официальная и расширенная сборки живут рядом и не перетирают друг друга.</summary>
     private static string TargetFor(CoreFlavor flavor) =>
         flavor == CoreFlavor.SingBoxExtended ? AppPaths.CoreExtendedBinary : AppPaths.CoreBinary;
 
-    public static async Task<CoreInfo?> InstallLatestAsync(CoreService core, CoreFlavor flavor,
-        IProgress<string>? progress = null, CancellationToken ct = default, string? repo = null)
+    public static Task<CoreInfo?> InstallLatestAsync(CoreService core, CoreFlavor flavor,
+        IProgress<string>? progress = null, CancellationToken ct = default, string? repo = null) =>
+        InstallReleaseAsync(core, flavor, progress, ct, RepoName(flavor, repo), fallbackFor: null);
+
+    /// <param name="fallbackFor">Основной репозиторий, вместо которого берём этот (он не ответил).</param>
+    private static async Task<CoreInfo?> InstallReleaseAsync(CoreService core, CoreFlavor flavor,
+        IProgress<string>? progress, CancellationToken ct, string repo, string? fallbackFor)
     {
         progress?.Report(L.T("S0287"));
-        var (url, name) = await ResolveWindowsAssetAsync(flavor, ct, repo);
-        progress?.Report(L.F("S0288", name));
-        return await InstallFromUrlAsync(core, url, progress, ct, flavor);
+        var asset = await ResolveWindowsAssetAsync(flavor, ct, repo);
+        progress?.Report(L.F("S0288", asset.Name));
+
+        var source = new CoreSourceInfo
+        {
+            Kind = CoreSourceInfo.KindGitHub,
+            Repo = repo,
+            Tag = asset.Tag,
+            Asset = asset.Name,
+            FallbackFor = fallbackFor
+        };
+        return await InstallFromUrlAsync(core, asset.Url, progress, ct, flavor, source, asset.Sha256);
     }
 
     /// <summary>
@@ -118,13 +134,15 @@ public static class CoreInstaller
     /// Windows-сборками и AWG 3.x (random_trailers/disable_cookies); если в его релизе не нашлось
     /// архива под нашу архитектуру или GitHub недоступен, берём расширенную сборку shtorm-7 —
     /// она тянет AWG до 3.0, а параметры 3.1 придётся отключать на сервере.
+    /// Какой из двух репозиториев сработал, записывается вместе с ядром (<see cref="CoreSourceStore"/>)
+    /// и видно в «Настройках»: одновременно на диске лежит только одна расширенная сборка.
     /// </summary>
     public static async Task<CoreInfo?> InstallAwgCoreAsync(CoreService core,
         IProgress<string>? progress = null, CancellationToken ct = default)
     {
         try
         {
-            var info = await InstallLatestAsync(core, CoreFlavor.SingBoxExtended, progress, ct, AwgRepo);
+            var info = await InstallReleaseAsync(core, CoreFlavor.SingBoxExtended, progress, ct, AwgRepo, fallbackFor: null);
             if (info is { Exists: true }) return info;
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TaskCanceledException)
@@ -132,7 +150,7 @@ public static class CoreInstaller
             progress?.Report(L.F("S0289", AwgRepo, ex.Message, ExtendedRepo));
         }
 
-        return await InstallLatestAsync(core, CoreFlavor.SingBoxExtended, progress, ct, ExtendedRepo);
+        return await InstallReleaseAsync(core, CoreFlavor.SingBoxExtended, progress, ct, ExtendedRepo, fallbackFor: AwgRepo);
     }
 
     /// <summary>
@@ -154,28 +172,71 @@ public static class CoreInstaller
         return await core.DetectAsync(target, flavor);
     }
 
+    /// <param name="source">Откуда архив (репозиторий и релиз) — запоминается вместе с ядром.</param>
+    /// <param name="sha256">Ожидаемый SHA-256 архива; сверяется до распаковки.</param>
     public static async Task<CoreInfo?> InstallFromUrlAsync(CoreService core, string url,
-        IProgress<string>? progress = null, CancellationToken ct = default, CoreFlavor? flavor = null)
+        IProgress<string>? progress = null, CancellationToken ct = default, CoreFlavor? flavor = null,
+        CoreSourceInfo? source = null, string? sha256 = null)
     {
         AppPaths.EnsureCreated();
         var tempZip = Path.Combine(Path.GetTempPath(), "vibetun-core-" + Guid.NewGuid().ToString("N")[..6] + ".zip");
 
-        using (var client = Client())
-        using (var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct))
+        try
         {
-            resp.EnsureSuccessStatusCode();
-            await using var fs = File.Create(tempZip);
-            await resp.Content.CopyToAsync(fs, ct);
-        }
+            using (var client = Client())
+                await DownloadAsync(client, url, tempZip, ct);
 
-        progress?.Report(L.T("S0291"));
-        var info = await InstallFromZipAsync(core, tempZip, progress, ct, flavor);
-        try { File.Delete(tempZip); } catch { /* ignore */ }
-        return info;
+            // хэш GitHub считает по самому архиву — сверяем его до распаковки
+            AppUpdateService.VerifyAssetSha256(tempZip, sha256);
+
+            progress?.Report(L.T("S0291"));
+            return await InstallFromZipAsync(core, tempZip, progress, ct, flavor,
+                source ?? new CoreSourceInfo { Kind = CoreSourceInfo.KindArchive, Asset = AssetNameOf(url) });
+        }
+        finally
+        {
+            try { File.Delete(tempZip); } catch { /* ignore */ }
+        }
     }
 
+    /// <summary>
+    /// Скачивает архив ядра с пределом размера: архив весит десятки мегабайт, и ответ на порядок
+    /// больше — не релиз, а подмена или сбой сервера. Качать его до конца (и забивать диск) незачем.
+    /// </summary>
+    private static async Task DownloadAsync(HttpClient client, string url, string path, CancellationToken ct)
+    {
+        const long limit = ZipGuard.MaxTotalUncompressedBytes;
+
+        using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+        resp.EnsureSuccessStatusCode();
+        if (resp.Content.Headers.ContentLength is > limit)
+            throw new InvalidDataException(L.F("S1074", limit / (1024 * 1024)));
+
+        await using var network = await resp.Content.ReadAsStreamAsync(ct);
+        await using var file = File.Create(path);
+
+        var buffer = new byte[81920];
+        long received = 0;
+        int read;
+        while ((read = await network.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
+        {
+            received += read;
+            if (received > limit)
+                throw new InvalidDataException(L.F("S1074", limit / (1024 * 1024)));
+            await file.WriteAsync(buffer.AsMemory(0, read), ct);
+        }
+    }
+
+    private static string AssetNameOf(string url)
+    {
+        try { return Path.GetFileName(new Uri(url).AbsolutePath); }
+        catch { return url; }
+    }
+
+    /// <param name="source">Откуда архив; <c>null</c> — файл выбрал пользователь («Установить из архива»).</param>
     public static async Task<CoreInfo?> InstallFromZipAsync(CoreService core, string zipPath,
-        IProgress<string>? progress = null, CancellationToken ct = default, CoreFlavor? flavor = null)
+        IProgress<string>? progress = null, CancellationToken ct = default, CoreFlavor? flavor = null,
+        CoreSourceInfo? source = null)
     {
         AppPaths.EnsureCreated();
         var tempDir = Path.Combine(Path.GetTempPath(), "vibetun-core-" + Guid.NewGuid().ToString("N")[..6]);
@@ -183,7 +244,8 @@ public static class CoreInstaller
 
         try
         {
-            ZipFile.ExtractToDirectory(zipPath, tempDir, true);
+            // архив проверяется до распаковки (zip-бомба, выход за пределы папки) — см. ZipGuard
+            ZipGuard.ExtractToDirectory(zipPath, tempDir, ct);
             var exe = Directory.EnumerateFiles(tempDir, "*.exe", SearchOption.AllDirectories)
                 .FirstOrDefault(f => Path.GetFileName(f).Contains("sing-box", StringComparison.OrdinalIgnoreCase))
                 ?? Directory.EnumerateFiles(tempDir, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
@@ -208,6 +270,9 @@ public static class CoreInstaller
             // теряет часть функций, поэтому переносим все соседние файлы в каталог ядра.
             CopySiblings(exe, target);
 
+            CoreSourceStore.Record(target,
+                source ?? new CoreSourceInfo { Kind = CoreSourceInfo.KindArchive, Asset = Path.GetFileName(zipPath) });
+
             progress?.Report(L.T("S0293"));
             return await core.DetectAsync(target, flavor);
         }
@@ -215,6 +280,19 @@ public static class CoreInstaller
         {
             try { Directory.Delete(tempDir, true); } catch { /* ignore */ }
         }
+    }
+
+    /// <summary>
+    /// «Установить из архива» с выбранным .exe: файл копируется в каталог ядра как официальная
+    /// сборка, а его имя запоминается как источник.
+    /// </summary>
+    public static async Task<CoreInfo?> InstallFromExeAsync(CoreService core, string exePath)
+    {
+        AppPaths.EnsureCreated();
+        File.Copy(exePath, AppPaths.CoreBinary, true);
+        CoreSourceStore.Record(AppPaths.CoreBinary,
+            new CoreSourceInfo { Kind = CoreSourceInfo.KindFile, Asset = Path.GetFileName(exePath) });
+        return await core.DetectAsync(AppPaths.CoreBinary);
     }
 
     private static void CopySiblings(string sourceExe, string targetExe)

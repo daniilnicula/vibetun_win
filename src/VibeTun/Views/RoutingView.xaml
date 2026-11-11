@@ -21,8 +21,12 @@
 
             <!-- ==================== параметры входа (профиль один) ==================== -->
             <ScrollViewer Grid.Column="0" Margin="0,0,16,0" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="0,0,6,12" DataContext="{Binding SelectedProfile}">
-                        <TextBlock Text="{loc:Tr S1001}" Style="{StaticResource TxtMuted}" Margin="0,0,0,4" />
+                    <StackPanel Margin="0,0,0,12" DataContext="{Binding SelectedProfile}">
+                        <!-- пояснение — подсказкой у подписи, а не серой строкой под переключателем -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="{loc:Tr S1001}" Style="{StaticResource TxtMuted}" VerticalAlignment="Center" />
+                            <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S1002}" />
+                        </StackPanel>
                         <Grid ctl:SegmentGroup.IsGroup="True" ctl:SegmentGroup.Radius="7">
                             <StackPanel Orientation="Horizontal">
                                 <ToggleButton Style="{StaticResource SegToggle}" Content="PROXY"
@@ -31,8 +35,6 @@
                                               IsChecked="{Binding IsDefaultDirect}" />
                             </StackPanel>
                         </Grid>
-                        <TextBlock Text="{loc:Tr S1002}" Style="{StaticResource TxtMuted}"
-                                   TextWrapping="Wrap" Margin="0,4,0,0" />
 
                         <TextBlock Text="{loc:Tr S0166}" Style="{StaticResource TxtCaption}" Margin="2,14,0,8" />
 
@@ -72,14 +74,15 @@
                         </Grid>
 
                         <Grid Margin="0,12,0,0">
-                            <TextBlock Text="{loc:Tr S0170}" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextPrimary}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Tr S0170}" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <!-- о правах администратора видно до включения, а не строкой после него -->
+                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0171}" />
+                            </StackPanel>
                             <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right"
                                           IsChecked="{Binding TunEnabled}" />
                         </Grid>
-                        <TextBlock Text="{loc:Tr S0171}"
-                                   Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,4,0,0"
-                                   Visibility="{Binding TunEnabled, Converter={StaticResource BoolToVis}}" />
 
                         <StackPanel Visibility="{Binding TunEnabled, Converter={StaticResource BoolToVis}}" Margin="0,10,0,0">
                             <TextBlock Text="{loc:Tr S0172}" Style="{StaticResource TxtMuted}" />
@@ -157,8 +160,12 @@
                     <ctl:SlideHost Grid.Row="1" Margin="0,12,0,0" SelectedKey="{Binding RoutingTab}" UniformSize="True">
                         <!-- домены, IP, regex -->
                         <ScrollViewer ctl:SlideHost.Key="domains" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="0,0,4,14">
-                                <TextBlock Text="{loc:Tr S0181}" Style="{StaticResource TxtH2}" />
+                            <StackPanel Margin="0,0,0,14">
+                                <!-- как распознаётся запись — подсказкой у заголовка: тип и так виден рядом с полем ввода -->
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{loc:Tr S0181}" Style="{StaticResource TxtH2}" VerticalAlignment="Center" />
+                                    <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0182}" />
+                                </StackPanel>
 
                                 <!-- выбор набора: набор применяется только к «Доменам и IP» -->
                                 <Grid Margin="0,8,0,0">
@@ -183,11 +190,8 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Style="{StaticResource TxtMuted}" Margin="0,10,0,10" TextWrapping="Wrap"
-                                           Text="{loc:Tr S0182}" />
-
                                 <!-- добавление правила -->
-                                <Grid>
+                                <Grid Margin="0,10,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -349,7 +353,7 @@
 
                         <!-- независимая блокировка рекламы и её собственные правила -->
                         <ScrollViewer ctl:SlideHost.Key="adblock" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="0,0,4,14">
+                            <StackPanel Margin="0,0,0,14">
                                 <Grid>
                                     <TextBlock Text="{loc:Tr S0505}" Style="{StaticResource TxtH2}"
                                                VerticalAlignment="Center" />

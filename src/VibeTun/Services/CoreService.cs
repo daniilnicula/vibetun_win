@@ -170,6 +170,8 @@ public sealed partial class CoreService : IDisposable
             info.AmneziaProbed = null;
             info.AwgTrailersProbed = null;
             info.EndpointError = null;
+            // откуда этот файл: релиз GitHub (какой репозиторий), вшитая копия, архив пользователя
+            info.Source = CoreSourceStore.Find(path);
             return info;
         }
         catch

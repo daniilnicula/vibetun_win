@@ -41,6 +41,7 @@ public partial class AddConnectionWindow : DialogWindow
 
     private readonly Rect? _origin;
     private readonly string _defaultGroupName;
+    private readonly IReadOnlyList<SubscriptionGroupOption> _groups;
     private readonly bool _hasMenu;
     private AddConnectionStep _step;
     private bool _busy;
@@ -48,17 +49,19 @@ public partial class AddConnectionWindow : DialogWindow
     private long _morphId;
     private bool _inFrame;
 
-    public AddConnectionWindow(Rect? origin, AddConnectionStep start, string defaultGroupName)
+    public AddConnectionWindow(Rect? origin, AddConnectionStep start, string defaultGroupName,
+        IReadOnlyList<SubscriptionGroupOption> groups)
     {
         InitializeComponent();
         _origin = origin;
         _defaultGroupName = defaultGroupName;
+        _groups = groups;
         _hasMenu = start == AddConnectionStep.Menu;
         _step = start;
 
         ProtocolCombo.ItemsSource = ProtocolOptions();
         ShowStep(start);
-        PrepareStep(start, fromClipboard: false);
+        PrepareStep(start);
         Loaded += OnOpened;
     }
 
@@ -104,7 +107,7 @@ public partial class AddConnectionWindow : DialogWindow
     // ------------------------------------------------------------------ переходы между шагами
 
     /// <summary>Перейти на другой шаг: содержимое гаснет, окно меняет размер, новое содержимое проявляется.</summary>
-    private void Navigate(AddConnectionStep next, bool fromClipboard = false)
+    private void Navigate(AddConnectionStep next)
     {
         if (_busy || _closing || next == _step) return;
         _busy = true;
@@ -112,7 +115,7 @@ public partial class AddConnectionWindow : DialogWindow
         FadeContent(0, Duration, () =>
         {
             ShowStep(next);
-            PrepareStep(next, fromClipboard);
+            PrepareStep(next);
 
             var from = CurrentRect();
             var to = Around(Center(from), SizeFor(next));
@@ -150,7 +153,7 @@ public partial class AddConnectionWindow : DialogWindow
         panel == current ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
 
     /// <summary>Подготовить содержимое шага: подписи, предзаполнение поля, состояние кнопок.</summary>
-    private void PrepareStep(AddConnectionStep step, bool fromClipboard)
+    private void PrepareStep(AddConnectionStep step)
     {
         switch (step)
         {
@@ -158,8 +161,10 @@ public partial class AddConnectionWindow : DialogWindow
                 FileError.Text = "";
                 break;
             case AddConnectionStep.Paste:
-                PasteSubtitle.Text = L.T(fromClipboard ? "S1013" : "S1015");
-                PasteInput.Text = fromClipboard ? ReadClipboard() : "";
+                PasteSubtitle.Text = L.T("S1013");
+                // группа необязательна: по умолчанию «Без группы», профили добавляются как раньше
+                PasteGroup.SetGroups(_groups, optional: true);
+                PasteInput.Text = ReadClipboard();
                 PasteInput.CaretIndex = PasteInput.Text.Length;
                 UpdatePasteStatus();
                 break;
@@ -344,10 +349,7 @@ public partial class AddConnectionWindow : DialogWindow
     private void OnMenuFile(object sender, RoutedEventArgs e) => Navigate(AddConnectionStep.File);
 
     private void OnMenuClipboard(object sender, RoutedEventArgs e) =>
-        Navigate(AddConnectionStep.Paste, fromClipboard: true);
-
-    private void OnMenuManual(object sender, RoutedEventArgs e) =>
-        Navigate(AddConnectionStep.Paste, fromClipboard: false);
+        Navigate(AddConnectionStep.Paste);
 
     private void OnMenuProtocol(object sender, RoutedEventArgs e) => Navigate(AddConnectionStep.Protocol);
 
@@ -432,9 +434,19 @@ public partial class AddConnectionWindow : DialogWindow
         PasteStatus.SetResourceReference(TextBlock.ForegroundProperty, "TextMuted");
         var count = 0;
 
+        // Одна строка http(s) с путём — ссылка на подписку: так же её разберёт и основной код
+        // (ProfilesViewModel.AddFromTextAsync). Проверяется первой: разборщик ссылок принял бы такой
+        // адрес за запись HTTP-прокси, и подпись «Распознанные профили: 1» обещала бы не то, что произойдёт.
+        var isSubscription = SubscriptionService.TryGetSubscriptionUrl(text, out _);
+
         if (string.IsNullOrWhiteSpace(text))
         {
             PasteAdd.IsEnabled = false;
+        }
+        else if (isSubscription)
+        {
+            PasteStatus.Text = L.T("S1025");
+            PasteAdd.IsEnabled = true;
         }
         else
         {
@@ -459,13 +471,23 @@ public partial class AddConnectionWindow : DialogWindow
         }
 
         PasteAdd.Content = count > 1 ? L.F("S0917", count) : L.T("S0029");
+
+        // Ссылку на подписку разбирает следующее окно, и группу спрашивает оно же (вместе с вариантом
+        // «добавить как подписку»). Здесь блок группы был бы вторым вопросом о том же — прячем его.
+        PasteGroup.Visibility = isSubscription
+            ? System.Windows.Visibility.Collapsed
+            : System.Windows.Visibility.Visible;
         RefitIfIdle();
     }
 
     private void OnPasteAdd(object sender, RoutedEventArgs e)
     {
         if (!PasteAdd.IsEnabled) return;
-        Finish(new AddConnectionChoice(AddConnectionAction.Paste, Text: PasteInput.Text));
+        var (groupId, newGroupName) = PasteGroup.Visibility == System.Windows.Visibility.Visible
+            ? PasteGroup.Selection
+            : (null, null);
+        Finish(new AddConnectionChoice(AddConnectionAction.Paste, Text: PasteInput.Text,
+            GroupName: newGroupName, ExistingGroupId: groupId));
     }
 
     private static string ReadClipboard()

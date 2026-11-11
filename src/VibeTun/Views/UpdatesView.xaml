@@ -153,7 +153,7 @@
                     <!-- описание с GitHub (markdown → блоки) -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding DisplayedRelease.DescriptionText, Converter={StaticResource MdBlocks}}"
-                                      Margin="0,0,6,8">
+                                      Margin="0,0,0,8">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel />

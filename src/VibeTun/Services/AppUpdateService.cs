@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -43,6 +42,12 @@ public static class AppUpdateService
     private const string ApiReleasesUrl = $"https://api.github.com/repos/{ConstantsService.AppRepo}/releases?per_page=100";
     private const string WebReleasesUrl = $"https://github.com/{ConstantsService.AppRepo}/releases";
     private const string AtomReleasesUrl = $"https://github.com/{ConstantsService.AppRepo}/releases.atom";
+
+    /// <summary>
+    /// Предел размера скачиваемого релиза. VibeTun.exe весит около 70 МБ; файл на порядок больше —
+    /// не релиз, а подмена или ошибка сервера, и качать его до конца незачем.
+    /// </summary>
+    private const long MaxDownloadBytes = ZipGuard.MaxTotalUncompressedBytes;
 
     private static string? _cachedExeSha256;
 
@@ -287,7 +292,7 @@ public static class AppUpdateService
         return text.Trim();
     }
 
-    private static string? ParseSha256Digest(string? digest)
+    internal static string? ParseSha256Digest(string? digest)
     {
         if (string.IsNullOrWhiteSpace(digest)) return null;
         var s = digest.Trim();
@@ -456,8 +461,12 @@ public static class AppUpdateService
                         int read;
                         while ((read = await netStream.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
                         {
-                            await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
                             received += read;
+                            // сервер не должен отдать больше разумного для релиза: иначе «обновление» забьёт диск
+                            if (received > MaxDownloadBytes)
+                                throw new InvalidDataException(L.F("S1074", MaxDownloadBytes / (1024 * 1024)));
+
+                            await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
 
                             if (lastReport.ElapsedMilliseconds >= 35 || (total > 0 && received >= total))
                             {
@@ -480,6 +489,11 @@ public static class AppUpdateService
                 {
                     throw;
                 }
+                catch (InvalidDataException)
+                {
+                    // файл отклонён по размеру: повтор напрямую отдаст то же самое
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     lastError = ex;
@@ -490,6 +504,10 @@ public static class AppUpdateService
             if (!downloaded)
                 throw lastError ?? new IOException(L.T("S0278"));
 
+            // Хэш ассета GitHub считает по самому скачиваемому файлу (для архива — по .zip),
+            // поэтому сверяем его сразу, до распаковки и до любых обращений к содержимому.
+            VerifyAssetSha256(downloadPath, release.AssetSha256);
+
             string finalExePath;
             if (isZip)
             {
@@ -497,7 +515,9 @@ public static class AppUpdateService
                 Directory.CreateDirectory(extractDir);
                 try
                 {
-                    ZipFile.ExtractToDirectory(downloadPath, extractDir, overwriteFiles: true);
+                    // архив проверяется до распаковки: сигнатура, число записей, суммарный размер,
+                    // степень сжатия и пути записей (zip-бомба, zip-slip) — см. ZipGuard
+                    ZipGuard.ExtractToDirectory(downloadPath, extractDir, ct);
                     var foundExe = Directory.EnumerateFiles(extractDir, "*.exe", SearchOption.AllDirectories)
                         .FirstOrDefault(f => Path.GetFileName(f).Equals("VibeTun.exe", StringComparison.OrdinalIgnoreCase))
                         ?? Directory.EnumerateFiles(extractDir, "*.exe", SearchOption.AllDirectories)
@@ -520,8 +540,9 @@ public static class AppUpdateService
                 finalExePath = downloadPath;
             }
 
-            // Проверяем, что скачанный файл действительно исполняемый PE-файл Windows ("MZ") и его хэш сходится
-            ValidateExecutable(finalExePath, isZip ? null : release.AssetSha256, out var sha256);
+            // Проверяем, что получился исполняемый PE-файл Windows ("MZ"). Хэш ассета уже сверен выше;
+            // здесь считается SHA-256 самого .exe — он сохраняется как отпечаток установленной версии.
+            ValidateExecutable(finalExePath, out var sha256);
             return (finalExePath, sha256);
         }
         catch
@@ -531,7 +552,21 @@ public static class AppUpdateService
         }
     }
 
-    private static void ValidateExecutable(string exePath, string? expectedSha256, out string actualSha256)
+    /// <summary>
+    /// Сверяет SHA-256 скачанного ассета с тем, что прислал GitHub (поле <c>digest</c> релиза).
+    /// Хэша может не быть: старые релизы и резервная лента его не содержат — тогда проверка пропускается.
+    /// </summary>
+    internal static void VerifyAssetSha256(string path, string? expectedSha256)
+    {
+        if (string.IsNullOrWhiteSpace(expectedSha256)) return;
+
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var actual = Convert.ToHexString(SHA256.HashData(fs));
+        if (!string.Equals(actual, expectedSha256.Trim(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(L.T("S0282"));
+    }
+
+    private static void ValidateExecutable(string exePath, out string actualSha256)
     {
         var info = new FileInfo(exePath);
         if (!info.Exists || info.Length < 1024 * 100)
@@ -546,12 +581,6 @@ public static class AppUpdateService
         fs.Position = 0;
         var hash = SHA256.HashData(fs);
         actualSha256 = Convert.ToHexString(hash).ToLowerInvariant();
-
-        if (!string.IsNullOrWhiteSpace(expectedSha256) &&
-            !string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException(L.T("S0282"));
-        }
     }
 
     /// <summary>

@@ -32,6 +32,15 @@ public sealed class SettingsViewModel : ObservableObject
         ChooseCustomFolderCommand = new RelayCommand(_ => PickCustomStorage());
         RestartNowCommand = new RelayCommand(_ => RestartRequested?.Invoke());
         RefreshPersonaCommand = new AsyncRelayCommand(RefreshPersonaAsync, () => !PersonaBusy && PersonaMode != "app");
+
+        // версия браузера подтягивается фоном: когда она пришла, строка «Обновлён» и подсказка
+        // с текущим заголовком должны обновиться сами (событие может прийти не из потока интерфейса)
+        NetworkPersonaService.Changed += () =>
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is null || dispatcher.CheckAccess()) RaisePersona();
+            else dispatcher.BeginInvoke(new Action(RaisePersona));
+        };
     }
 
     // ----------------------------------------------------------- сетевой облик
@@ -64,8 +73,14 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Текущий User-Agent, которым подписаны исходящие запросы.</summary>
-    public string PersonaUaText => NetworkPersonaService.UserAgent;
+    /// <summary>Текущий User-Agent, которым подписаны исходящие запросы (подсказка у выбора режима).</summary>
+    public string PersonaUaText => L.T("S1066") + NetworkPersonaService.UserAgent;
+
+    /// <summary>Выбран режим «без маскировки»: заголовок запросов прямо называет приложение.</summary>
+    public bool PersonaIsApp => _settings.Current.PersonaMode == "app";
+
+    /// <summary>Предупреждение для режима «без маскировки»: что именно увидят серверы.</summary>
+    public string PersonaWarningText => L.F("S1086", ConstantsService.AppUserAgent);
 
     /// <summary>Когда облик в последний раз обновлялся; в режиме «без маскировки» не показываем.</summary>
     public string PersonaAgeText => NetworkPersonaService.Mode == "app" || NetworkPersonaService.RefreshedAtUtc is null
@@ -90,6 +105,7 @@ public sealed class SettingsViewModel : ObservableObject
     private void RaisePersona()
     {
         Raise(nameof(PersonaMode));
+        Raise(nameof(PersonaIsApp));
         Raise(nameof(PersonaUaText));
         Raise(nameof(PersonaAgeText));
         RefreshPersonaCommand.RaiseCanExecuteChanged();
@@ -98,6 +114,32 @@ public sealed class SettingsViewModel : ObservableObject
     public event Action<string, bool>? Notify;
     public event Action? ThemeChanged;
     public event Action<bool>? BlurChanged;
+
+    /// <summary>Акцент сменён из настроек — пикер цвета в заголовке окна перечитывает состояние.</summary>
+    public event Action? AccentChanged;
+
+    /// <summary>
+    /// «Использовать системные цвета Windows»: акцент приложения берётся из параметров Windows
+    /// (Персонализация → Цвета) и меняется вместе с ним. Тот же переключатель есть в пикере цвета
+    /// в заголовке окна; оба работают через это свойство. Выбранный вручную цвет не теряется:
+    /// при выключении режима он возвращается.
+    /// </summary>
+    public bool UseSystemAccent
+    {
+        get => _settings.Current.UseSystemAccent;
+        set
+        {
+            if (_settings.Current.UseSystemAccent == value) return;
+            _settings.Current.UseSystemAccent = value;
+            _settings.SaveSoon();
+            ThemeService.ApplyAccent(_settings.Current.AccentColor, value);
+            Raise();
+            AccentChanged?.Invoke();
+        }
+    }
+
+    /// <summary>Акцент сменён пикером в заголовке окна (ручной цвет, сброс) — обновляем переключатель.</summary>
+    public void RaiseAccent() => Raise(nameof(UseSystemAccent));
 
     public bool BlurSidebar
     {
@@ -444,6 +486,12 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string CorePathText => _core.Info.Exists ? _core.Info.Path : CoreInstaller.ManualHint;
 
+    /// <summary>
+    /// Какая сборка ядра сейчас используется и откуда она взята. Расширенная сборка ставится из
+    /// одного из двух репозиториев GitHub (основной, при сбое — запасной), и здесь видно, из какого.
+    /// </summary>
+    public string CoreSourceText => CoreSourceStore.Describe(_core.Info);
+
     /// <summary>Есть ли в этой сборке приложения вшитые ядра.</summary>
     public bool HasBundledCores => BundledCores.HasOfficial || BundledCores.HasExtended;
 
@@ -610,6 +658,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         Raise(nameof(CoreVersionText));
         Raise(nameof(CorePathText));
+        Raise(nameof(CoreSourceText));
         Raise(nameof(CoreMissing));
         Raise(nameof(CoreSupportText));
     }
@@ -728,9 +777,7 @@ public sealed class SettingsViewModel : ObservableObject
             CoreInfo? info;
             if (path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                Directory.CreateDirectory(AppPaths.CoreDir);
-                File.Copy(path, AppPaths.CoreBinary, true);
-                info = await _core.DetectAsync(AppPaths.CoreBinary);
+                info = await CoreInstaller.InstallFromExeAsync(_core, path);
             }
             else
             {
@@ -802,7 +849,10 @@ public sealed class SettingsViewModel : ObservableObject
         ThemeService.ApplyAccent(_settings.Current.AccentColor, _settings.Current.UseSystemAccent);
         BlurChanged?.Invoke(_settings.Current.BlurSidebar);
         L.SetLanguage(_settings.Current.Language);
+        // режим маскировки тоже сброшен: сервис облика должен перейти на него, а не остаться на прежнем
+        NetworkPersonaService.SetMode(_settings.Current.PersonaMode);
         Raise(null);
+        AccentChanged?.Invoke();
         AutostartService.Apply(false, false);
         Motion.SetSpeed(_settings.Current.AnimationSpeed);
         Notify?.Invoke(L.T("S0890"), false);

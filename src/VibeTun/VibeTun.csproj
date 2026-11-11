@@ -13,8 +13,8 @@
     <RootNamespace>VibeTun</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.2.0</Version>
-    <FileVersion>1.2.0.0</FileVersion>
+	<Version>1.2.0</Version>
+	<FileVersion>1.2.0.0</FileVersion>
     <Product>VibeTun</Product>
     <Company>VibeTun</Company>
     <Description>Minimal proxy / VPN client: sing-box core, per-app routing, profiles, tray</Description>

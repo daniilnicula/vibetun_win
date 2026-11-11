@@ -249,13 +249,13 @@ public sealed class ProfilesViewModel : ObservableObject
     /// </summary>
     private Task OpenAddConnectionAsync(Rect? origin, AddConnectionStep start)
     {
-        var defaultGroupName = L.F("S0957", Entries.OfType<ProfileGroupVm>().Count() + 1);
-        var choice = _dialogs.ChooseAddConnection(origin, start, defaultGroupName);
+        var choice = _dialogs.ChooseAddConnection(origin, start, NextDefaultGroupName(), GroupOptions());
         switch (choice.Action)
         {
             case AddConnectionAction.FromFile:
             case AddConnectionAction.Paste:
-                return AddFromTextAsync(choice.Text ?? "");
+                // группа выбрана в том же окне: профили сразу кладутся в неё, без перетаскивания
+                return AddFromTextAsync(choice.Text ?? "", choice.ExistingGroupId, choice.GroupName);
             case AddConnectionAction.Protocol:
                 CreateManual(choice.Protocol);
                 break;
@@ -281,8 +281,13 @@ public sealed class ProfilesViewModel : ObservableObject
         await AddFromTextAsync(text);
     }
 
-    /// <summary>Добавить профили из текста (ссылки, конфиги, JSON) или по ссылке на подписку.</summary>
-    private async Task AddFromTextAsync(string text)
+    /// <summary>
+    /// Добавить профили из текста (ссылки, конфиги, JSON) или по ссылке на подписку.
+    /// <paramref name="groupId"/> и <paramref name="newGroupName"/> — группа, выбранная в окне добавления
+    /// (существующая или новая): профили попадают сразу в неё. Обе пустые — профили добавляются вне групп.
+    /// Для ссылки на подписку группу спрашивает окно импорта подписки.
+    /// </summary>
+    private async Task AddFromTextAsync(string text, string? groupId = null, string? newGroupName = null)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -290,7 +295,7 @@ public sealed class ProfilesViewModel : ObservableObject
             return;
         }
 
-        if (TryGetSubscriptionUrl(text, out var subscriptionUrl))
+        if (SubscriptionService.TryGetSubscriptionUrl(text, out var subscriptionUrl))
         {
             await ImportSubscriptionFromClipboardAsync(subscriptionUrl);
             return;
@@ -308,21 +313,56 @@ public sealed class ProfilesViewModel : ObservableObject
             return;
         }
 
-        AddParsed(result.Profiles);
+        var target = ResolveTargetGroup(groupId, newGroupName);
+        if (target is null) AddParsed(result.Profiles);
+        else AddParsedToGroup(result.Profiles, target);
         if (result.Errors.Count > 0)
             Notify?.Invoke(L.F("S0803", result.Errors.First()), true);
     }
 
-    private static bool TryGetSubscriptionUrl(string text, out string url)
-    {
-        url = text.Trim();
-        if (url.Any(char.IsWhiteSpace) || !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) || string.IsNullOrWhiteSpace(uri.Host))
-            return false;
+    /// <summary>
+    /// Группы, в которые профили можно класть вручную. Подписочные исключены: их состав ведёт сервер
+    /// подписки, посторонний профиль там потерялся бы среди обновляемых.
+    /// </summary>
+    private List<SubscriptionGroupOption> GroupOptions() =>
+        Entries.OfType<ProfileGroupVm>()
+            .Where(entry => !entry.IsSubscription)
+            .Select(entry => new SubscriptionGroupOption(entry.Id, entry.Name))
+            .ToList();
 
-        // http(s)://user:pass@proxy:port is also a supported single HTTP-proxy URI.
-        // A subscription URL (e.g. 3x-ui /<sub-path>/<sub-id>) has a non-root path.
-        return uri.AbsolutePath.Trim('/').Length > 0;
+    /// <summary>Свободное имя вида «Группа N»: с номером, которого среди групп ещё нет.</summary>
+    private string NextDefaultGroupName()
+    {
+        var taken = Entries.OfType<ProfileGroupVm>().Select(entry => entry.Name)
+            .ToHashSet(StringComparer.CurrentCultureIgnoreCase);
+        var number = Entries.OfType<ProfileGroupVm>().Count() + 1;
+        while (taken.Contains(L.F("S0957", number))) number++;
+        return L.F("S0957", number);
+    }
+
+    /// <summary>
+    /// Имя новой группы, которое предлагается при импорте подписки. Берётся название, присланное самой
+    /// панелью (заголовок Profile-Title). Адрес сервера именем не считается: хост или IP ссылки —
+    /// техническая деталь, а не то, как человек назвал бы группу. Без названия — нейтральное «Группа N».
+    /// </summary>
+    private string SuggestGroupName(SubscriptionFetchResult subscription, string url)
+    {
+        var title = subscription.Title?.Trim() ?? "";
+        return title.Length > 0 && !LooksLikeServerAddress(title, url) ? title : NextDefaultGroupName();
+    }
+
+    /// <summary>Строка — адрес, а не название: IP-адрес либо хост (хост:порт) самой ссылки подписки.</summary>
+    private static bool LooksLikeServerAddress(string name, string url)
+    {
+        var bare = name.Trim('[', ']');
+        var isIpLiteral = System.Net.IPAddress.TryParse(bare, out var address) &&
+                          (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ||
+                           bare.Count(symbol => symbol == '.') == 3);
+        if (isIpLiteral) return true;
+
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+               (string.Equals(name, uri.Host, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(name, uri.Authority, StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task ImportSubscriptionFromClipboardAsync(string url)
@@ -330,15 +370,8 @@ public sealed class ProfilesViewModel : ObservableObject
         try
         {
             var subscription = await _subscriptionService.FetchAsync(url);
-            var groups = Entries.OfType<ProfileGroupVm>()
-                .Where(group => !group.IsSubscription)
-                .Select(group => new SubscriptionGroupOption(group.Id, group.Name))
-                .ToList();
-            var defaultGroupName = Uri.TryCreate(url, UriKind.Absolute, out var subscriptionUri)
-                ? subscriptionUri.Host
-                : subscription.Name;
             var choice = _dialogs.ChooseSubscriptionImport(
-                subscription.Name, defaultGroupName, subscription.Profiles.Count, groups);
+                subscription.Name, SuggestGroupName(subscription, url), subscription.Profiles.Count, GroupOptions());
             if (choice.Action == SubscriptionImportAction.Cancel) return;
 
             switch (choice.Action)
@@ -350,17 +383,13 @@ public sealed class ProfilesViewModel : ObservableObject
                     AddParsed(subscription.Profiles);
                     break;
                 case SubscriptionImportAction.AddProfilesToGroup:
-                    var group = ResolvePasteTargetGroup(choice);
+                    var group = ResolveTargetGroup(choice.GroupId, choice.NewGroupName);
                     if (group is null)
                     {
                         Notify?.Invoke(L.T("S0985"), true);
                         return;
                     }
-                    var added = AddProfilesToGroupCore(subscription.Profiles, group);
-                    OnLayoutChanged();
-                    RefreshDisplay();
-                    PingAllCommand.RaiseCanExecuteChanged();
-                    Notify?.Invoke(L.F("S0988", added, group.Name), false);
+                    AddParsedToGroup(subscription.Profiles, group);
                     break;
             }
 
@@ -373,24 +402,38 @@ public sealed class ProfilesViewModel : ObservableObject
         }
     }
 
-    private ProfileGroupVm? ResolvePasteTargetGroup(SubscriptionImportChoice choice)
+    /// <summary>
+    /// Группа, выбранная в диалоге: существующая по идентификатору либо новая по имени (имя, совпавшее
+    /// с обычной группой, означает её саму). null — группа не указана. Подписочные группы не подходят.
+    /// </summary>
+    private ProfileGroupVm? ResolveTargetGroup(string? groupId, string? newGroupName)
     {
-        if (!string.IsNullOrWhiteSpace(choice.GroupId))
+        if (!string.IsNullOrWhiteSpace(groupId))
         {
-            var selected = Entries.OfType<ProfileGroupVm>().FirstOrDefault(group =>
-                !group.IsSubscription && string.Equals(group.Id, choice.GroupId, StringComparison.Ordinal));
+            var selected = Entries.OfType<ProfileGroupVm>().FirstOrDefault(entry =>
+                !entry.IsSubscription && string.Equals(entry.Id, groupId, StringComparison.Ordinal));
             if (selected is not null) return selected;
         }
 
-        if (string.IsNullOrWhiteSpace(choice.NewGroupName)) return null;
-        var name = choice.NewGroupName.Trim();
-        var existing = Entries.OfType<ProfileGroupVm>().FirstOrDefault(group =>
-            !group.IsSubscription && string.Equals(group.Name, name, StringComparison.CurrentCultureIgnoreCase));
+        if (string.IsNullOrWhiteSpace(newGroupName)) return null;
+        var name = newGroupName.Trim();
+        var existing = Entries.OfType<ProfileGroupVm>().FirstOrDefault(entry =>
+            !entry.IsSubscription && string.Equals(entry.Name, name, StringComparison.CurrentCultureIgnoreCase));
         if (existing is not null) return existing;
 
         var created = new ProfileGroupVm(new ProfileGroupDefinition { Name = MakeUniqueGroupName(name) }, this);
         Entries.Add(created);
         return created;
+    }
+
+    /// <summary>Положить разобранные профили сразу в группу и сообщить, сколько и куда добавлено.</summary>
+    private void AddParsedToGroup(IEnumerable<ProxyProfile> profiles, ProfileGroupVm group)
+    {
+        var added = AddProfilesToGroupCore(profiles, group);
+        OnLayoutChanged();
+        RefreshDisplay();
+        PingAllCommand.RaiseCanExecuteChanged();
+        Notify?.Invoke(L.F("S0988", added, group.Name), false);
     }
 
     private async Task CreateSubscriptionAsync()

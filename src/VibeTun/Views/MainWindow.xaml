@@ -20,349 +20,411 @@
     </shell:WindowChrome.WindowChrome>
 
     <!-- Тип окна выбирает MainWindow по версии ОС: Windows 11 — обычное (mica), Windows 10 — layered (живой акрил). -->
-    <Border x:Name="RootBorder" CornerRadius="0" Background="#01000000"
-            SizeChanged="OnRootSizeChanged">
-        <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="32" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <!-- ================= верхняя полоса: марка + кнопки окна ================= -->
-        <Border Grid.Row="0" Background="#01000000">
+    <!-- Оболочка окна: пока виден сплэш, содержимое (RootBorder) уже разложено в итоговом
+         размере и только масштабируется — окно растёт из центра, не пересчитывая вёрстку
+         приложения на каждом кадре. Сплэш лежит поверх оболочки и растягивается по окну. -->
+    <Grid x:Name="ShellRoot">
+        <Border x:Name="RootBorder" CornerRadius="0" Background="#01000000"
+                SizeChanged="OnRootSizeChanged">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="252" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <!-- шапка справа от сайдбара непрозрачная; над сайдбаром она прозрачная (видно размытие) -->
-                <Border Grid.Column="1" Background="{DynamicResource WindowBg}" />
-                <Border x:Name="HeaderTint" Grid.Column="0" Background="{DynamicResource PanelGlass}"
-                        IsHitTestVisible="False" />
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="18,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
-                    <!-- Единый векторный логотип приложения в окне и на splash-экране. -->
-                    <v:VibeTunLogo Width="22" Height="22" />
-                    <TextBlock Text="VibeTun" Margin="10,0,0,0" FontSize="12.5" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                </StackPanel>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="32" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Style="{StaticResource BtnCaption}" Click="OnAccentClick"
-                            ToolTip="{loc:Tr S0130}">
-                        <Ellipse Width="13" Height="13" Fill="{DynamicResource Accent}"
-                                 Stroke="{DynamicResource TextSecondary}" StrokeThickness="1" />
-                    </Button>
+                <!-- ================= верхняя полоса: марка + кнопки окна ================= -->
+                <Border Grid.Row="0" Background="#01000000">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="252" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <!-- шапка справа от сайдбара непрозрачная; над сайдбаром она прозрачная (видно размытие) -->
+                        <Border Grid.Column="1" Background="{DynamicResource WindowBg}" />
+                        <Border x:Name="HeaderTint" Grid.Column="0" Background="{DynamicResource PanelGlass}"
+                                IsHitTestVisible="False" />
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="18,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                            <!-- Единый векторный логотип приложения в окне и на splash-экране. -->
+                            <v:VibeTunLogo Width="22" Height="22" />
+                            <TextBlock Text="VibeTun" Margin="10,0,0,0" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+                        </StackPanel>
 
-                    <Button Style="{StaticResource BtnCaption}" Click="OnMinimizeClick" ToolTip="{loc:Tr S0131}">
-                        <Path Data="M 0,0 H 11" Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.2"
-                              VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    </Button>
-                    <Button Style="{StaticResource BtnCaption}" Click="OnMaximizeClick" ToolTip="{loc:Tr S0132}">
-                        <Path Data="M 0,0 H 10.5 V 10.5 H 0 Z" Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.2"
-                              VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    </Button>
-                    <Button Style="{StaticResource BtnCaptionClose}" Click="OnCloseClick" ToolTip="{loc:Tr S0133}">
-                        <Path Data="M 0,0 L 10.5,10.5 M 10.5,0 L 0,10.5" Stroke="{DynamicResource TextSecondary}"
-                              StrokeThickness="1.2" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    </Button>
-                </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource BtnCaption}" Click="OnAccentClick"
+                                    ToolTip="{loc:Tr S0130}" AutomationProperties.AutomationId="AccentButton">
+                                <Ellipse Width="13" Height="13" Fill="{DynamicResource Accent}"
+                                         Stroke="{DynamicResource TextSecondary}" StrokeThickness="1" />
+                            </Button>
+
+                            <Button Style="{StaticResource BtnCaption}" Click="OnMinimizeClick" ToolTip="{loc:Tr S0131}">
+                                <Path Data="M 0,0 H 11" Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.2"
+                                      VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            </Button>
+                            <Button Style="{StaticResource BtnCaption}" Click="OnMaximizeClick" ToolTip="{loc:Tr S0132}">
+                                <Path Data="M 0,0 H 10.5 V 10.5 H 0 Z" Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.2"
+                                      VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            </Button>
+                            <Button Style="{StaticResource BtnCaptionClose}" Click="OnCloseClick" ToolTip="{loc:Tr S0133}">
+                                <Path Data="M 0,0 L 10.5,10.5 M 10.5,0 L 0,10.5" Stroke="{DynamicResource TextSecondary}"
+                                      StrokeThickness="1.2" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ============================= основная область ============================= -->
+                <Grid x:Name="MainContent" Grid.Row="1" Opacity="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="252" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- сайдбар -->
+                    <Border Grid.Column="0" Background="#01000000" BorderThickness="0,0,1,0"
+                            BorderBrush="{DynamicResource Divider}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- полупрозрачный слой сайдбара; под ним системный акрил окна (или непрозрачный цвет без акрила) -->
+                            <Border x:Name="SidebarTint" Grid.RowSpan="3" Background="{DynamicResource PanelGlass}"
+                                    IsHitTestVisible="False" />
+
+                            <!-- вкладки можно перетаскивать ЛКМ; порядок сохраняется (логика в MainWindow.xaml.cs) -->
+                            <Grid x:Name="NavHost" Grid.Row="0" Margin="10,12,10,0">
+                            <!-- подсветка выбранной вкладки: одна на весь список, переезжает к новой (SlideMarker, MainWindow.xaml.cs) -->
+                            <Border x:Name="NavMarker" CornerRadius="9" Background="{DynamicResource AccentSoft}"
+                                    Visibility="Collapsed">
+                                <Border Width="3" Height="16" CornerRadius="2" Background="{DynamicResource Accent}"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center" />
+                            </Border>
+                            <ListBox x:Name="NavList" Style="{StaticResource ListNav}" Margin="0"
+                                     SelectedValue="{Binding ActiveTab}" SelectedValuePath="Tag"
+                                     PreviewMouseLeftButtonDown="OnNavPreviewMouseDown"
+                                     PreviewMouseMove="OnNavPreviewMouseMove"
+                                     PreviewMouseLeftButtonUp="OnNavPreviewMouseUp"
+                                     LostMouseCapture="OnNavLostCapture">
+                                <ListBoxItem Tag="profiles">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M20.5,7.2 A3.1,3.1 0 1 1 14.3,7.2 A3.1,3.1 0 1 1 20.5,7.2 M14.2,19.4 Q15,15 20.6,14.4"
+                                                  Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                            <Path Data="M13,7.6 A3.6,3.6 0 1 1 5.8,7.6 A3.6,3.6 0 1 1 13,7.6 M3.2,19.6 a6.4,6.4 0 0 1 12.6,0"
+                                                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                        <TextBlock Text="{loc:Tr S0134}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="routing">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M7.4,12 H9.8 M9.8,12 L15.9,7.9 M9.8,12 L14.6,15.9 M7.4,12 A2.6,2.6 0 1 1 2.2,12 A2.6,2.6 0 1 1 7.4,12 M18.8,17.4 A2.6,2.6 0 1 1 13.6,17.4 A2.6,2.6 0 1 1 18.8,17.4"
+                                                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                            <Path Data="M21.4,6.8 A3,3 0 1 1 15.4,6.8 A3,3 0 1 1 21.4,6.8"
+                                                  Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                        <TextBlock Text="{loc:Tr S0135}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="dns">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                                        <Path Data="M12,3.6 A3.9,8.4 0 1 1 12,20.4 A3.9,8.4 0 1 1 12,3.6 M3.6,12 H20.4"
+              Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
+              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+              StrokeLineJoin="Round" />
+                                                        <Path Data="M20.6,12 A8.6,8.6 0 1 1 3.4,12 A8.6,8.6 0 1 1 20.6,12"
+                                                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+
+                                        </Canvas>
+                                    </Viewbox>
+                                        <TextBlock Text="DNS" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <!-- раздел «DPI»: сервисы со своим набором приёмов обхода -->
+                                <ListBoxItem Tag="dpi">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <!-- щит: трафик идёт мимо разбора DPI -->
+                                            <Path Data="M12,3.4 L19.4,6.4 V12 C19.4,16.4 16.2,19.4 12,20.8 C7.8,19.4 4.6,16.4 4.6,12 V6.4 Z"
+                                                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                            <Path Data="M9,12.2 L11.3,14.5 L15.4,9.6"
+                                                  Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                        <TextBlock Text="DPI" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="settings">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="M20.47,10.51 L20.47,13.49 L18.43,13.48 L17.6,15.5 L19.04,16.93 L16.93,19.04 L15.5,17.6 L13.48,18.43 L13.49,20.47 L10.51,20.47 L10.52,18.43 L8.5,17.6 L7.07,19.04 L4.96,16.93 L6.4,15.5 L5.57,13.48 L3.53,13.49 L3.53,10.51 L5.57,10.52 L6.4,8.5 L4.96,7.07 L7.07,4.96 L8.5,6.4 L10.52,5.57 L10.51,3.53 L13.49,3.53 L13.48,5.57 L15.5,6.4 L16.93,4.96 L19.04,7.07 L17.6,8.5 L18.43,10.52 Z M15,12 A3,3 0 1 1 9,12 A3,3 0 1 1 15,12"
+                                                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="2"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+                                        <TextBlock Text="{loc:Tr S0136}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ListBoxItem>
+                                <ListBoxItem Tag="updates">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
+                                            <Canvas Width="24" Height="24">
+                                                <Path Data="M4.2,14.8 V17.5 A2.5,2.5 0 0 0 6.7,20 H17.3 A2.5,2.5 0 0 0 19.8,17.5 V14.8"
+                                                      Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round" />
+                                                <Path Data="M12,3.8 V14.4 M7.8,10.4 L12,14.6 L16.2,10.4"
+                                                      Stroke="{DynamicResource Accent}" StrokeThickness="2.2"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round" />
+                                            </Canvas>
+                                        </Viewbox>
+                                        <TextBlock Text="{loc:Tr S0137}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ListBoxItem>
+
+                                <!-- разделы «Панели» и «SSH»: клик по заголовку только раскрывает список
+                                     (вкладку не переключает), разделы перетаскиваются вместе с вкладками,
+                                     сами заголовки не подсвечиваются; общая анимированная подсветка переезжает на открытую запись.
+                                     Строки записей + кнопка «+» рисуются кодом (NavSectionMenu). -->
+                                <ListBoxItem Tag="panel" Style="{StaticResource NavSectionItem}">
+                                    <StackPanel>
+                                <Border x:Name="PanelHeader" Style="{StaticResource NavSectionHeader}" PreviewMouseLeftButtonDown="OnNavHeaderMouseDown"
+                                        MouseLeftButtonUp="OnPanelHeaderClick">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Viewbox Width="16" Height="16" Margin="14,0,9,0" VerticalAlignment="Center">
+                                                <Canvas Width="24" Height="24">
+                                                    <Path Data="M5.5,4.5 H18.5 A2,2 0 0 1 20.5,6.5 V17.5 A2,2 0 0 1 18.5,19.5 H5.5 A2,2 0 0 1 3.5,17.5 V6.5 A2,2 0 0 1 5.5,4.5 Z M16.6,12.4 H18.6 M16.6,15.2 H18.6"
+                                                          Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M7.6,15.4 V12.6 M11.2,15.4 V8.8 M14.8,15.4 V10.6"
+                                                          Stroke="{DynamicResource Accent}" StrokeThickness="2.4"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                </Canvas>
+                                            </Viewbox>
+                                            <TextBlock Text="{loc:Tr S0138}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Path Data="M0,0 L5,5 L10,0" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Margin="0,0,12,0"
+                                              Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.6"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                                            <Path.RenderTransform>
+                                                <RotateTransform x:Name="PanelChevronRot" CenterX="5" CenterY="2.5" />
+                                            </Path.RenderTransform>
+                                        </Path>
+                                    </Grid>
+                                </Border>
+                                <Border x:Name="PanelMenuBox" ClipToBounds="True" Visibility="Collapsed">
+                                    <StackPanel x:Name="PanelMenu" Margin="14,4,14,2" />
+                                </Border>
+                                    </StackPanel>
+                                </ListBoxItem>
+
+                                <ListBoxItem Tag="ssh" Style="{StaticResource NavSectionItem}">
+                                    <StackPanel>
+                                <Border x:Name="SshHeader" Style="{StaticResource NavSectionHeader}" Margin="0,2,0,0"
+                                        PreviewMouseLeftButtonDown="OnNavHeaderMouseDown"
+                                        MouseLeftButtonUp="OnSshHeaderClick">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Viewbox Width="16" Height="16" Margin="14,0,9,0" VerticalAlignment="Center">
+                                                <Canvas Width="24" Height="24">
+                                                    <Path Data="M5.5,4.5 H18.5 A2,2 0 0 1 20.5,6.5 V17.5 A2,2 0 0 1 18.5,19.5 H5.5 A2,2 0 0 1 3.5,17.5 V6.5 A2,2 0 0 1 5.5,4.5 Z"
+                                                          Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M7.4,9.4 L10.6,12.6 L7.4,15.8 M13,15.8 H16.4"
+                                                          Stroke="{DynamicResource Accent}" StrokeThickness="2.2"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                </Canvas>
+                                            </Viewbox>
+                                            <TextBlock Text="SSH" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Path Data="M0,0 L5,5 L10,0" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Margin="0,0,12,0"
+                                              Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.6"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                                            <Path.RenderTransform>
+                                                <RotateTransform x:Name="SshChevronRot" CenterX="5" CenterY="2.5" />
+                                            </Path.RenderTransform>
+                                        </Path>
+                                    </Grid>
+                                </Border>
+                                <Border x:Name="SshMenuBox" ClipToBounds="True" Visibility="Collapsed">
+                                    <StackPanel x:Name="SshMenu" Margin="14,4,14,2" />
+                                </Border>
+                                    </StackPanel>
+                                </ListBoxItem>
+
+                            </ListBox>
+                            </Grid>
+
+                            <!-- затемнение над карточкой: во всю ширину панели, иначе градиент не доходит до краёв -->
+                            <Border x:Name="NavFade" Grid.Row="0" Height="26" VerticalAlignment="Bottom"
+                                    Background="{DynamicResource PanelBg}"
+                                    IsHitTestVisible="False" Margin="0,0,0,2">
+                                <Border.OpacityMask>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#00000000" Offset="0" />
+                                        <GradientStop Color="#FF000000" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.OpacityMask>
+                            </Border>
+
+                            <v:ConnectionCard x:Name="ConnectionPanel" Grid.Row="2" Margin="12,0,12,12" />
+                        </Grid>
+                    </Border>
+
+                    <!-- страницы -->
+                    <Grid Grid.Column="1" Background="{DynamicResource WindowBg}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- баннер: ядро не найдено -->
+                        <Border Grid.Row="0" Margin="18,14,18,0" Padding="14,12" CornerRadius="10"
+                                Background="{DynamicResource WarningSoft}"
+                                Visibility="{Binding Preferences.CoreMissing, Converter={StaticResource BoolToVis}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr S0140}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Warning}" />
+                                    <TextBlock Text="{loc:Tr S0141}"
+                                               Style="{StaticResource TxtMuted}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="{loc:Tr S0142}" Style="{StaticResource BtnPrimary}"
+                                        Command="{Binding InstallCoreCommand}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                        AutomationProperties.AutomationId="InstallCoreBanner" />
+                            </Grid>
+                        </Border>
+
+                        <!-- страницы листаются по вертикали; направление — по позиции пункта в левом списке -->
+                        <ctl:SlideHost x:Name="MainPages" Grid.Row="1" Vertical="True"
+                                       SelectedKey="{Binding DataContext.ActiveTab, RelativeSource={RelativeSource AncestorType=Window}}">
+                            <v:ProfilesView ctl:SlideHost.Key="profiles" DataContext="{Binding Profiles}" />
+                            <v:RoutingView ctl:SlideHost.Key="routing" DataContext="{Binding Routing}" />
+                            <v:DnsView ctl:SlideHost.Key="dns" DataContext="{Binding Dns}" />
+                            <v:DpiView ctl:SlideHost.Key="dpi" DataContext="{Binding Dpi}" />
+                            <v:SettingsView ctl:SlideHost.Key="settings" DataContext="{Binding Preferences}" Loaded="SettingsView_Loaded" />
+                            <v:UpdatesView ctl:SlideHost.Key="updates" DataContext="{Binding Updates}" />
+                            <v:PanelView x:Name="PanelTab" ctl:SlideHost.Key="panel" />
+                            <v:SshView x:Name="SshTab" ctl:SlideHost.Key="ssh" />
+                        </ctl:SlideHost>
+
+                        <!-- строка состояния -->
+                        <Border Grid.Row="2" Margin="18,10,18,14" Padding="12,6" CornerRadius="8"
+                                Background="{DynamicResource CardBgAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                                Visibility="{Binding HasStatus, Converter={StaticResource BoolToVis}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <Button Grid.Column="1" Content="{loc:Tr S0022}" Style="{StaticResource BtnSmall}"
+                                        Command="{Binding ShowLogCommand}" Margin="10,0,0,0" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+            </Grid>
+
+
+            <!-- ============================= пикер акцента ============================= -->
+            <Border x:Name="AccentOverlay" Grid.RowSpan="2" Background="Transparent" Visibility="Collapsed"
+                    MouseLeftButtonDown="OnAccentOverlayClick">
+                <Border Style="{StaticResource Card}" Width="380" Padding="16,14" Margin="0,0,154,0"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" MouseLeftButtonDown="AccentCard_Click">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Tr S0130}" Style="{StaticResource TxtH2}" />
+
+                        <!-- цветовой круг: кольцо оттенка и квадрат насыщенности и яркости -->
+                        <ctl:ColorWheel x:Name="AccentWheel" Width="216" Height="216" Margin="0,12,0,0"
+                                        HorizontalAlignment="Center" ColorChanged="OnAccentWheelChanged" />
+
+                        <Border Margin="0,12,0,0" Padding="3" CornerRadius="10" Background="{DynamicResource CardBgAlt}"
+                                BorderBrush="{DynamicResource Border}" BorderThickness="1">
+                            <Grid ctl:SegmentGroup.IsGroup="True" ctl:SegmentGroup.Radius="8" DataContext="{Binding Preferences}">
+                                <UniformGrid Columns="4">
+                                    <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="{loc:Tr S0143}" IsChecked="{Binding ThemeSystem}" />
+                                    <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="{loc:Tr S0144}" IsChecked="{Binding ThemeLight}" />
+                                    <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="{loc:Tr S0145}" IsChecked="{Binding ThemeDark}" />
+                                    <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="Black" IsChecked="{Binding ThemeBlack}" />
+                                </UniformGrid>
+                            </Grid>
+                        </Border>
+
+                        <Grid Margin="0,12,0,0" DataContext="{Binding Preferences}">
+                            <TextBlock Text="{loc:Tr S1028}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                            <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right"
+                                          IsChecked="{Binding BlurSidebar}"
+                                          AutomationProperties.AutomationId="BlurSidebarSwitch" />
+                        </Grid>
+
+                        <!-- прозрачность: тонкая полоска без ползунка; заполнение показывает долю непрозрачности -->
+                        <ctl:AlphaBar x:Name="AccentAlpha" Height="14" Margin="0,10,0,0"
+                                      AlphaChanged="OnAccentAlphaChanged" ToolTip="{loc:Tr S0146}" />
+
+                        <Border x:Name="AccentPreview" Height="30" CornerRadius="8" Margin="0,12,0,0"
+                                BorderBrush="{DynamicResource Border}" BorderThickness="1" />
+
+                        <Grid Margin="0,10,0,0">
+                            <TextBlock x:Name="AccentHexText" Style="{StaticResource TxtMono}"
+                                       VerticalAlignment="Center" />
+                            <Button Content="{loc:Tr S0147}" Style="{StaticResource BtnGhost}"
+                                    HorizontalAlignment="Right" Click="OnAccentReset" />
+                        </Grid>
+
+                        <Grid Margin="0,10,0,0">
+                            <TextBlock Text="{loc:Tr S0148}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
+                            <ToggleButton x:Name="SystemAccentToggle" Style="{StaticResource Switch}"
+                                          HorizontalAlignment="Right" Click="OnAccentSystemToggle" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Border>
             </Grid>
         </Border>
 
-        <!-- ============================= основная область ============================= -->
-        <Grid x:Name="MainContent" Grid.Row="1" Opacity="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="252" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <!-- сайдбар -->
-            <Border Grid.Column="0" Background="#01000000" BorderThickness="0,0,1,0"
-                    BorderBrush="{DynamicResource Divider}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <!-- полупрозрачный слой сайдбара; под ним системный акрил окна (или непрозрачный цвет без акрила) -->
-                    <Border x:Name="SidebarTint" Grid.RowSpan="3" Background="{DynamicResource PanelGlass}"
-                            IsHitTestVisible="False" />
-
-                    <!-- вкладки можно перетаскивать ЛКМ; порядок сохраняется (логика в MainWindow.xaml.cs) -->
-                    <Grid x:Name="NavHost" Grid.Row="0" Margin="10,12,10,0">
-                    <!-- подсветка выбранной вкладки: одна на весь список, переезжает к новой (SlideMarker, MainWindow.xaml.cs) -->
-                    <Border x:Name="NavMarker" CornerRadius="9" Background="{DynamicResource AccentSoft}"
-                            Visibility="Collapsed">
-                        <Border Width="3" Height="16" CornerRadius="2" Background="{DynamicResource Accent}"
-                                HorizontalAlignment="Left" VerticalAlignment="Center" />
-                    </Border>
-                    <ListBox x:Name="NavList" Style="{StaticResource ListNav}" Margin="0"
-                             SelectedValue="{Binding ActiveTab}" SelectedValuePath="Tag"
-                             PreviewMouseLeftButtonDown="OnNavPreviewMouseDown"
-                             PreviewMouseMove="OnNavPreviewMouseMove"
-                             PreviewMouseLeftButtonUp="OnNavPreviewMouseUp"
-                             LostMouseCapture="OnNavLostCapture">
-                        <ListBoxItem Tag="profiles">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
-                                <Canvas Width="24" Height="24">
-                                    <Path Data="M20.5,7.2 A3.1,3.1 0 1 1 14.3,7.2 A3.1,3.1 0 1 1 20.5,7.2 M14.2,19.4 Q15,15 20.6,14.4"
-                                          Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                    <Path Data="M13,7.6 A3.6,3.6 0 1 1 5.8,7.6 A3.6,3.6 0 1 1 13,7.6 M3.2,19.6 a6.4,6.4 0 0 1 12.6,0"
-                                          Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                </Canvas>
-                            </Viewbox>
-                                <TextBlock Text="{loc:Tr S0134}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="routing">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
-                                <Canvas Width="24" Height="24">
-                                    <Path Data="M7.4,12 H9.8 M9.8,12 L15.9,7.9 M9.8,12 L14.6,15.9 M7.4,12 A2.6,2.6 0 1 1 2.2,12 A2.6,2.6 0 1 1 7.4,12 M18.8,17.4 A2.6,2.6 0 1 1 13.6,17.4 A2.6,2.6 0 1 1 18.8,17.4"
-                                          Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                    <Path Data="M21.4,6.8 A3,3 0 1 1 15.4,6.8 A3,3 0 1 1 21.4,6.8"
-                                          Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                </Canvas>
-                            </Viewbox>
-                                <TextBlock Text="{loc:Tr S0135}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="dns">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
-                                <Canvas Width="24" Height="24">
-                                                <Path Data="M12,3.6 A3.9,8.4 0 1 1 12,20.4 A3.9,8.4 0 1 1 12,3.6 M3.6,12 H20.4"
-      Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
-      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-      StrokeLineJoin="Round" />
-                                                <Path Data="M20.6,12 A8.6,8.6 0 1 1 3.4,12 A8.6,8.6 0 1 1 20.6,12"
-                                          Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                    
-                                </Canvas>
-                            </Viewbox>
-                                <TextBlock Text="DNS" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <!-- раздел «DPI»: сервисы со своим набором приёмов обхода -->
-                        <ListBoxItem Tag="dpi">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
-                                <Canvas Width="24" Height="24">
-                                    <!-- щит: трафик идёт мимо разбора DPI -->
-                                    <Path Data="M12,3.4 L19.4,6.4 V12 C19.4,16.4 16.2,19.4 12,20.8 C7.8,19.4 4.6,16.4 4.6,12 V6.4 Z"
-                                          Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                    <Path Data="M9,12.2 L11.3,14.5 L15.4,9.6"
-                                          Stroke="{DynamicResource Accent}" StrokeThickness="2.1"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                </Canvas>
-                            </Viewbox>
-                                <TextBlock Text="DPI" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="settings">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
-                                <Canvas Width="24" Height="24">
-                                    <Path Data="M20.47,10.51 L20.47,13.49 L18.43,13.48 L17.6,15.5 L19.04,16.93 L16.93,19.04 L15.5,17.6 L13.48,18.43 L13.49,20.47 L10.51,20.47 L10.52,18.43 L8.5,17.6 L7.07,19.04 L4.96,16.93 L6.4,15.5 L5.57,13.48 L3.53,13.49 L3.53,10.51 L5.57,10.52 L6.4,8.5 L4.96,7.07 L7.07,4.96 L8.5,6.4 L10.52,5.57 L10.51,3.53 L13.49,3.53 L13.48,5.57 L15.5,6.4 L16.93,4.96 L19.04,7.07 L17.6,8.5 L18.43,10.52 Z M15,12 A3,3 0 1 1 9,12 A3,3 0 1 1 15,12"
-                                          Stroke="{DynamicResource TextPrimary}" StrokeThickness="2"
-                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                </Canvas>
-                            </Viewbox>
-                                <TextBlock Text="{loc:Tr S0136}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </ListBoxItem>
-                        <ListBoxItem Tag="updates">
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
-                                    <Canvas Width="24" Height="24">
-                                        <Path Data="M4.2,14.8 V17.5 A2.5,2.5 0 0 0 6.7,20 H17.3 A2.5,2.5 0 0 0 19.8,17.5 V14.8"
-                                              Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
-                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                              StrokeLineJoin="Round" />
-                                        <Path Data="M12,3.8 V14.4 M7.8,10.4 L12,14.6 L16.2,10.4"
-                                              Stroke="{DynamicResource Accent}" StrokeThickness="2.2"
-                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                              StrokeLineJoin="Round" />
-                                    </Canvas>
-                                </Viewbox>
-                                <TextBlock Text="{loc:Tr S0137}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </ListBoxItem>
-
-                        <!-- разделы «Панели» и «SSH»: клик по заголовку только раскрывает список
-                             (вкладку не переключает), разделы перетаскиваются вместе с вкладками,
-                             сами заголовки не подсвечиваются; общая анимированная подсветка переезжает на открытую запись.
-                             Строки записей + кнопка «+» рисуются кодом (NavSectionMenu). -->
-                        <ListBoxItem Tag="panel" Style="{StaticResource NavSectionItem}">
-                            <StackPanel>
-                        <Border x:Name="PanelHeader" Style="{StaticResource NavSectionHeader}" PreviewMouseLeftButtonDown="OnNavHeaderMouseDown"
-                                MouseLeftButtonUp="OnPanelHeaderClick">
-                            <Grid>
-                                <StackPanel Orientation="Horizontal">
-                                    <Viewbox Width="16" Height="16" Margin="14,0,9,0" VerticalAlignment="Center">
-                                        <Canvas Width="24" Height="24">
-                                            <Path Data="M5.5,4.5 H18.5 A2,2 0 0 1 20.5,6.5 V17.5 A2,2 0 0 1 18.5,19.5 H5.5 A2,2 0 0 1 3.5,17.5 V6.5 A2,2 0 0 1 5.5,4.5 Z M16.6,12.4 H18.6 M16.6,15.2 H18.6"
-                                                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
-                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  StrokeLineJoin="Round" />
-                                            <Path Data="M7.6,15.4 V12.6 M11.2,15.4 V8.8 M14.8,15.4 V10.6"
-                                                  Stroke="{DynamicResource Accent}" StrokeThickness="2.4"
-                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  StrokeLineJoin="Round" />
-                                        </Canvas>
-                                    </Viewbox>
-                                    <TextBlock Text="{loc:Tr S0138}" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <Path Data="M0,0 L5,5 L10,0" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                      Margin="0,0,12,0"
-                                      Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.6"
-                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                    <Path.RenderTransform>
-                                        <RotateTransform x:Name="PanelChevronRot" CenterX="5" CenterY="2.5" />
-                                    </Path.RenderTransform>
-                                </Path>
-                            </Grid>
-                        </Border>
-                        <Border x:Name="PanelMenuBox" ClipToBounds="True" Visibility="Collapsed">
-                            <StackPanel x:Name="PanelMenu" Margin="14,4,14,2" />
-                        </Border>
-                            </StackPanel>
-                        </ListBoxItem>
-
-                        <ListBoxItem Tag="ssh" Style="{StaticResource NavSectionItem}">
-                            <StackPanel>
-                        <Border x:Name="SshHeader" Style="{StaticResource NavSectionHeader}" Margin="0,2,0,0"
-                                PreviewMouseLeftButtonDown="OnNavHeaderMouseDown"
-                                MouseLeftButtonUp="OnSshHeaderClick">
-                            <Grid>
-                                <StackPanel Orientation="Horizontal">
-                                    <Viewbox Width="16" Height="16" Margin="14,0,9,0" VerticalAlignment="Center">
-                                        <Canvas Width="24" Height="24">
-                                            <Path Data="M5.5,4.5 H18.5 A2,2 0 0 1 20.5,6.5 V17.5 A2,2 0 0 1 18.5,19.5 H5.5 A2,2 0 0 1 3.5,17.5 V6.5 A2,2 0 0 1 5.5,4.5 Z"
-                                                  Stroke="{DynamicResource TextPrimary}" StrokeThickness="2.1"
-                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  StrokeLineJoin="Round" />
-                                            <Path Data="M7.4,9.4 L10.6,12.6 L7.4,15.8 M13,15.8 H16.4"
-                                                  Stroke="{DynamicResource Accent}" StrokeThickness="2.2"
-                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                  StrokeLineJoin="Round" />
-                                        </Canvas>
-                                    </Viewbox>
-                                    <TextBlock Text="SSH" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <Path Data="M0,0 L5,5 L10,0" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                      Margin="0,0,12,0"
-                                      Stroke="{DynamicResource TextSecondary}" StrokeThickness="1.6"
-                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                    <Path.RenderTransform>
-                                        <RotateTransform x:Name="SshChevronRot" CenterX="5" CenterY="2.5" />
-                                    </Path.RenderTransform>
-                                </Path>
-                            </Grid>
-                        </Border>
-                        <Border x:Name="SshMenuBox" ClipToBounds="True" Visibility="Collapsed">
-                            <StackPanel x:Name="SshMenu" Margin="14,4,14,2" />
-                        </Border>
-                            </StackPanel>
-                        </ListBoxItem>
-
-                    </ListBox>
-                    </Grid>
-
-                    <!-- затемнение над карточкой: во всю ширину панели, иначе градиент не доходит до краёв -->
-                    <Border x:Name="NavFade" Grid.Row="0" Height="26" VerticalAlignment="Bottom"
-                            Background="{DynamicResource PanelBg}"
-                            IsHitTestVisible="False" Margin="0,0,0,2">
-                        <Border.OpacityMask>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#00000000" Offset="0" />
-                                <GradientStop Color="#FF000000" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.OpacityMask>
-                    </Border>
-
-                    <v:ConnectionCard x:Name="ConnectionPanel" Grid.Row="2" Margin="12,0,12,12" />
-                </Grid>
-            </Border>
-
-            <!-- страницы -->
-            <Grid Grid.Column="1" Background="{DynamicResource WindowBg}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <!-- баннер: ядро не найдено -->
-                <Border Grid.Row="0" Margin="18,14,18,0" Padding="14,12" CornerRadius="10"
-                        Background="{DynamicResource WarningSoft}"
-                        Visibility="{Binding Preferences.CoreMissing, Converter={StaticResource BoolToVis}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="{loc:Tr S0140}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource Warning}" />
-                            <TextBlock Text="{loc:Tr S0141}"
-                                       Style="{StaticResource TxtMuted}" Margin="0,3,0,0" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <Button Grid.Column="1" Content="{loc:Tr S0142}" Style="{StaticResource BtnPrimary}"
-                                Command="{Binding InstallCoreCommand}" VerticalAlignment="Center" Margin="12,0,0,0" />
-                    </Grid>
-                </Border>
-
-                <!-- страницы листаются по вертикали; направление — по позиции пункта в левом списке -->
-                <ctl:SlideHost x:Name="MainPages" Grid.Row="1" Vertical="True"
-                               SelectedKey="{Binding DataContext.ActiveTab, RelativeSource={RelativeSource AncestorType=Window}}">
-                    <v:ProfilesView ctl:SlideHost.Key="profiles" DataContext="{Binding Profiles}" />
-                    <v:RoutingView ctl:SlideHost.Key="routing" DataContext="{Binding Routing}" />
-                    <v:DnsView ctl:SlideHost.Key="dns" DataContext="{Binding Dns}" />
-                    <v:DpiView ctl:SlideHost.Key="dpi" DataContext="{Binding Dpi}" />
-                    <v:SettingsView ctl:SlideHost.Key="settings" DataContext="{Binding Preferences}" Loaded="SettingsView_Loaded" />
-                    <v:UpdatesView ctl:SlideHost.Key="updates" DataContext="{Binding Updates}" />
-                    <v:PanelView x:Name="PanelTab" ctl:SlideHost.Key="panel" />
-                    <v:SshView x:Name="SshTab" ctl:SlideHost.Key="ssh" />
-                </ctl:SlideHost>
-
-                <!-- строка состояния -->
-                <Border Grid.Row="2" Margin="18,10,18,14" Padding="12,6" CornerRadius="8"
-                        Background="{DynamicResource CardBgAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1"
-                        Visibility="{Binding HasStatus, Converter={StaticResource BoolToVis}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource TextSecondary}" />
-                        <Button Grid.Column="1" Content="{loc:Tr S0022}" Style="{StaticResource BtnSmall}"
-                                Command="{Binding ShowLogCommand}" Margin="10,0,0,0" />
-                    </Grid>
-                </Border>
-            </Grid>
-        </Grid>
-
         <!-- ============================= сплэш холодного старта ============================= -->
-        <Grid x:Name="Splash" Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource WindowBg}" Visibility="Collapsed">
+        <Grid x:Name="Splash" Background="{DynamicResource WindowBg}" Visibility="Collapsed">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,10">
                 <v:VibeTunLogo Width="56" Height="56" HorizontalAlignment="Center" />
                 <TextBlock Text="VibeTun" Margin="0,12,0,0" FontSize="20" FontWeight="SemiBold"
@@ -373,59 +435,5 @@
                              Width="240" Margin="0,14,0,0" Minimum="0" Maximum="100" Value="0" />
             </StackPanel>
         </Grid>
-
-        <!-- ============================= пикер акцента ============================= -->
-        <Border x:Name="AccentOverlay" Grid.RowSpan="2" Background="Transparent" Visibility="Collapsed"
-                MouseLeftButtonDown="OnAccentOverlayClick">
-            <Border Style="{StaticResource Card}" Width="380" Padding="16,14" Margin="0,0,154,0"
-                    HorizontalAlignment="Right" VerticalAlignment="Top" MouseLeftButtonDown="AccentCard_Click">
-                <StackPanel>
-                    <TextBlock Text="{loc:Tr S0130}" Style="{StaticResource TxtH2}" />
-
-                    <!-- цветовой круг: кольцо оттенка и квадрат насыщенности и яркости -->
-                    <ctl:ColorWheel x:Name="AccentWheel" Width="216" Height="216" Margin="0,12,0,0"
-                                    HorizontalAlignment="Center" ColorChanged="OnAccentWheelChanged" />
-
-                    <Border Margin="0,12,0,0" Padding="3" CornerRadius="10" Background="{DynamicResource CardBgAlt}"
-                            BorderBrush="{DynamicResource Border}" BorderThickness="1">
-                        <Grid ctl:SegmentGroup.IsGroup="True" ctl:SegmentGroup.Radius="8" DataContext="{Binding Preferences}">
-                            <UniformGrid Columns="4">
-                                <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="{loc:Tr S0143}" IsChecked="{Binding ThemeSystem}" />
-                                <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="{loc:Tr S0144}" IsChecked="{Binding ThemeLight}" />
-                                <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="{loc:Tr S0145}" IsChecked="{Binding ThemeDark}" />
-                                <ToggleButton Style="{StaticResource TabToggle}" Padding="7,8" Content="Black" IsChecked="{Binding ThemeBlack}" />
-                            </UniformGrid>
-                        </Grid>
-                    </Border>
-
-                    <Grid Margin="0,12,0,0" DataContext="{Binding Preferences}">
-                        <TextBlock Text="{loc:Tr S1028}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
-                        <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right"
-                                      IsChecked="{Binding BlurSidebar}" />
-                    </Grid>
-
-                    <!-- прозрачность: тонкая полоска без ползунка; заполнение показывает долю непрозрачности -->
-                    <ctl:AlphaBar x:Name="AccentAlpha" Height="14" Margin="0,10,0,0"
-                                  AlphaChanged="OnAccentAlphaChanged" ToolTip="{loc:Tr S0146}" />
-
-                    <Border x:Name="AccentPreview" Height="30" CornerRadius="8" Margin="0,12,0,0"
-                            BorderBrush="{DynamicResource Border}" BorderThickness="1" />
-
-                    <Grid Margin="0,10,0,0">
-                        <TextBlock x:Name="AccentHexText" Style="{StaticResource TxtMono}"
-                                   VerticalAlignment="Center" />
-                        <Button Content="{loc:Tr S0147}" Style="{StaticResource BtnGhost}"
-                                HorizontalAlignment="Right" Click="OnAccentReset" />
-                    </Grid>
-
-                    <Grid Margin="0,10,0,0">
-                        <TextBlock Text="{loc:Tr S0148}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
-                        <ToggleButton x:Name="SystemAccentToggle" Style="{StaticResource Switch}"
-                                      HorizontalAlignment="Right" Click="OnAccentSystemToggle" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-        </Border>
     </Grid>
-    </Border>
 </Window>

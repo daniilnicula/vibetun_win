@@ -366,6 +366,13 @@ public sealed class CoreInfo
     /// </summary>
     public string? EndpointError { get; set; }
 
+    /// <summary>
+    /// Откуда взят этот файл ядра: репозиторий и релиз GitHub, вшитая копия, архив или файл
+    /// пользователя. <c>null</c> — файл попал в каталог ядра мимо установщика.
+    /// </summary>
+    [JsonIgnore]
+    public CoreSourceInfo? Source { get; set; }
+
     [JsonIgnore]
     public string VersionShort => string.IsNullOrWhiteSpace(Version) ? L.T("S0275") : Version;
 
@@ -386,4 +393,43 @@ public sealed class CoreInfo
     public CoreFlavor Flavor() => IsExtended ? CoreFlavor.SingBoxExtended : CoreFlavor.SingBox;
 
     public static CoreInfo Empty => new();
+}
+
+/// <summary>
+/// Откуда взят файл ядра, лежащий в каталоге ядра. Расширенная сборка для AmneziaWG ставится из
+/// одного из двух репозиториев (основной форк, при сбое — запасной), и по строке версии не всегда
+/// понятно, какой из них сработал, — поэтому источник записывается при установке и показывается
+/// в «Настройках» рядом с версией.
+/// </summary>
+public sealed class CoreSourceInfo
+{
+    public const string KindGitHub = "github";
+    public const string KindBundled = "bundled";
+    public const string KindArchive = "archive";
+    public const string KindFile = "file";
+
+    /// <summary>Файл сверен с вшитой копией и не совпал: откуда он — уже не узнать.</summary>
+    public const string KindUnknown = "unknown";
+
+    /// <summary>github | bundled | archive | file | unknown.</summary>
+    public string Kind { get; set; } = "";
+
+    /// <summary>Репозиторий GitHub вида «владелец/имя» (для <see cref="KindGitHub"/>).</summary>
+    public string? Repo { get; set; }
+
+    /// <summary>Тег релиза, из которого взят архив.</summary>
+    public string? Tag { get; set; }
+
+    /// <summary>Имя скачанного архива либо файла, выбранного пользователем.</summary>
+    public string? Asset { get; set; }
+
+    /// <summary>Основной репозиторий, который не ответил: ядро поставлено из запасного.</summary>
+    public string? FallbackFor { get; set; }
+
+    public DateTime InstalledAtUtc { get; set; }
+
+    // Отпечаток файла ядра на момент установки. Если файл потом подменили вручную, запись
+    // к нему уже не относится — тогда честно показываем «источник неизвестен».
+    public long FileSize { get; set; }
+    public long FileTimeUtcTicks { get; set; }
 }

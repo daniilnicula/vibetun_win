@@ -20,7 +20,7 @@ public enum AddConnectionAction
     Cancel,
     /// <summary>Текст из выбранных файлов (<see cref="AddConnectionChoice.Text"/>).</summary>
     FromFile,
-    /// <summary>Текст, вставленный в поле (из буфера или вручную).</summary>
+    /// <summary>Текст, вставленный в поле из буфера обмена.</summary>
     Paste,
     /// <summary>Протокол для ручного создания профиля (<see cref="AddConnectionChoice.Protocol"/>).</summary>
     Protocol,
@@ -28,11 +28,18 @@ public enum AddConnectionAction
     Group
 }
 
+/// <summary>
+/// Итог окна «Добавить подключение». Для <see cref="AddConnectionAction.Group"/> <see cref="GroupName"/> —
+/// имя создаваемой группы. Для <see cref="AddConnectionAction.Paste"/> пара
+/// <see cref="ExistingGroupId"/> / <see cref="GroupName"/> — куда положить добавляемые профили:
+/// в существующую группу или в новую с этим именем; обе пустые — вне групп.
+/// </summary>
 public sealed record AddConnectionChoice(
     AddConnectionAction Action,
     string? Text = null,
     string? Protocol = null,
-    string? GroupName = null);
+    string? GroupName = null,
+    string? ExistingGroupId = null);
 
 public enum SubscriptionImportAction
 {
@@ -80,8 +87,10 @@ public interface IDialogService
     /// <summary>
     /// Окно «Добавить подключение» (меню и его шаги). <paramref name="origin"/> — экранный прямоугольник
     /// кнопки, из которой окно выросло (в DIP); null — окно появляется из центра.
+    /// <paramref name="groups"/> — группы, в которые можно сразу положить добавляемые профили.
     /// </summary>
-    AddConnectionChoice ChooseAddConnection(Rect? origin, AddConnectionStep start, string defaultGroupName);
+    AddConnectionChoice ChooseAddConnection(Rect? origin, AddConnectionStep start, string defaultGroupName,
+        IReadOnlyList<SubscriptionGroupOption> groups);
 
     string? PromptText(string title, string caption, string initial = "");
 

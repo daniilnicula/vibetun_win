@@ -15,22 +15,6 @@
     "ru": "Сессия",
     "en": "Session"
   },
-  "S0004": {
-    "ru": "DPI тест",
-    "en": "DPI test"
-  },
-  "S0005": {
-    "ru": "Проверяет подключение к сервисам, которые блокируются DPI",
-    "en": "Tests connections to services blocked by DPI"
-  },
-  "S0006": {
-    "ru": "Диагностика",
-    "en": "Diagnostics"
-  },
-  "S0007": {
-    "ru": "Таблица в журнале: на каком этапе умирает каждый домен (DNS, TCP, TLS, HTTP) — напрямую и через обход",
-    "en": "Log table: the stage at which each domain fails (DNS, TCP, TLS, HTTP), directly and through bypass"
-  },
   "S0008": {
     "ru": "Порт",
     "en": "Port"
@@ -555,10 +539,6 @@
     "ru": "Панели",
     "en": "Panels"
   },
-  "S0139": {
-    "ru": "Активный профиль",
-    "en": "Active profile"
-  },
   "S0140": {
     "ru": "Ядро sing-box не найдено",
     "en": "sing-box core not found"
@@ -643,22 +623,6 @@
     "ru": "Скопировать конфиг",
     "en": "Copy configuration"
   },
-  "S0161": {
-    "ru": "Входящие подключения, TUN, правила для доменов/IP и приложений. Наборы правил хранятся отдельными файлами.",
-    "en": "Inbound connections, TUN, domain/IP and application rules. Rule sets are stored in separate files."
-  },
-  "S0162": {
-    "ru": "Изменения применяются сразу: активное подключение перезапускается автоматически.",
-    "en": "Changes are applied immediately; the active connection restarts automatically."
-  },
-  "S0163": {
-    "ru": "Профили входа",
-    "en": "Inbound profiles"
-  },
-  "S0164": {
-    "ru": "Новый профиль маршрутизации",
-    "en": "New routing profile"
-  },
   "S0165": {
     "ru": "Удалить профиль",
     "en": "Delete profile"
@@ -698,14 +662,6 @@
   "S0174": {
     "ru": "Определять домены (sniff)",
     "en": "Detect domains (sniff)"
-  },
-  "S0175": {
-    "ru": "Выбирается в разделе «DNS» слева",
-    "en": "Selected in “DNS” on the left"
-  },
-  "S0176": {
-    "ru": "Открыть",
-    "en": "Open"
   },
   "S0177": {
     "ru": "Новый",
@@ -767,10 +723,6 @@
     "ru": "Лимит строк логов, отображаемых в интерфейсе",
     "en": "Log lines shown in the app"
   },
-  "S0192": {
-    "ru": "Только в окне приложения. В файл записываются все логи.",
-    "en": "Only in the application window. All logs are written to the file."
-  },
   "S0193": {
     "ru": "Запускать при входе в Windows",
     "en": "Run at Windows startup"
@@ -823,70 +775,6 @@
     "ru": "«Спрашивать» — при нажатии на крестик покажет выбор: скрыть в трей или выйти из приложения.",
     "en": "“Ask” shows a choice when you click the close button: hide to tray or exit the application."
   },
-  "S0206": {
-    "ru": "Общий набор: применяется ко всем сайтам. Для отдельного сервиса набор можно задать в разделе «DPI» слева — тогда он заменяет общий для своего домена, а остальные сайты продолжают идти по этому. Локальный прокси режет трафик так, что система глубокого анализа не видит имя сайта целиком: разрыв ClientHello по SNI, разбиение записи TLS и фейк-пакет с маленьким TTL. Обход включается кнопкой на карточке подключения слева внизу.",
-    "en": "The common set: it applies to every site. A service in the DPI tab can have a set of its own — it replaces the common one for its domain, while other sites keep using this one. The local proxy splits traffic so deep packet inspection cannot see the entire website name: ClientHello splitting at SNI, TLS record splitting, and a fake packet with a low TTL. Turn the bypass on with the button on the connection card at the bottom left."
-  },
-  "S0207": {
-    "ru": "Разрыв по SNI (посредине имени домена)",
-    "en": "Split at SNI (in the middle of the domain name)"
-  },
-  "S0208": {
-    "ru": "Для обычного HTTP режет запрос перед двоеточием в «Host:» — так DPI не видит адрес в первом пакете.",
-    "en": "For plain HTTP, splits the request before the colon in “Host:” so DPI cannot see the address in the first packet."
-  },
-  "S0209": {
-    "ru": "Разбиение TLS record",
-    "en": "Split TLS record"
-  },
-  "S0210": {
-    "ru": "Тот же разрыв, но с переупаковкой в две записи TLS: помогает, когда DPI собирает запись по длине из заголовка.",
-    "en": "The same split, repackaged as two TLS records. Helps when DPI reassembles records using the header length."
-  },
-  "S0211": {
-    "ru": "Фейк-пакет (TTL)",
-    "en": "Fake packet (TTL)"
-  },
-  "S0212": {
-    "ru": "Тот же ClientHello уходит с отдельного соединения с маленьким TTL: DPI его видит и отрабатывает по нему, а до сайта пакет не доходит. Включайте, если один split не помогает.",
-    "en": "Sends the same ClientHello over a separate connection with a low TTL: DPI processes it, but the packet never reaches the website. Enable if splitting alone does not help."
-  },
-  "S0213": {
-    "ru": "TTL фейка",
-    "en": "Fake TTL"
-  },
-  "S0214": {
-    "ru": "Пауза, мс",
-    "en": "Delay, ms"
-  },
-  "S0215": {
-    "ru": "Дробить по MSS",
-    "en": "Split by MSS"
-  },
-  "S0216": {
-    "ru": "Принудительный TCP_MAXSEG: система сама режет ClientHello на мелкие сегменты, и имя сайта не попадает в первый пакет целиком.",
-    "en": "Enforces TCP_MAXSEG: the system splits ClientHello into small segments so the first packet does not contain the entire website name."
-  },
-  "S0217": {
-    "ru": "Мультисплит (много мелких кусков)",
-    "en": "Multisplit (many small chunks)"
-  },
-  "S0218": {
-    "ru": "ClientHello уходит кусками по несколько байт с паузой, а не двумя частями: срывает DPI, который собирает запись TLS по длине из заголовка. Пауза между кусками — та же, что и для обычного разрыва.",
-    "en": "Sends ClientHello in small chunks with delays instead of two parts, disrupting DPI that reassembles TLS records by header length. Uses the same delay as ordinary splitting."
-  },
-  "S0219": {
-    "ru": "Значение зависит от провайдера, поэтому проще нажать «DPI тест» на вкладке «DPI bypass»: он проверит площадку напрямую и через обход, а если текущий вариант не работает — переберёт комбинации TTL, места разрыва и MSS и применит ту, что открылась.",
-    "en": "The value depends on the ISP. Use “DPI test” on the “DPI bypass” tab: it tests sites directly and through bypass. If current settings fail, it tries TTL, split point and MSS combinations and applies one that works."
-  },
-  "S0220": {
-    "ru": "Системный DNS или DoH — выбирается в разделе «DNS» слева",
-    "en": "System DNS or DoH: select in “DNS” on the left"
-  },
-  "S0221": {
-    "ru": "Куда идти после обхода",
-    "en": "Where to connect after bypass"
-  },
   "S0222": {
     "ru": "НАПРЯМУЮ",
     "en": "DIRECT"
@@ -895,17 +783,9 @@
     "ru": "ЧЕРЕЗ ПРОФИЛЬ",
     "en": "VIA PROFILE"
   },
-  "S0224": {
-    "ru": "«Напрямую» — как zapret: сайты открываются без VPN. «Через профиль» — трафик уходит в локальный вход активного профиля, а десинхронизация отключается (иначе фейк-пакет пошёл бы мимо VPN); если ядро не поднято, движок идёт напрямую.",
-    "en": "“Direct” works like zapret: websites open without a VPN. “Via profile” sends traffic to the active profile's local inbound and disables desynchronization (otherwise fake packets would bypass the VPN). If the core is not running, the engine connects directly."
-  },
   "S0225": {
     "ru": "Прописывать в системный прокси Windows",
     "en": "Set as Windows system proxy"
-  },
-  "S0226": {
-    "ru": "Пока обход включён, системный прокси указывает на него. Если при этом поднять прокси-ядро, системный прокси перейдёт к ядру; когда ядро остановят — вернётся к обходу.",
-    "en": "While bypass is enabled, the system proxy points to it. Starting the proxy core switches the system proxy to the core; stopping it switches back to bypass."
   },
   "S0227": {
     "ru": "Ядро sing-box",
@@ -1014,10 +894,6 @@
   "S0253": {
     "ru": "Подключения не созданы. Откройте «SSH» слева и нажмите «+».",
     "en": "No connections created. Open “SSH” on the left and click “+”."
-  },
-  "S0254": {
-    "ru": "Релизы приложения для Windows и история изменений с GitHub.",
-    "en": "Windows application releases and changelog from GitHub."
   },
   "S0255": {
     "ru": "Открыть страницу релизов на GitHub",
@@ -1603,18 +1479,6 @@
     "ru": "обход остановлен",
     "en": "bypass stopped"
   },
-  "S0398": {
-    "ru": " (после)",
-    "en": " (after)"
-  },
-  "S0399": {
-    "ru": "мультисплит {0} байт",
-    "en": "multisplit {0} bytes"
-  },
-  "S0400": {
-    "ru": "без обхода (прямая пересылка)",
-    "en": "no bypass (direct forwarding)"
-  },
   "S0401": {
     "ru": "напрямую",
     "en": "direct"
@@ -1835,10 +1699,6 @@
     "ru": "TCP не поднимается — режет по адресу",
     "en": "TCP fails: address-based blocking"
   },
-  "S0456": {
-    "ru": "другой",
-    "en": "other"
-  },
   "S0457": {
     "ru": "проверяем площадки напрямую",
     "en": "testing sites directly"
@@ -1947,10 +1807,6 @@
     "ru": "DNS не отдал адрес: ",
     "en": "DNS returned no address: "
   },
-  "S0484": {
-    "ru": "в ответе не TLS ({0:X2} {1:X2})",
-    "en": "response is not TLS ({0:X2} {1:X2})"
-  },
   "S0485": {
     "ru": "DNS не знает такого имени",
     "en": "DNS name not found"
@@ -1958,10 +1814,6 @@
   "S0486": {
     "ru": " после разрыва",
     "en": " after split"
-  },
-  "S0487": {
-    "ru": "split 2 байта",
-    "en": "split 2 bytes"
   },
   "S0488": {
     "ru": "мультисплит по {0} байт",
@@ -2747,10 +2599,6 @@
     "ru": "Выключено",
     "en": "Off"
   },
-  "S0684": {
-    "ru": "стратегии выключены — трафик идёт как есть",
-    "en": "strategies disabled; traffic is forwarded unchanged"
-  },
   "S0685": {
     "ru": "нет соединений",
     "en": "no connections"
@@ -3027,18 +2875,6 @@
     "ru": "проверка ядра: {0}",
     "en": "core check: {0}"
   },
-  "S0754": {
-    "ru": "Проверка задержки…",
-    "en": "Testing latency…"
-  },
-  "S0755": {
-    "ru": "Сервер не ответил",
-    "en": "Server did not respond"
-  },
-  "S0756": {
-    "ru": "Задержка: ",
-    "en": "Latency: "
-  },
   "S0757": {
     "ru": "Обход DPI включён: {0} · {1}",
     "en": "DPI bypass enabled: {0} · {1}"
@@ -3050,34 +2886,6 @@
   "S0759": {
     "ru": "Обход DPI выключен",
     "en": "DPI bypass disabled"
-  },
-  "S0761": {
-    "ru": "Проверка обхода: ",
-    "en": "Bypass check: "
-  },
-  "S0764": {
-    "ru": "Интернет недоступен — DPI-тест ничего не показал",
-    "en": "Internet unavailable; DPI test was inconclusive"
-  },
-  "S0765": {
-    "ru": "DPI сломан: {0}",
-    "en": "DPI broken: {0}"
-  },
-  "S0766": {
-    "ru": " — но обход сейчас выключен",
-    "en": "; bypass is currently disabled"
-  },
-  "S0767": {
-    "ru": " — разрыв пакетов тут не поможет, нужен VPN: включите профиль и режим «через профиль»",
-    "en": "; packet splitting cannot help here. VPN required: enable a profile and “Via profile” mode"
-  },
-  "S0768": {
-    "ru": " — откройте сервис в разделе «DPI» и нажмите «Подобрать»: движок переберёт приёмы и запишет рабочие профилями",
-    "en": " — open the service in the DPI section and press “Search”: the engine will try the techniques and save the working ones as profiles"
-  },
-  "S0769": {
-    "ru": "Накрыт: ",
-    "en": "Blocked: "
   },
   "S0775": {
     "ru": "Обход DPI: не удалось обновить выход — ",
@@ -3195,14 +3003,6 @@
     "ru": "Часть строк не распознана: {0}",
     "en": "Some lines were not recognized: {0}"
   },
-  "S0804": {
-    "ru": "Текст и конфиги (*.txt;*.json;*.conf;*.yaml)|*.txt;*.json;*.conf;*.yaml|Все файлы (*.*)|*.*",
-    "en": "Text and configurations (*.txt;*.json;*.conf;*.yaml)|*.txt;*.json;*.conf;*.yaml|All files (*.*)|*.*"
-  },
-  "S0805": {
-    "ru": "Не удалось прочитать файл",
-    "en": "Could not read file"
-  },
   "S0806": {
     "ru": "Добавлено профилей: {0}",
     "en": "Added {0} profiles"
@@ -3262,14 +3062,6 @@
   "S0820": {
     "ru": "Приложение «{0}» добавлено",
     "en": "Application “{0}” added"
-  },
-  "S0821": {
-    "ru": "Профиль ",
-    "en": "Profile "
-  },
-  "S0822": {
-    "ru": "Удалить профиль маршрутизации",
-    "en": "Delete routing profile"
   },
   "S0823": {
     "ru": "Удалить «{0}»?",
@@ -3334,14 +3126,6 @@
   "S0838": {
     "ru": "TUN включён — при подключении потребуются права администратора",
     "en": "TUN enabled; connecting will require administrator privileges"
-  },
-  "S0839": {
-    "ru": "Сейчас {0}. Обычно хватает 3–8: пакет должен дойти до DPI, но не до сайта. ",
-    "en": "Current value: {0}. Usually 3–8 is enough: the packet must reach DPI but not the website. "
-  },
-  "S0840": {
-    "ru": "Если «Накрыт» — увеличьте; если сайты открываются и без обхода, значение слишком большое.",
-    "en": "If “Blocked”, increase it. If websites open without bypass, the value is too high."
   },
   "S0841": {
     "ru": "Ядро не установлено",
@@ -3983,10 +3767,6 @@
     "ru": "не выполнялась",
     "en": "not performed"
   },
-  "Extra955": {
-    "ru": "системный",
-    "en": "system"
-  },
   "Extra956": {
     "ru": "домена",
     "en": "domains"
@@ -4070,10 +3850,6 @@
   "dpi.openSite": {
     "ru": "Открыть сайт",
     "en": "Open site"
-  },
-  "dpi.enable": {
-    "ru": "Сервис включён — обход применяется к его домену",
-    "en": "Service is on — the bypass applies to its domain"
   },
   "dpi.enabledHint": {
     "ru": "Включён: набор приёмов сервиса применяется к его доменам.",
@@ -4255,10 +4031,6 @@
     "ru": "Свой набор приёмов.",
     "en": "Custom set of techniques."
   },
-  "dpi.profile.usage": {
-    "ru": "сервисов: {0}",
-    "en": "services: {0}"
-  },
   "dpi.profileUsage": {
     "ru": "сервисов: {0}",
     "en": "services: {0}"
@@ -4358,10 +4130,6 @@
   "dpi.strategy.decoy": {
     "ru": " · чужой SNI {0}",
     "en": " · decoy SNI {0}"
-  },
-  "dpi.field.splitpos": {
-    "ru": "Позиция разрыва",
-    "en": "Split position"
   },
   "dpi.split.sni": {
     "ru": "середина имени (SNI)",
@@ -4535,10 +4303,6 @@
     "ru": "Через обход ответа нет: {0}",
     "en": "No answer through the bypass: {0}"
   },
-  "dpi.test.autoHit": {
-    "ru": "Подобрана стратегия: {0}",
-    "en": "Strategy found: {0}"
-  },
   "dpi.test.autoNone": {
     "ru": "Ни один вариант не открыл поток. Смотрите журнал: «сервер молчит после ClientHello» — режут по содержимому, «сбрасывает соединение» — рвут поток, «TCP не поднимается» — режут по адресу (нужен VPN).",
     "en": "No variant opened the flow. Check the log: \"server silent after ClientHello\" means content-based blocking, \"resets the connection\" means the flow is cut, \"TCP does not connect\" means address-based blocking (a VPN is needed)."
@@ -4578,10 +4342,6 @@
   "dpi.pingOne": {
     "ru": "Измерить пинг ещё раз",
     "en": "Measure the ping again"
-  },
-  "dpi.iconPending": {
-    "ru": "Скачиваем значок…",
-    "en": "Downloading the icon…"
   },
   "dpi.disabled": {
     "ru": "выключен",
@@ -4718,10 +4478,6 @@
   "dpi.strategy.noinject": {
     "ru": " без инъекции",
     "en": " without injection"
-  },
-  "dpi.strategy.failover": {
-    "ru": "перебор {0} стратегий",
-    "en": "failover {0} strategies"
   },
   "dpi.fool.none": {
     "ru": "без обманки",
@@ -5163,14 +4919,6 @@
     "ru": "Вставьте содержимое из буфера обмена",
     "en": "Paste the contents from the clipboard"
   },
-  "S1014": {
-    "ru": "Добавить вручную",
-    "en": "Add manually"
-  },
-  "S1015": {
-    "ru": "Вставьте содержимое вручную",
-    "en": "Paste the contents manually"
-  },
   "S1016": {
     "ru": "Выберите протокол для создания",
     "en": "Choose a protocol to create"
@@ -5244,8 +4992,8 @@
     "en": "Could not refresh the persona — keeping the previous one"
   },
   "S1058": {
-    "ru": "Обновлён: ",
-    "en": "Refreshed: "
+    "ru": "Последнее обновление: ",
+    "en": "Last refreshed: "
   },
   "S1060": {
     "ru": "Под кого маскироваться",
@@ -5274,5 +5022,101 @@
   "S1066": {
     "ru": "Сейчас: ",
     "en": "Current: "
+  },
+  "S1067": {
+    "ru": "Архив не прошёл проверку: {0}.",
+    "en": "The archive failed the safety check: {0}."
+  },
+  "S1068": {
+    "ru": "это не zip-архив",
+    "en": "it is not a zip archive"
+  },
+  "S1069": {
+    "ru": "архив повреждён",
+    "en": "the archive is corrupt"
+  },
+  "S1070": {
+    "ru": "в нём слишком много файлов ({0} при допустимых {1})",
+    "en": "it contains too many files ({0}, {1} allowed)"
+  },
+  "S1071": {
+    "ru": "распакованный размер больше {0} МБ",
+    "en": "the unpacked size exceeds {0} MB"
+  },
+  "S1072": {
+    "ru": "у файла «{0}» неправдоподобная степень сжатия",
+    "en": "file “{0}” has an implausible compression ratio"
+  },
+  "S1073": {
+    "ru": "файл «{0}» распаковался бы за пределы папки назначения",
+    "en": "file “{0}” would be extracted outside the target folder"
+  },
+  "S1074": {
+    "ru": "Скачиваемый файл больше допустимого размера ({0} МБ) — загрузка остановлена.",
+    "en": "The file being downloaded exceeds the size limit ({0} MB); the download was stopped."
+  },
+  "S1075": {
+    "ru": "Сборка: {0} · источник: {1}",
+    "en": "Build: {0} · source: {1}"
+  },
+  "S1076": {
+    "ru": "официальная",
+    "en": "official"
+  },
+  "S1077": {
+    "ru": "расширенная",
+    "en": "extended"
+  },
+  "S1078": {
+    "ru": "GitHub, {0}, релиз {1}",
+    "en": "GitHub, {0}, release {1}"
+  },
+  "S1079": {
+    "ru": "GitHub, {0}",
+    "en": "GitHub, {0}"
+  },
+  "S1080": {
+    "ru": " (запасной репозиторий: {0} был недоступен)",
+    "en": " (fallback repository: {0} was unavailable)"
+  },
+  "S1081": {
+    "ru": "встроена в приложение",
+    "en": "bundled with the app"
+  },
+  "S1082": {
+    "ru": "архив {0}",
+    "en": "archive {0}"
+  },
+  "S1083": {
+    "ru": "файл {0}",
+    "en": "file {0}"
+  },
+  "S1084": {
+    "ru": "свой файл вне папки ядра",
+    "en": "custom file outside the core folder"
+  },
+  "S1085": {
+    "ru": "не записан (ядро поставлено прежней версией приложения или положено в папку вручную)",
+    "en": "not recorded (installed by an earlier app version or placed in the folder manually)"
+  },
+  "S1086": {
+    "ru": "Без маскировки запросы приложения подписаны как «{0}»: сервер подписки, GitHub и DPI на пути видят, что их делает VPN-клиент.",
+    "en": "Without camouflage the app signs its requests as “{0}”: the subscription server, GitHub and any DPI on the path can see they come from a VPN client."
+  },
+  "S1087": {
+    "ru": "Цвет акцента берётся из параметров Windows (Персонализация → Цвета) и меняется вместе с ним. Свой цвет выбирается кружком в заголовке окна.",
+    "en": "The accent color is taken from Windows settings (Personalization → Colors) and follows it. Pick your own color with the dot in the title bar."
+  },
+  "S1088": {
+    "ru": "Добавить в группу",
+    "en": "Add to group"
+  },
+  "S1089": {
+    "ru": "Без группы",
+    "en": "No group"
+  },
+  "S1090": {
+    "ru": "Новая группа",
+    "en": "New group"
   }
 }

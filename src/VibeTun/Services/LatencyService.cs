@@ -200,8 +200,10 @@ public sealed class LatencyService
     /// </summary>
     private static async Task<int> ProbeHttpAsync(Socket socket, Stopwatch sw, string tag, CancellationToken ct)
     {
+        // запрос подписан общим обликом приложения: HTTP-запрос вовсе без User-Agent — такая же
+        // примета инструмента, как и захардкоженный заголовок
         var request = Encoding.ASCII.GetBytes(
-            $"GET http://{ProbeHost}/generate_204 HTTP/1.1\r\nHost: {ProbeHost}\r\nConnection: close\r\n\r\n");
+            $"GET http://{ProbeHost}/generate_204 HTTP/1.1\r\nHost: {ProbeHost}\r\nUser-Agent: {NetworkPersonaService.UserAgent}\r\nConnection: close\r\n\r\n");
         await socket.SendAsync(request, SocketFlags.None, ct);
 
         var buffer = new byte[1024];

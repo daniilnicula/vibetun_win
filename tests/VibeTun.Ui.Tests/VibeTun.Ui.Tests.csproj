@@ -19,6 +19,8 @@
     <Compile Include="../../src/VibeTun/Services/LogFormat.cs" Link="LogFormat.cs" />
     <Compile Include="../../src/VibeTun/Services/ThemeService.cs" Link="ThemeService.cs" />
     <Compile Include="../../src/VibeTun/Views/Controls/Motion.cs" Link="Motion.cs" />
+    <Compile Include="../../src/VibeTun/Utils/ZipGuard.cs" Link="ZipGuard.cs" />
+    <Compile Include="../../src/VibeTun/Utils/CoreAssetPicker.cs" Link="CoreAssetPicker.cs" />
     <Resource Include="../../src/VibeTun/Themes/Dark.xaml" Link="Themes/Dark.xaml" />
     <Resource Include="../../src/VibeTun/Themes/Light.xaml" Link="Themes/Light.xaml" />
     <Resource Include="../../src/VibeTun/Themes/Black.xaml" Link="Themes/Black.xaml" />

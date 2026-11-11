@@ -25,8 +25,8 @@
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="420">
-            <TextBlock x:Name="Message" Margin="18,0,18,4" TextWrapping="Wrap"
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="420" Margin="18,0,18,0">
+            <TextBlock x:Name="Message" Margin="0,0,0,4" TextWrapping="Wrap"
                        Foreground="{DynamicResource TextSecondary}" />
         </ScrollViewer>
 

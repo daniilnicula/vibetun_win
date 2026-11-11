@@ -11,9 +11,10 @@ public static class ConstantsService
     // Все исходящие HTTP-запросы маскируются под браузер: внешние серверы подписок
     // и DPI-посредники не должны видеть, что клиент — VPN/прокси-приложение.
     // Облик подтягивает NetworkPersonaService: версия браузера обновляется раз в сутки
-    // из официальных источников; эта строка — запасной вариант на случай полного офлайна.
-    public const string BrowserUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+    // из официальных источников. Версия ниже — запасной вариант на случай полного офлайна
+    // и единственное место, где номер версии браузера зашит в сборку: сама строка User-Agent
+    // всегда собирается из шаблонов ниже, второй захардкоженной строки с другой версией нет.
+    public const int FallbackBrowserMajor = 124;
 
     /// <summary>Шаблоны облика под актуальную мажорную версию браузера ({0} — мажорная версия).</summary>
     public const string ChromeUaTemplate =
@@ -24,7 +25,14 @@ public static class ConstantsService
     public const string EdgeUaTemplate =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{0}.0.0.0 Safari/537.36 Edg/{0}.0.0.0";
 
-    /// <summary>Честный облик приложения — режим «без маскировки».</summary>
+    /// <summary>Запасной облик (Chrome) до первой подгрузки версии из сети.</summary>
+    public static readonly string BrowserUserAgent =
+        string.Format(System.Globalization.CultureInfo.InvariantCulture, ChromeUaTemplate, FallbackBrowserMajor);
+
+    /// <summary>
+    /// Честный облик приложения — режим «без маскировки». Заголовок прямо называет VPN-клиент,
+    /// поэтому режим включается только явным выбором в настройках, и там же показано предупреждение.
+    /// </summary>
     public const string AppUserAgent = "VibeTun/1.0";
 
     /// <summary>Доступные режимы маскировки (значение настройки PersonaMode).</summary>

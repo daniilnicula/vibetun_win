@@ -269,8 +269,10 @@ public static class DpiDiagnostics
             using var ssl = new SslStream(client.GetStream(), false, (_, _, _, _) => true);
             await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions { TargetHost = domain }, budget.Token);
 
+            // тот же облик, что у всех остальных запросов приложения: голый «Mozilla/5.0» без версии
+            // не шлёт ни один браузер, и для DPI это отдельная примета инструмента
             var request = Encoding.ASCII.GetBytes(
-                $"GET / HTTP/1.1\r\nHost: {domain}\r\nUser-Agent: Mozilla/5.0\r\nAccept: */*\r\nConnection: close\r\n\r\n");
+                $"GET / HTTP/1.1\r\nHost: {domain}\r\nUser-Agent: {NetworkPersonaService.UserAgent}\r\nAccept: */*\r\nConnection: close\r\n\r\n");
             await ssl.WriteAsync(request, budget.Token);
             await ssl.FlushAsync(budget.Token);
 

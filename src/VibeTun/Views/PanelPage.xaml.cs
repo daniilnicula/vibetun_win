@@ -17,11 +17,38 @@ namespace VibeTun.Views;
 /// панели, страница прогружается в фоне при показе (чтобы вкладка открывалась сразу),
 /// при сворачивании в трей браузер выгружается полностью, при возврате — подгружается заново.
 /// Окружение WebView2 одно на все страницы (общий процесс браузера и папка профиля).
+/// <para>
+/// Память: браузер — самая тяжёлая часть приложения (около 250 МБ даже на простой странице), поэтому
+/// страница, которую не видно (открыта другая вкладка или другая панель), через <see cref="SleepAfter"/>
+/// засыпает: её скрипты и таймеры останавливаются, состояние сохраняется, а память система может
+/// забрать, когда она понадобится (сразу её освобождается немного). Через <see cref="UnloadAfter"/>
+/// браузер выгружается совсем, как при сворачивании в трей, — вот тогда память освобождается целиком.
+/// Страница, которую подгрузили заранее и к сроку сна так и не открыли, выгружается сразу: усыпить
+/// такой браузер нельзя, а беречь в ней нечего. Пока окно приложения скрыто в трее, браузер не создаётся.
+/// </para>
 /// </summary>
 public partial class PanelPage : UserControl
 {
+    /// <summary>Сколько страницу должно быть не видно, чтобы она заснула (состояние сохраняется).</summary>
+    private static readonly TimeSpan SleepAfter = TimeSpan.FromSeconds(60);
+
+    /// <summary>Сколько страницу должно быть не видно, чтобы браузер выгрузился целиком.</summary>
+    private static readonly TimeSpan UnloadAfter = TimeSpan.FromMinutes(10);
+
     private readonly PanelEntry _entry;
     private readonly DispatcherTimer _loadTimeout;
+    private readonly DispatcherTimer _idleTimer;
+    private long _hiddenAt;     // Environment.TickCount64 на момент, когда страницу перестало быть видно
+    private bool _asleep;
+    private bool _idleUnloaded; // браузер выгружен из-за простоя: при показе страницы создаём его заново
+
+    /// <summary>
+    /// Страницу показывали с тех пор, как создан её браузер. Усыпить можно только такой браузер:
+    /// WebView2 засыпает, лишь когда считает себя невидимым, а о видимости элемент WPF сообщает ему
+    /// только при её изменении. Браузер, созданный в скрытой вкладке и ни разу не показанный,
+    /// продолжает считаться видимым, и TrySuspendAsync для него завершается ошибкой.
+    /// </summary>
+    private bool _shown;
     private WebView2? _browser;
     private bool _busy;
     private ulong _navigationId;
@@ -42,6 +69,9 @@ public partial class PanelPage : UserControl
         InitializeComponent();
         _loadTimeout = new DispatcherTimer { Interval = TimeSpan.FromSeconds(90) };
         _loadTimeout.Tick += OnLoadTimeout;
+        _idleTimer = new DispatcherTimer { Interval = SleepAfter };
+        _idleTimer.Tick += OnIdleTick;
+        IsVisibleChanged += OnPageVisibleChanged;
         var rotation = new DoubleAnimation(0, -360, new Duration(TimeSpan.FromMilliseconds(800)))
         {
             RepeatBehavior = RepeatBehavior.Forever,
@@ -120,7 +150,12 @@ public partial class PanelPage : UserControl
     public async Task EnsureBrowserAsync()
     {
         if (_busy || _browser is not null) return;
+        // Окно скрыто в трее (в том числе запуск свёрнутым): браузер не создаём — иначе он занимал бы
+        // память всё время, пока окна не видно. Страницу подгрузит PanelView.Restore() при показе окна.
+        // Страницы панелей живут только в главном окне, поэтому спрашиваем его напрямую.
+        if (System.Windows.Application.Current?.MainWindow is { IsVisible: false }) return;
         _busy = true;
+        _idleUnloaded = false;
         SetLoading(true);
         try
         {
@@ -130,6 +165,7 @@ public partial class PanelPage : UserControl
 
             var env = await GetEnvAsync();
             await browser.EnsureCoreWebView2Async(env);
+            _shown = IsVisible;
 
             var core = browser.CoreWebView2;
 
@@ -179,10 +215,14 @@ public partial class PanelPage : UserControl
             {
                 SetLoading(false);
             }
+
+            // страницу подгрузили заранее, в скрытой вкладке: отсчёт до сна и выгрузки идёт сразу
+            if (!IsVisible) StartIdleCountdown();
         }
         catch (Exception ex)
         {
             _loadTimeout.Stop();
+            _idleTimer.Stop();
             SetLoading(false);
             // WebView2 Runtime отсутствует или не запустился — оставляем подсказку вместо браузера
             try { BrowserHost.Children.Clear(); } catch { /* ignore */ }
@@ -250,10 +290,97 @@ public partial class PanelPage : UserControl
         }
     }
 
-    /// <summary>Выгрузить страницу (сворачивание в трей): освобождаем ресурсы браузера.</summary>
+    // ------------------------------------------------------------- экономия памяти
+
+    private void OnPageVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible && _browser?.CoreWebView2 is not null) _shown = true;
+        if (IsVisible) WakeUp();
+        else StartIdleCountdown();
+    }
+
+    /// <summary>Страницу перестало быть видно: отсчитываем время до сна и до выгрузки.</summary>
+    private void StartIdleCountdown()
+    {
+        _idleTimer.Stop();
+        if (_browser is null) return;
+        _hiddenAt = Environment.TickCount64;
+        _idleTimer.Interval = SleepAfter;
+        _idleTimer.Start();
+    }
+
+    /// <summary>Страницу снова видно: будим браузер, а выгруженный из-за простоя создаём заново.</summary>
+    private void WakeUp()
+    {
+        _idleTimer.Stop();
+        if (_browser is null)
+        {
+            // В остальных случаях (возврат из трея, ошибка запуска браузера) страницу загружают те же
+            // вызовы, что и раньше: PanelView.ShowEntry и PanelView.Restore.
+            if (_idleUnloaded) _ = EnsureBrowserAsync();
+            return;
+        }
+
+        if (!_asleep) return;
+        _asleep = false;
+        if (_browser.CoreWebView2 is not { } core) return;
+        try { core.MemoryUsageTargetLevel = CoreWebView2MemoryUsageTargetLevel.Normal; }
+        catch { /* рантайм без этой настройки */ }
+        // видимый браузер просыпается и сам; явный вызов — на случай, если этого ещё не произошло
+        try { if (core.IsSuspended) core.Resume(); }
+        catch { /* браузер мог уже закрыться */ }
+    }
+
+    private void OnIdleTick(object? sender, EventArgs e)
+    {
+        _idleTimer.Stop();
+        if (_browser is null || IsVisible) return;
+
+        var hidden = TimeSpan.FromMilliseconds(Environment.TickCount64 - _hiddenAt);
+        // Подошёл срок выгрузки — либо срок сна у страницы, которую ни разу не показывали: усыпить её
+        // браузер нельзя (см. _shown), а состояния, которое стоило бы беречь, в ней ещё нет. При показе
+        // страница загрузится заново, как после возврата из трея. Браузер, который ещё создаётся, не трогаем.
+        if (hidden >= UnloadAfter || (!_shown && !_busy))
+        {
+            UnloadBrowser();
+            _idleUnloaded = true;
+            return;
+        }
+
+        // Страница, которая ещё создаётся или грузится, не засыпает: ждём следующего срабатывания.
+        if (!_asleep && !_busy && !_loadTimeout.IsEnabled && _browser.CoreWebView2 is { } core)
+        {
+            _asleep = true;
+            _ = SleepAsync(core);
+        }
+
+        var left = UnloadAfter - hidden;
+        _idleTimer.Interval = _asleep || left < SleepAfter ? left : SleepAfter;
+        _idleTimer.Start();
+    }
+
+    /// <summary>
+    /// Сон скрытой страницы — то же, что «спящая вкладка» в браузере: скрипты и таймеры страницы
+    /// останавливаются, память процесса система может забрать под другие задачи, а сама страница
+    /// (введённый текст, прокрутка, вход в панель) остаётся как была. Оба вызова необязательные:
+    /// рантайм может их не поддерживать.
+    /// </summary>
+    private static async Task SleepAsync(CoreWebView2 core)
+    {
+        try { core.MemoryUsageTargetLevel = CoreWebView2MemoryUsageTargetLevel.Low; }
+        catch { /* рантайм без этой настройки */ }
+        try { await core.TrySuspendAsync(); }
+        catch { /* браузер считает себя видимым или уже закрыт — страница просто продолжит работать */ }
+    }
+
+    /// <summary>Выгрузить страницу (трей, долгий простой, удаление панели): освобождаем ресурсы браузера.</summary>
     public void UnloadBrowser()
     {
         _loadTimeout.Stop();
+        _idleTimer.Stop();
+        _asleep = false;
+        _shown = false;
+        _idleUnloaded = false;
         _retryInProgress = false;
         LoadingMessage.Visibility = Visibility.Collapsed;
         ErrorOverlay.Visibility = Visibility.Collapsed;

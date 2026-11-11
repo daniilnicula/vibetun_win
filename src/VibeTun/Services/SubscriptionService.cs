@@ -14,12 +14,35 @@ using VibeTun.Utils;
 
 namespace VibeTun.Services;
 
-public sealed record SubscriptionFetchResult(string Name, List<ProxyProfile> Profiles, List<string> Errors);
+/// <summary>
+/// Загруженная подписка. <see cref="Name"/> всегда заполнено: это название из заголовка Profile-Title,
+/// а если панель его не прислала — хост ссылки. <see cref="Title"/> — только название от самой панели
+/// (null, когда его нет): по нему предлагается имя новой группы, чтобы там не оказался IP-адрес.
+/// </summary>
+public sealed record SubscriptionFetchResult(string Name, List<ProxyProfile> Profiles, List<string> Errors)
+{
+    public string? Title { get; init; }
+}
 
 /// <summary>Загрузка стандартных URI/JSON-подписок, в том числе форматов 3x-ui.</summary>
 public sealed class SubscriptionService
 {
     private const int MaxResponseBytes = 8 * 1024 * 1024;
+
+    /// <summary>
+    /// Текст — ссылка на подписку: одна строка http(s)-адреса с непустым путём (например,
+    /// 3x-ui: /&lt;sub-path&gt;/&lt;sub-id&gt;). Адрес без пути — http(s)://user:pass@proxy:port —
+    /// это запись HTTP-прокси, а не подписка. Одно правило для окна добавления и для самого импорта.
+    /// </summary>
+    public static bool TryGetSubscriptionUrl(string? text, out string url)
+    {
+        url = text?.Trim() ?? "";
+        if (url.Length == 0 || url.Any(char.IsWhiteSpace) || !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) || string.IsNullOrWhiteSpace(uri.Host))
+            return false;
+
+        return uri.AbsolutePath.Trim('/').Length > 0;
+    }
 
     public async Task<SubscriptionFetchResult> FetchAsync(string address, CancellationToken cancellationToken = default)
     {
@@ -61,7 +84,8 @@ public sealed class SubscriptionService
                         : $"The response did not contain supported proxy profiles: {detail}");
                 }
 
-                return new SubscriptionFetchResult(ReadTitle(response, uri), parsed.Profiles, parsed.Errors);
+                var title = ReadTitle(response);
+                return new SubscriptionFetchResult(title ?? uri.Host, parsed.Profiles, parsed.Errors) { Title = title };
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -166,7 +190,8 @@ public sealed class SubscriptionService
                value.Contains("[Interface]", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string ReadTitle(HttpResponseMessage response, Uri uri)
+    /// <summary>Название подписки из заголовка Profile-Title; null — панель его не прислала.</summary>
+    private static string? ReadTitle(HttpResponseMessage response)
     {
         var value = response.Headers.TryGetValues("Profile-Title", out var responseValues)
             ? responseValues.FirstOrDefault()
@@ -175,7 +200,7 @@ public sealed class SubscriptionService
             ? contentValues.FirstOrDefault()
             : null;
         value = value?.Trim();
-        if (string.IsNullOrWhiteSpace(value)) return uri.Host;
+        if (string.IsNullOrWhiteSpace(value)) return null;
 
         if (value.StartsWith("base64:", StringComparison.OrdinalIgnoreCase) && Text.TryBase64(value[7..], out var decoded))
             value = decoded.Trim();
@@ -185,6 +210,6 @@ public sealed class SubscriptionService
             catch (UriFormatException) { /* keep the header as-is */ }
         }
 
-        return string.IsNullOrWhiteSpace(value) ? uri.Host : value;
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 }
