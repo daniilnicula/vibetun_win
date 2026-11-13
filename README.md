@@ -1,50 +1,92 @@
 # VibeTun
 
-proxy/VPN-клиент на C# (.NET 8, WPF): обвязка над ядром **nekobox_core**
-(sing-box из исходников nekoray, vendored в `core/`).
+<img width="1472" height="720" alt="homeworkdirartifactsvibetun_github_banner-1" src="https://github.com/user-attachments/assets/0d8004b7-82bd-4843-8a92-049508abb23c" />
+
+
+**Proxy/VPN-клиент для Windows** на C# (.NET 8, WPF) поверх ядра
+[sing-box](https://github.com/Leadaxe/sing-box-lx) — единый клиент для прокси-режима,
+TUN-туннеля и обхода DPI.
+## Возможности
+
+- **Профили и группы** — импорт ссылок и подписок (в т.ч. JSON-ответы: приложение само
+  находит ссылочный вариант, если в JSON нужного протокола нет), дублирование, пинги.
+- **Режимы подключения** — системный прокси или TUN (wintun, auto-route/strict_route),
+  переключение профиля и правок маршрутизации **без остановки ядра**.
+- **Маршрутизация** — наборы правил, привязка по приложениям и доменам, блокировка рекламы,
+  DNS-правила.
+- **DNS** — основной резолвер, DNS доменов и приложений, свой список серверов.
+- **Обход DPI** — стратегии fake/seqovl и другие (см. [docs/dpi-strategies.md](docs/dpi-strategies.md)).
+- **Панели** — профиль браузера (WebView2) с рабочим окружением внутри клиента.
+- **SSH-терминал** — подключение к серверам из профилей.
+- **Статистика** — трафик, аптайм, счётчик соединений и задержка через clash API ядра.
+- **Обновления** — две секции `app` и `sing-box-lx`, авто-проверка раз в 30 минут,
+  установка/откат ядра одной кнопкой.
+- **Интерфейс** — темы (Dark/Light/Black), акценты, локализация RU/EN, трей и горячие
+  состояния подключения.
+
 ## Протоколы
-Профили: `vmess`, `vless`, `trojan`, `shadowsocks`, `socks`, `http`, `hysteria2`,
-`hysteria`, `tuic`, `anytls`, `ssh`, `wireguard`, `amneziawg`, `mtproto`, `tunnel` (custom JSON).
-<img width="1034" height="715" alt="image" src="https://github.com/user-attachments/assets/2e8b6b3b-635b-4c85-b780-008bfeb9b06b" />
-<img width="1701" height="716" alt="image" src="https://github.com/user-attachments/assets/584fa00e-61ec-4b7d-b474-57e8104545d4" />
 
+Базовый список: `vless`, `vmess`, `trojan`, `shadowsocks`, `socks`, `http`, `hysteria2`,
+`hysteria`, `tuic`, `anytls`, `wireguard`, `amneziawg`, `ssh`, `mtproto`, `tunnel`
+(кастомный JSON ядра).
 
+Список в редакторе собирается **динамически**: базовый набор ∩ то, что реально поддерживает
+установленное ядро (`sing-box schema` + живая проба), — `Services/ProtocolRegistry.cs`.
 
 | Протокол | Реализация |
 |---|---|
-| vmess / vless / trojan / shadowsocks / http | outbounds ядра sing-box (сборка без extra-тегов) |
+| vmess / vless / trojan / shadowsocks / socks / http | outbounds ядра sing-box |
 | wireguard | outbounds (старые ядра) или `endpoints` (≥1.11); MTU clamp, auto_route/strict_route в TUN |
-| hysteria / hysteria2 / tuic | тег `with_quic` (vendored sing-quic) |
+| hysteria / hysteria2 / tuic | QUIC-сборка ядра (в sing-box-lx входит) |
+| amneziawg | расширенные сборки (sing-box-lx и т.п.); для AWG 3.1 нужна плоская схема `flat` — её поддержку приложение проверяет живьём и подсказывает, если ядро не то |
+| anytls / ssh | outbounds ядра sing-box |
 | mixed | inbound mixed — режим прослушки по умолчанию (Socks+Http) |
-| tunnel | профиль Custom: JSON ядра пользователя идёт в ядро как есть (ветка RawJson в SingBoxConfigBuilder) |
+| tunnel | профиль Custom: JSON ядра пользователя идёт в ядро как есть |
 | tun | режим TUN (маршрут по умолчанию, stack/gvisor из тегов сборки) |
-| mtproto | применяется только внутри Telegram (ядро sing-box MTProto-outbound не имеет ни в одной ветке) — профиль открывается через `tg://` |
-| amneziawg | расширенные сборки ядра (sing-box-extended, sing-box-lx и т.п.); базовая сборка отклоняет профиль с подсказкой |
+| mtproto | применяется только внутри Telegram (у ядра sing-box нет MTProto-outbound) — профиль открывается через `tg://` |
 
-Со стороны UI список протоколов — `ProfileEditorViewModel.ProtocolList`, конвертация в JSON
-ядра — `Services/SingBoxConfigBuilder.cs`, импорт ссылок/подписок/JSON — `Utils/LinkParser.cs`
-и `Utils/JsonConfigConverter.cs`.
+Со стороны UI список протоколов — `Services/ProtocolRegistry.cs`, конвертация в JSON
+ядра — `Services/SingBoxConfigBuilder.cs`, импорт ссылок/подписок/JSON —
+`Utils/LinkParser.cs` и `Utils/JsonConfigConverter.cs`.
 
-## Архитектура: gRPC поверх nekobox_core
+## Ядро и запуск
 
-`nekobox_core` — один бинарник с двумя режимами (см. `core/README.md`):
+Ядро ставится и обновляется из вкладки «Обновление»: единственный источник — релизы
+[Leadaxe/sing-box-lx](https://github.com/Leadaxe/sing-box-lx). `CoreService` умеет три
+пути запуска и выбирает первый доступный:
 
-1. **gRPC (основной для VibeTun):** `sing-box.exe nekobox --token T --port P` поднимает
-   libcore-сервис на 127.0.0.1; приложение шлёт `Start` (конфиг-JSON), `Stop`, `Test`,
-   `QueryStats` с заголовком `nekoray_auth` (ровно одно значение). Клиент —
-   `src/VibeTun/Services/NekoCoreRpcClient.cs`, протокол — `src/VibeTun/Protos/libcore.proto`
-   (зеркало `core/nekoray/go/grpc_server/gen/libcore.proto`; генерация стабов — Grpc.Tools).
-2. **Fallback `run -c`:** если ядро без баннера `NekoBox:` (скачанный релиз, форк) или
-   gRPC-путь по любой причине не поднялся, `CoreService.StartAsync` автоматически запускает
-   тот же бинарник обычным `run -c … -D run\` — контракт с UI не меняется.
+1. **lxd** (основной для sing-box-lx) — рядом с приложением поднимается демон
+   `sing-box lxd`; старт и переключения идут через `POST /admin/apply`: конфиг
+   проверяется в подпроцессе, инстанс меняется **внутри того же процесса** (без kill
+   и respawn), при сбое старта — автооткат на last-good. Отключение останавливает
+   инстанс, но оставляет демон живым — следующее подключение это один HTTP-запрос.
+   Логи инстанса пишутся в `core.log` и читаются в журнал приложения.
+2. **nekobox gRPC** — для ядер с баннером `NekoBox:`:
+   `sing-box.exe nekobox --token T --port P`, клиент `Services/NekoCoreRpcClient.cs`,
+   протокол `Protos/libcore.proto`.
+3. **`run -c`** — универсальный fallback: тот же бинарник обычным запуском, если lxd
+   недоступен или gRPC-путь не поднялся.
 
-Статистика трафика и задержка идут через clash API из конфига (он поднимается внутри
-инстанса в обоих режимах); `QueryStats` gRPC доступен как альтернатива.
+Статистика трафика и тесты задержки идут через clash API, который поднимается внутри
+инстанса во всех режимах.
 
 ## Хранение данных
+
 Профили, наборы правил, настройки, ядро, логи и профиль браузера «Панели» лежат в одной папке.
 По умолчанию это папка `data` рядом с `VibeTun.exe`. Место выбирается в «Настройках» → «Данные приложения»:
 «В локальной папке» (`%LocalAppData%\VibeTun`), «Рядом с исполняемым файлом» или «Указать своё место».
 Выбор запоминается в `%LocalAppData%\VibeTun\location.json` и вступает в силу после перезапуска.
 Если в новой папке данных ещё нет, данные из прежней копируются при запуске; существующие файлы не перезаписываются.
 Если папка рядом с exe недоступна для записи (например, в `Program Files`), используется локальная папка и приложение об этом сообщает.
+
+## Разработка
+
+```sh
+# проверка локализации (RU/EN), ссылок на ключи, XAML и палитр — без .NET SDK
+python3 scripts/validate-ui.py
+
+# сборка (Windows, .NET 8 SDK)
+dotnet build VibeTun.sln -c Release
+```
+
+Полезное: `docs/` — чек-листы UI и стратегии DPI; `scripts/` — вспомогательные скрипты.
