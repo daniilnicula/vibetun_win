@@ -1,49 +1,80 @@
 <UserControl x:Class="VibeTun.Views.UpdatesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:loc="clr-namespace:VibeTun.Services">
+             xmlns:loc="clr-namespace:VibeTun.Services"
+             xmlns:ctl="clr-namespace:VibeTun.Views.Controls">
     <Grid Margin="18,14,18,14">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- заголовок страницы -->
+        <!-- заголовок страницы: слева название и GitHub, справа — проверка обновлений -->
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel>
-                <TextBlock Text="{loc:Tr S0137}" Style="{StaticResource TxtH1}" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Tr S0137}" Style="{StaticResource TxtH1}" VerticalAlignment="Center" />
+                <Button Content="GitHub" Style="{StaticResource BtnGhost}" Margin="14,0,0,0"
+                        VerticalAlignment="Center" Command="{Binding OpenGitHubCommand}"
+                        ToolTip="{loc:Tr S0255}" />
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="GitHub" Style="{StaticResource BtnGhost}" Command="{Binding OpenGitHubCommand}"
-                        ToolTip="{loc:Tr S0255}" />
-                <Button Content="{loc:Tr S0228}" Style="{StaticResource BtnGhost}" Margin="8,0,0,0"
-                        Command="{Binding RefreshCommand}" ToolTip="{loc:Tr S0256}" />
-            </StackPanel>
+            <Button Grid.Column="1" Style="{StaticResource BtnIcon}" VerticalAlignment="Center"
+                    Command="{Binding CheckCommand}" ToolTip="{loc:Tr S1091}">
+                <Path Data="M11,4.4 A5.2,5.2 0 1 0 12.2,8.6 M11,4.4 H14 M11,4.4 V1.4"
+                      Stroke="{DynamicResource TextPrimary}" StrokeThickness="1.7"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Button>
         </Grid>
 
-        <!-- основная область: слева список релизов под Windows, справа — выбранный (или текущий) релиз -->
-        <Grid Grid.Row="1" Margin="0,14,0,0">
+        <!-- переключатель секций: приложение / ядро sing-box-lx (названия не локализуются) -->
+        <Border Grid.Row="1" Margin="0,12,0,0" HorizontalAlignment="Center" Padding="3" CornerRadius="10"
+                Background="{DynamicResource CardBgAlt}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
+            <Grid ctl:SegmentGroup.IsGroup="True" ctl:SegmentGroup.Radius="8">
+                <StackPanel Orientation="Horizontal">
+                    <ToggleButton Style="{StaticResource TabToggle}" Content="app"
+                                  IsChecked="{Binding IsAppTab}" />
+                    <!-- моргающий кружочек секции с обновлением (как в навигации) -->
+                    <Ellipse Width="7" Height="7" Margin="7,0,3,0" VerticalAlignment="Center"
+                             Fill="{DynamicResource Accent}"
+                             Visibility="{Binding HasAppUpdate, Converter={StaticResource BoolToVis}}"
+                             ctl:Pulse.On="{Binding HasAppUpdate}" />
+                    <ToggleButton Style="{StaticResource TabToggle}" Content="sing-box-lx" Margin="3,0,0,0"
+                                  IsChecked="{Binding IsCoreTab}" />
+                    <Ellipse Width="7" Height="7" Margin="7,0,0,0" VerticalAlignment="Center"
+                             Fill="{DynamicResource Accent}"
+                             Visibility="{Binding HasCoreUpdate, Converter={StaticResource BoolToVis}}"
+                             ctl:Pulse.On="{Binding HasCoreUpdate}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- основная область: слева список релизов секции, справа — выбранный (или текущий) релиз -->
+        <Grid Grid.Row="2" Margin="0,14,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="292" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- ==================== левая колонка: релизы под Windows ==================== -->
+            <!-- ==================== левая колонка: релизы ==================== -->
             <Grid Grid.Column="0" Margin="0,0,16,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="{loc:Tr S0257}" Style="{StaticResource TxtCaption}" Margin="2,0,0,8" />
+                <TextBlock Grid.Row="0" Text="{Binding ListCaption}" Style="{StaticResource TxtCaption}" Margin="2,0,0,8" />
 
-                <ListBox Grid.Row="1" Style="{StaticResource ListPlain}"
+                <!-- CanContentScroll=False: прокрутка в пикселях — порог догрузки у нижнего края измеряется в пикселях -->
+                <ListBox Grid.Row="1" x:Name="ReleaseList" Style="{StaticResource ListPlain}"
+                         ScrollViewer.CanContentScroll="False"
                          ItemsSource="{Binding Releases}"
                          SelectedItem="{Binding SelectedRelease, Mode=TwoWay}">
                     <ListBox.ItemTemplate>
@@ -99,6 +130,11 @@
                                 HorizontalAlignment="Center" Command="{Binding RefreshCommand}" />
                     </StackPanel>
                 </Border>
+
+                <!-- догрузка следующей порции релизов -->
+                <TextBlock Grid.Row="2" Text="{loc:Tr S0259}" Style="{StaticResource TxtMuted}"
+                           Margin="2,8,0,0"
+                           Visibility="{Binding IsLoadingMore, Converter={StaticResource BoolToVis}}" />
             </Grid>
 
             <!-- ==================== правая колонка: описание релиза и кнопка ==================== -->
@@ -212,7 +248,7 @@
                                        Style="{StaticResource TxtMuted}" VerticalAlignment="Center"
                                        TextWrapping="Wrap" Margin="0,0,12,0" />
 
-                            <Button Grid.Column="1" Content="{loc:Tr S0013}" Style="{StaticResource BtnPrimary}"
+                            <Button Grid.Column="1" Content="{Binding ActionText}" Style="{StaticResource BtnPrimary}"
                                     Padding="22,8" FontSize="13"
                                     Command="{Binding ApplyReleaseCommand}"
                                     Visibility="{Binding CanUpdate, Converter={StaticResource BoolToVis}}" />

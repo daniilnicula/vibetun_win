@@ -10,13 +10,14 @@ namespace VibeTun.Views.Dialogs;
 public partial class SubscriptionImportWindow : DialogWindow
 {
     public SubscriptionImportWindow(string subscriptionName, string defaultGroupName, int profileCount,
-        IReadOnlyList<SubscriptionGroupOption> groups)
+        IReadOnlyList<SubscriptionGroupOption> groups, string? formatNote)
     {
         InitializeComponent();
         // здесь группа обязательна: кнопка ниже кладёт профили именно в группу
         TargetGroup.SetGroups(groups, optional: false);
         TargetGroup.NewName = defaultGroupName;
-        Message.Text = L.F("S0978", subscriptionName, profileCount);
+        Message.Text = L.F("S0978", subscriptionName, profileCount) +
+                       (string.IsNullOrEmpty(formatNote) ? "" : "\n" + formatNote);
     }
 
     public SubscriptionImportChoice Choice { get; private set; } = new(SubscriptionImportAction.Cancel);

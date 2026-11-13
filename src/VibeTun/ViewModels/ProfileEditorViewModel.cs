@@ -28,19 +28,23 @@ public sealed class ProfileEditorViewModel : ObservableObject
 
     public AsyncRelayCommand TestPingCommand { get; }
 
-    public static IReadOnlyList<string> ProtocolList { get; } = new[]
-    {
-        ProtocolIds.Vless, ProtocolIds.Vmess, ProtocolIds.Trojan, ProtocolIds.Shadowsocks,
-        ProtocolIds.Socks, ProtocolIds.Http, ProtocolIds.Hysteria2, ProtocolIds.Hysteria,
-        ProtocolIds.Tuic, ProtocolIds.AnyTls, ProtocolIds.Wireguard, ProtocolIds.AmneziaWg,
-        ProtocolIds.Ssh, ProtocolIds.MtProto, ProtocolIds.Tunnel
-    };
+    /// <summary>
+    /// Протоколы для ComboBox: базовый список плюс новые типы поддерживаемого ядра
+    /// (см. <see cref="ProtocolRegistry"/>); текущий протокол профиля всегда присутствует.
+    /// Кэш: ссылка меняется только когда состав реально изменился — иначе ComboBox при
+    /// перестроении ItemsSource пушит обратно null (это роняло приложение при смене протокола).
+    /// </summary>
+    private IReadOnlyList<string>? _protocolList;
+
+    public IReadOnlyList<string> ProtocolList => _protocolList ??= ProtocolRegistry.ProfileList(Profile.Protocol);
 
     public string Protocol
     {
         get => Profile.Protocol;
         set
         {
+            if (string.IsNullOrWhiteSpace(value)) return;   // отбрасываем null-push от ComboBox
+            if (string.Equals(Profile.Protocol, value, StringComparison.Ordinal)) return;
             Profile.Protocol = value;
             Raise();
             Raise(nameof(IsTelegram));
@@ -49,28 +53,47 @@ public sealed class ProfileEditorViewModel : ObservableObject
             Raise(nameof(IsQuic));
             Raise(nameof(IsTransportable));
             Raise(nameof(IsUdpBased));
+            Raise(nameof(ShowUuidRow));
+            Raise(nameof(ShowPasswordRow));
+            Raise(nameof(ShowMethodRow));
+            Raise(nameof(ShowFlowRow));
             Raise(nameof(ProtocolHint));
+
+            var next = ProtocolRegistry.ProfileList(Profile.Protocol);
+            if (_protocolList is null || !_protocolList.SequenceEqual(next))
+            {
+                _protocolList = next;
+                Raise(nameof(ProtocolList));
+            }
         }
     }
 
-    public string ProtocolHint => Profile.Protocol.ToLowerInvariant() switch
+    public string ProtocolHint => (Profile.Protocol ?? "").ToLowerInvariant() switch
     {
         ProtocolIds.MtProto => L.T("S0794"),
         ProtocolIds.AmneziaWg => L.T("S0795"),
         ProtocolIds.ShadowsocksR => L.T("S0796"),
         ProtocolIds.Tunnel => L.T("S0797"),
-        _ => ""
+        // новый протокол из схемы/пробы ядра: подсказываем, что он нестандартный
+        _ => ProtocolRegistry.IsKnown(Profile.Protocol) ? "" : L.T("S1096")
     };
 
     public bool IsTelegram => Profile.Protocol == ProtocolIds.MtProto;
 
     public bool IsWireGuard => Profile.Protocol is ProtocolIds.Wireguard or ProtocolIds.AmneziaWg;
     public bool IsAmnezia => Profile.Protocol == ProtocolIds.AmneziaWg || Node.HasAwgParams;
-    public bool IsTlsCapable => Profile.Protocol is ProtocolIds.Vless or ProtocolIds.Vmess or ProtocolIds.Trojan
-        or ProtocolIds.Hysteria2 or ProtocolIds.Hysteria or ProtocolIds.Tuic or ProtocolIds.AnyTls or ProtocolIds.Http;
-    public bool IsQuic => Profile.Protocol is ProtocolIds.Hysteria2 or ProtocolIds.Hysteria or ProtocolIds.Tuic;
-    public bool IsTransportable => Profile.Protocol is ProtocolIds.Vless or ProtocolIds.Vmess or ProtocolIds.Trojan;
+
+    /// <summary>Секция TLS: у протоколов вне базового списка — показана, но выключена по умолчанию.</summary>
+    public bool IsTlsCapable => ProtocolRegistry.IsTlsCapable(Profile.Protocol);
+    public bool IsQuic => ProtocolRegistry.IsQuic(Profile.Protocol);
+    public bool IsTransportable => ProtocolRegistry.IsTransportable(Profile.Protocol);
     public bool IsUdpBased => ProtocolIds.IsUdpBased(Profile.Protocol);
+
+    // видимость строк учётных данных — по реестру протоколов (для неизвестных — универсальные строки)
+    public bool ShowUuidRow => ProtocolRegistry.ShowUuidRow(Profile.Protocol);
+    public bool ShowPasswordRow => ProtocolRegistry.ShowPasswordRow(Profile.Protocol);
+    public bool ShowMethodRow => ProtocolRegistry.ShowMethodRow(Profile.Protocol);
+    public bool ShowFlowRow => ProtocolRegistry.ShowFlowRow(Profile.Protocol);
 
     public bool Tls
     {

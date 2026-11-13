@@ -45,14 +45,22 @@ public static class ConstantsService
     /// <summary>Репозиторий самого приложения (релизы и обновления).</summary>
     public const string AppRepo = "daniilnicula/vibetun_win";
 
-    /// <summary>Официальный sing-box.</summary>
-    public const string SingBoxRepo = "SagerNet/sing-box";
+    // (репозитории ядра — см. CoreRepo выше)
 
-    /// <summary>Расширенная сборка sing-box (AmneziaWG и прочие расширения).</summary>
-    public const string SingBoxExtendedRepo = "shtorm-7/sing-box-extended";
+    /// <summary>
+    /// Единственный репозиторий ядра: сюда сводятся все установки (официальная, расширенная, AWG) —
+    /// у sing-box-lx есть готовые сборки под Windows и полная поддержка AmneziaWG 2.0/3.x.
+    /// </summary>
+    public const string CoreRepo = "Leadaxe/sing-box-lx";
 
-    /// <summary>Форк с полной поддержкой AmneziaWG 2.0/3.x (random_trailers, disable_cookies).</summary>
-    public const string AwgRepo = "Leadaxe/sing-box-lx";
+    /// <summary>Совместимое имя: официальная сборка теперь берётся из <see cref="CoreRepo"/>.</summary>
+    public const string SingBoxRepo = CoreRepo;
+
+    /// <summary>Совместимое имя: расширенная сборка теперь берётся из <see cref="CoreRepo"/>.</summary>
+    public const string SingBoxExtendedRepo = CoreRepo;
+
+    /// <summary>Совместимое имя: AWG-форк — это тот же <see cref="CoreRepo"/>.</summary>
+    public const string AwgRepo = CoreRepo;
 
     public const string GithubApiLatestReleaseUrl = "https://api.github.com/repos/{0}/releases/latest";
 

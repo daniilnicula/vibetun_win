@@ -130,6 +130,20 @@ public sealed class ProfilesViewModel : ObservableObject
     /// <summary>Создание профиля вручную: выбор протокола из подменю ПКМ.</summary>
     public RelayCommand CreateManualCommand { get; }
 
+    /// <summary>
+    /// Протоколы для подменю «Создать»: полный список из реестра (включая новые типы
+    /// поддерживаемого ядра) — статический список в XAML приходилось дописывать вручную.
+    /// </summary>
+    public IReadOnlyList<CreateProtocolChoice> CreateChoices =>
+        ProtocolRegistry.ProfileList(null)
+            .Select(id => new CreateProtocolChoice(id,
+                string.Equals(id, ProtocolIds.Tunnel, StringComparison.OrdinalIgnoreCase)
+                    ? L.T("S0156")
+                    : ProtocolIds.Display(id)))
+            .ToList();
+
+    public sealed record CreateProtocolChoice(string Id, string Title);
+
     // ------------------------------------------------------------------ загрузка
     public void Load()
     {
@@ -371,7 +385,8 @@ public sealed class ProfilesViewModel : ObservableObject
         {
             var subscription = await _subscriptionService.FetchAsync(url);
             var choice = _dialogs.ChooseSubscriptionImport(
-                subscription.Name, SuggestGroupName(subscription, url), subscription.Profiles.Count, GroupOptions());
+                subscription.Name, SuggestGroupName(subscription, url), subscription.Profiles.Count, GroupOptions(),
+                subscription.Format == "json" ? L.T("S1014") : null);
             if (choice.Action == SubscriptionImportAction.Cancel) return;
 
             switch (choice.Action)
@@ -446,6 +461,7 @@ public sealed class ProfilesViewModel : ObservableObject
             var url = address.Trim();
             var subscription = await _subscriptionService.FetchAsync(url);
             AddSubscriptionGroup(url, subscription);
+            if (subscription.Format == "json") Notify?.Invoke(L.T("S1014"), true);
             if (subscription.Errors.Count > 0)
                 Notify?.Invoke(L.F("S0989", subscription.Errors[0]), true);
         }
@@ -466,6 +482,7 @@ public sealed class ProfilesViewModel : ObservableObject
                 !string.Equals(group.SubscriptionUrl, url, StringComparison.Ordinal)) return;
             var (added, updated) = ApplySubscriptionUpdate(group, subscription.Profiles);
             Notify?.Invoke(L.F("S0987", group.Name, added, updated), false);
+            if (subscription.Format == "json") Notify?.Invoke(L.T("S1014"), true);
             if (subscription.Errors.Count > 0)
                 Notify?.Invoke(L.F("S0989", subscription.Errors[0]), true);
         }
@@ -667,7 +684,9 @@ public sealed class ProfilesViewModel : ObservableObject
 
         var profile = new ProxyProfile
         {
-            Name = ProtocolIds.Display(protocol!),
+            Name = string.Equals(protocol, ProtocolIds.Tunnel, StringComparison.OrdinalIgnoreCase)
+                ? L.T("S0156")
+                : ProtocolIds.Display(protocol!),
             Protocol = protocol!
         };
 

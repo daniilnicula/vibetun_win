@@ -361,6 +361,14 @@ public sealed class CoreInfo
     public bool SupportsNekoRpc { get; set; }
 
     /// <summary>
+    /// Ядро собрано из Leadaxe/sing-box-lx: есть подкоманда <c>lxd</c> — локальный admin
+    /// REST-канал. Конфиг меняется через <c>POST /admin/apply</c> без перезапуска процесса
+    /// (проверка в подпроцессе, затем swap инстанса в том же процессе с автооткатом
+    /// на last-good) — вместо kill + respawn со всеми его паузами.
+    /// </summary>
+    public bool SupportsLxd { get; set; }
+
+    /// <summary>
     /// Почему тестовый эндпоинт WireGuard не собрался (например, сборка ядра без gvisor —
     /// тогда WireGuard-эндпоинт не работает вообще, а не только AmneziaWG).
     /// </summary>

@@ -349,20 +349,7 @@
                                      Opened="OnProfileContextMenuOpened">
                             <MenuItem Header="{loc:Tr S0952}" Command="{Binding CreateGroupCommand}" />
                             <MenuItem Header="{loc:Tr S0154}" Command="{Binding AddCommand}" />
-                            <MenuItem Header="{loc:Tr S0155}">
-                                <MenuItem Header="VLESS" Command="{Binding CreateManualCommand}" CommandParameter="vless" />
-                                <MenuItem Header="VMess" Command="{Binding CreateManualCommand}" CommandParameter="vmess" />
-                                <MenuItem Header="Trojan" Command="{Binding CreateManualCommand}" CommandParameter="trojan" />
-                                <MenuItem Header="Shadowsocks" Command="{Binding CreateManualCommand}" CommandParameter="shadowsocks" />
-                                <MenuItem Header="SOCKS" Command="{Binding CreateManualCommand}" CommandParameter="socks" />
-                                <MenuItem Header="HTTP" Command="{Binding CreateManualCommand}" CommandParameter="http" />
-                                <MenuItem Header="Hysteria 2" Command="{Binding CreateManualCommand}" CommandParameter="hysteria2" />
-                                <MenuItem Header="TUIC" Command="{Binding CreateManualCommand}" CommandParameter="tuic" />
-                                <MenuItem Header="WireGuard" Command="{Binding CreateManualCommand}" CommandParameter="wireguard" />
-                                <MenuItem Header="AmneziaWG" Command="{Binding CreateManualCommand}" CommandParameter="amneziawg" />
-                                <MenuItem Header="MTProto (Telegram)" Command="{Binding CreateManualCommand}" CommandParameter="mtproto" />
-                                <MenuItem Header="{loc:Tr S0156}" Command="{Binding CreateManualCommand}" CommandParameter="tunnel" />
-                            </MenuItem>
+                            <MenuItem Header="{loc:Tr S0155}" Tag="CreateProto" />
                             <MenuItem Header="{loc:Tr S0032}" Command="{Binding AddFromClipboardCommand}" />
                             <MenuItem Header="{loc:Tr S0157}" Command="{Binding ImportFileCommand}" />
                             <Separator />

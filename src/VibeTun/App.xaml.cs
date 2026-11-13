@@ -97,6 +97,12 @@ public partial class App : Application
         _ = _window.InitializeAsync();
         StartPipeListener();
 
+        // Скрытые TUN/TAP-адаптеры и фантомы Device Manager («sing-tun Tunnel») от убитых ядер:
+        // чистим сразу при запуске, не дожидаясь TUN-старта. Живые туннели (Status = Up)
+        // не трогаются; без прав администратора удаление всё равно не сработает.
+        if (IsAdministrator())
+            _ = Task.Run(() => { try { TunCleanup.CleanupHiddenTunAdapters(); } catch { /* ignore */ } });
+
         // сетевой облик (User-Agent): режим из настроек, свежая версия браузера раз в сутки, фоном и молча
         NetworkPersonaService.Initialize(Settings.Current.PersonaMode);
     }

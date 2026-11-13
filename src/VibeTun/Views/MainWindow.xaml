@@ -193,7 +193,12 @@
                                     </StackPanel>
                                 </ListBoxItem>
                                 <ListBoxItem Tag="updates">
-                                    <StackPanel Orientation="Horizontal">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
                                         <Viewbox Width="16" Height="16" Margin="0,0,9,0" VerticalAlignment="Center">
                                             <Canvas Width="24" Height="24">
                                                 <Path Data="M4.2,14.8 V17.5 A2.5,2.5 0 0 0 6.7,20 H17.3 A2.5,2.5 0 0 0 19.8,17.5 V14.8"
@@ -206,8 +211,13 @@
                                                       StrokeLineJoin="Round" />
                                             </Canvas>
                                         </Viewbox>
-                                        <TextBlock Text="{loc:Tr S0137}" VerticalAlignment="Center" />
-                                    </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{loc:Tr S0137}" VerticalAlignment="Center" />
+                                        <!-- пульсирующая точка: есть обновление приложения или ядра -->
+                                        <Ellipse Grid.Column="2" Width="7" Height="7" Margin="0,0,12,0"
+                                                 VerticalAlignment="Center" Fill="{DynamicResource Accent}"
+                                                 Visibility="{Binding Updates.HasAnyUpdate, Converter={StaticResource BoolToVis}}"
+                                                 ctl:Pulse.On="{Binding Updates.HasAnyUpdate}" />
+                                    </Grid>
                                 </ListBoxItem>
 
                                 <!-- разделы «Панели» и «SSH»: клик по заголовку только раскрывает список

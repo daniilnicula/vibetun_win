@@ -63,7 +63,7 @@ public sealed class MainViewModel : ObservableObject
         // пинг сервиса в разделе «DPI» идёт через поднятый обход, если он есть
         Dpi = new DpiViewModel(_dialogs, () => _dpi.Port);
         Preferences = new SettingsViewModel(App.Settings, Core, _dialogs);
-        Updates = new UpdatesViewModel(_dialogs);
+        Updates = new UpdatesViewModel(_dialogs, Core, () => StopProxyAsync(), OnCoreUpdatedFromUpdates);
 
         Profiles.ConnectRequested += profile => _ = ConnectToAsync(profile);
         Profiles.Notify += (text, error) => ShowStatus(text, error);
@@ -473,6 +473,8 @@ public sealed class MainViewModel : ObservableObject
 
         await Core.DetectAsync(App.Settings.Current.CorePath, App.Settings.Current.CoreFlavor);
         Preferences.RefreshCoreInfo();
+        // какие outbound-типы умеет это ядро — для редактора профиля (фоном, после DetectAsync)
+        _ = Core.ProbeOutboundTypesAsync();
         UpdateStateText();
         UpdateTrayStatus();
 
@@ -499,7 +501,7 @@ public sealed class MainViewModel : ObservableObject
             // «браузер → DPI → ядро», а не «кто включён последним» (см. StartProxyAsync)
             _ = StartDpiAsync();
 
-        _ = Updates.LoadReleasesAsync();
+        Updates.StartAutoChecks();
     }
 
     private ProxyProfile? ActiveProfileFromSettings()
@@ -536,7 +538,8 @@ public sealed class MainViewModel : ObservableObject
             if (cts.IsCancellationRequested) return;
 
             ShowStatus(L.T("S0695"), false);
-            await StopProxyAsync();
+            // Без остановки: маршрутизация — это данные конфига, ядро подхватит их на месте
+            // (lxd-apply / внутренняя остановка legacy-пути). Прокси/DPI перенастраиваются ниже.
             await StartProxyAsync();
         }
         catch (OperationCanceledException) { /* пришла новая правка — переподключимся по ней */ }
@@ -571,7 +574,7 @@ public sealed class MainViewModel : ObservableObject
             if (!IsProxyOn || _activeProfile is null || Busy) return;
 
             ShowStatus(L.F("S0697", what), false);
-            await StopProxyAsync();
+            // DNS — часть конфига: обновляем ядро на месте, без гашения сеанса
             await StartProxyAsync();
         }
         catch (OperationCanceledException) { /* выбрали другой DNS — переподключимся по нему */ }
@@ -591,15 +594,10 @@ public sealed class MainViewModel : ObservableObject
         App.Settings.Current.ActiveProfileId = profile.Id;
         App.Settings.SaveSoon();
 
-        if (IsProxyOn)
-        {
-            await StopProxyAsync();
-            await StartProxyAsync();
-        }
-        else
-        {
-            await StartProxyAsync();
-        }
+        // Переключение без остановки: ядро уже работает — новый конфиг просто уходит ему
+        // (lxd-apply меняет инстанс на месте; legacy-путь остановит старый сам, внутри StartAsync).
+        // Системный прокси/DPI перенастраиваются в StartProxyAsync по новому маршруту.
+        await StartProxyAsync();
     }
 
     private async Task StartProxyAsync(bool autoRestore = false)
@@ -676,12 +674,17 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
-            var check = await Core.ValidateAsync(build.Json);
-            if (!check.Ok)
+            // lxd: apply сам гоняет check в подпроцессе (422 → ядро не тронуто) — повторная
+            // проверка здесь только замедляла бы переключение. Ошибки покажет фолбэк ниже.
+            if (!Core.Info.SupportsLxd)
             {
-                ShowStatus(L.T("S0708"), true);
-                _dialogs.ShowCoreLog(check.Message);
-                return;
+                var check = await Core.ValidateAsync(build.Json);
+                if (!check.Ok)
+                {
+                    ShowStatus(L.T("S0708"), true);
+                    _dialogs.ShowCoreLog(check.Message);
+                    return;
+                }
             }
 
             // Системный прокси забирает себе ядро; если включён обход DPI — ниже вернём
@@ -690,7 +693,16 @@ public sealed class MainViewModel : ObservableObject
             // а прокси на 127.0.0.1 ломает UWP/WebView2-приложения (Яндекс Музыка и т.п.) —
             // для них loopback заблокирован изоляцией AppContainer, приложение видит «нет сети».
             _dpiOwnsSystemProxy = false;
-            if (route.UseSystemProxy && !route.TunEnabled) SystemProxy.CaptureSnapshot();
+            // Снимок — только со «своего» системного прокси: при переключении сеанса (IsProxyOn)
+            // тут может стоять наш же прокси — перехватить его как «прежний» нельзя, иначе
+            // остановка вернёт вместо чистых настроек адрес нашего ядра.
+            if (route.UseSystemProxy && !route.TunEnabled &&
+                (!IsProxyOn || !SystemProxy.IsEnabled)) SystemProxy.CaptureSnapshot();
+            // Переключение на TUN (или маршрут без системного прокси): старый системный прокси
+            // снимаем сразу, иначе он останется указывать на порт прошлого сеанса (а в паре
+            // с TUN ломает UWP/WebView2). DPI-владение ниже восстановится после старта.
+            if (IsProxyOn && !DpiEnabled && (route.TunEnabled || !route.UseSystemProxy))
+                await ApplySystemProxyAsync();
 
             ShowStatus(L.T("S0709"), false);
             await Core.StartAsync(build.Json, clashPort);
@@ -853,7 +865,6 @@ public sealed class MainViewModel : ObservableObject
         _dialogs.Error(L.T("S0731"),
             reason + "\n\n" + CoreInstaller.ManualHint +
             L.F("S0732", CoreInstaller.AwgRepo) +
-            L.F("S0733", CoreInstaller.ExtendedRepo) +
             L.T("S0734") +
             (needsAwg31
                 ? L.T("S0735") +
@@ -901,7 +912,15 @@ public sealed class MainViewModel : ObservableObject
         App.Settings.SaveSoon();
         Preferences.RaiseCoreFlavor();
         Preferences.RefreshCoreInfo();
+        _ = Core.ProbeOutboundTypesAsync();
         ShowStatus(L.T("S0739"), false);
+    }
+
+    /// <summary>Ядро обновлено из вкладки «Обновление»: перечитать карточку ядра и строку состояния.</summary>
+    private void OnCoreUpdatedFromUpdates()
+    {
+        Preferences.RefreshCoreInfo();
+        UpdateStateText();
     }
 
     public async Task StopProxyAsync(bool keepStateFlag = false)
@@ -1604,6 +1623,16 @@ public sealed class MainViewModel : ObservableObject
         {
             // StopAsync сам ограничен по времени; общий предел здесь — страховка от непредвиденного зависания
             await Core.StopAsync().WaitAsync(TimeSpan.FromSeconds(12));
+        }
+        catch (Exception ex)
+        {
+            AppendLog(L.T("S0793") + ex.Message);
+        }
+
+        try
+        {
+            // lxd-демон lx переживает отключение (ради быстрых переключений) — убиваем только при выходе
+            await Core.ShutdownLxdAsync().WaitAsync(TimeSpan.FromSeconds(5));
         }
         catch (Exception ex)
         {

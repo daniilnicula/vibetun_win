@@ -871,7 +871,8 @@ public static class SingBoxConfigBuilder
             ["server_port"] = n.Port
         };
 
-        switch (profile.Protocol.ToLowerInvariant())
+        var protocol = profile.Protocol.ToLowerInvariant();
+        switch (protocol)
         {
             case ProtocolIds.Vless:
                 o["type"] = "vless";
@@ -905,18 +906,25 @@ public static class SingBoxConfigBuilder
                 break;
 
             case ProtocolIds.Socks:
+            {
                 o["type"] = "socks";
                 o["version"] = "5";
-                if (!string.IsNullOrWhiteSpace(n.Username)) o["username"] = n.Username;
+                // редактор не показывает отдельное поле username для socks/http — его заполняют в UUID
+                var user = string.IsNullOrWhiteSpace(n.Username) ? n.Uuid : n.Username;
+                if (!string.IsNullOrWhiteSpace(user)) o["username"] = user;
                 if (!string.IsNullOrWhiteSpace(n.Password)) o["password"] = n.Password;
                 break;
+            }
 
             case ProtocolIds.Http:
+            {
                 o["type"] = "http";
-                if (!string.IsNullOrWhiteSpace(n.Username)) o["username"] = n.Username;
+                var user = string.IsNullOrWhiteSpace(n.Username) ? n.Uuid : n.Username;
+                if (!string.IsNullOrWhiteSpace(user)) o["username"] = user;
                 if (!string.IsNullOrWhiteSpace(n.Password)) o["password"] = n.Password;
                 if (n.Tls || n.Port == 443) AddTls(o, n);
                 break;
+            }
 
             case ProtocolIds.Hysteria2:
                 o["type"] = "hysteria2";
@@ -967,11 +975,16 @@ public static class SingBoxConfigBuilder
                 break;
 
             case ProtocolIds.Ssh:
+            {
                 o["type"] = "ssh";
-                o["user"] = n.Username ?? "root";
+                var user = !string.IsNullOrWhiteSpace(n.Username) ? n.Username
+                    : !string.IsNullOrWhiteSpace(n.Uuid) ? n.Uuid
+                    : "root";
+                o["user"] = user;
                 if (!string.IsNullOrWhiteSpace(n.Password)) o["password"] = n.Password;
                 if (!string.IsNullOrWhiteSpace(n.SshPrivateKeyPath)) o["private_key_path"] = n.SshPrivateKeyPath;
                 break;
+            }
 
             case ProtocolIds.ShadowsocksR:
                 throw new NotSupportedException(L.T("S0518"));
@@ -982,7 +995,23 @@ public static class SingBoxConfigBuilder
                     L.T("S0519"));
 
             default:
-                throw new NotSupportedException(L.F("S0520", profile.Protocol));
+            {
+                // Универсальный builder для протоколов, которых нет в этой версии приложения
+                // (новые типы из sing-box schema): заполненные поля + TLS, но только те ключи,
+                // которые разрешены схемой ядра (DisallowUnknownFields не пропускает лишние).
+                o["type"] = protocol;
+                var allowed = ProtocolRegistry.FieldsFor(protocol);
+                var emitAll = allowed is null || allowed.Count == 0;
+                bool Allowed(string key) => emitAll || allowed!.Contains(key);
+
+                if (!string.IsNullOrWhiteSpace(n.Uuid) && Allowed("uuid")) o["uuid"] = n.Uuid;
+                if (!string.IsNullOrWhiteSpace(n.Password) && Allowed("password")) o["password"] = n.Password;
+                if (!string.IsNullOrWhiteSpace(n.Username) && Allowed("username")) o["username"] = n.Username;
+                if (n.Tls || n.Reality) AddTls(o, n);
+                if (!Allowed("server")) o.Remove("server");
+                if (!Allowed("server_port")) o.Remove("server_port");
+                break;
+            }
         }
 
         return o;

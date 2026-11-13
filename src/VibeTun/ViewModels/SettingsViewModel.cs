@@ -693,6 +693,7 @@ public sealed class SettingsViewModel : ObservableObject
                 _settings.Current.CoreVersion = info.Version;
                 _settings.SaveSoon();
                 RefreshCoreInfo();
+                _ = _core.ProbeOutboundTypesAsync();
                 Notify?.Invoke(L.T("S0878") + info.Version, false);
             }
             else
@@ -722,6 +723,7 @@ public sealed class SettingsViewModel : ObservableObject
             _settings.Current.CoreVersion = _core.Info.Version;
             _settings.SaveSoon();
             RefreshCoreInfo();
+            _ = _core.ProbeOutboundTypesAsync();
             Notify?.Invoke(_core.Info.Exists ? L.T("S0881") + _core.Info.Version : L.T("S0311"), !_core.Info.Exists);
         }
         finally
@@ -749,6 +751,7 @@ public sealed class SettingsViewModel : ObservableObject
                 _settings.Current.CoreVersion = info.Version;
                 _settings.SaveSoon();
                 RefreshCoreInfo();
+                _ = _core.ProbeOutboundTypesAsync();
                 Notify?.Invoke(L.T("S0883") + info.Version, false);
             }
             else
@@ -790,6 +793,7 @@ public sealed class SettingsViewModel : ObservableObject
                 _settings.Current.CoreVersion = info.Version;
                 _settings.SaveSoon();
                 RefreshCoreInfo();
+                _ = _core.ProbeOutboundTypesAsync();
                 Notify?.Invoke(L.T("S0883") + info.Version, false);
             }
         }

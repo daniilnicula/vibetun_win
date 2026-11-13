@@ -1,9 +1,12 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using VibeTun.Models;
 using VibeTun.Utils;
@@ -17,12 +20,31 @@ public sealed partial class CoreService : IDisposable
     private readonly List<string> _recentLog = new();
     private Process? _process;
     private NekoCoreRpcClient? _rpc;
+    // lxd-режим lx-форка: демон поднимается один раз и переживает отключение — переключение
+    // профиля идёт через POST /admin/apply (swap инстанса без respawn процесса ядра).
+    private Process? _lxd;
+    private int _lxdPort;                 // admin-порт демона (0 — не поднят)
+    private bool _lxdSession;             // активный сеанс запущен через lxd-apply
+    private bool _lxdBroken;              // демон не поднялся — lxd-путь выключен до перезапуска приложения
+    private CancellationTokenSource? _lxdLogTail;   // чтение core.log в кольцо, пока живёт lxd-сеанс
     private int _clashPort;
     private readonly SemaphoreSlim _stopGate = new(1, 1);   // остановки выполняются по одной
     // кэш проверки конфига: повторный запуск того же конфига на том же ядре check не гоняет
     private string? _checkedConfigNorm;
     private string? _checkedCorePath;
     private string? _checkedCoreVersion;
+
+    // lxd: admin-канал демона на loopback. Apply может ждать проверку конфига в подпроцессе
+    // (до 10 с) и старт инстанса — таймаут щедрый; пробы живости — короткие. Прокси в обход:
+    // наш же системный прокси (127.0.0.1) иначе перехватит loopback-запросы (как в ClashApiClient).
+    private static readonly HttpClient LxdHttp = CreateLxdClient(TimeSpan.FromSeconds(40));
+    private static readonly HttpClient LxdProbeHttp = CreateLxdClient(TimeSpan.FromSeconds(2));
+
+    private static HttpClient CreateLxdClient(TimeSpan timeout)
+    {
+        var handler = new HttpClientHandler { Proxy = null, UseProxy = false };
+        return new HttpClient(handler) { Timeout = timeout };
+    }
 
     public event Action<string>? LogReceived;
     public event Action<ConnectionState>? StateChanged;
@@ -111,6 +133,7 @@ public sealed partial class CoreService : IDisposable
             if (info is not null)
             {
                 Info = info;
+                _lxdBroken = false;   // новое ядро — даём lxd-пути ещё один шанс
                 return info;
             }
         }
@@ -161,6 +184,9 @@ public sealed partial class CoreService : IDisposable
             // Баннер nekobox_core («sing-box: … NekoBox: …» печатается до любых подкоманд):
             // такое ядро умеет gRPC-режим «nekobox --token --port».
             info.SupportsNekoRpc = output.Contains("NekoBox:", StringComparison.Ordinal);
+            // lx-форк: подкоманда lxd (admin REST, смена конфига без перезапуска процесса).
+            // Старое ядро печатает «unknown command» — тогда остаётся обычный запуск.
+            info.SupportsLxd = await ProbeLxdAsync(path);
             // Обфускацию AmneziaWG понимают только расширенные сборки (блок "amnezia" в эндпоинте).
             // Это предварительная оценка по строке версии и build-тегам; точный ответ даёт
             // ProbeAmneziaSupportAsync(), который вызывается перед запуском AmneziaWG-профиля.
@@ -177,6 +203,46 @@ public sealed partial class CoreService : IDisposable
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Умеет ли ядро подкоманду <c>lxd</c> (Leadaxe/sing-box-lx): печатает usage со
+    /// <c>--state-dir</c>. Старые бинарники отвечают «unknown command» — тогда остаётся
+    /// обычный путь запуска. Проба дешёвая и ничего не ломает при сбое.
+    /// </summary>
+    private static async Task<bool> ProbeLxdAsync(string path)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = path,
+                Arguments = "lxd --help",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using var p = Process.Start(psi);
+            if (p is null) return false;
+            var output = await p.StandardOutput.ReadToEndAsync();
+            output += await p.StandardError.ReadToEndAsync();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            try
+            {
+                await p.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                try { p.Kill(); } catch { /* ignore */ }
+                return false;
+            }
+            return output.Contains("state-dir", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -501,6 +567,277 @@ public sealed partial class CoreService : IDisposable
         return line.Length > 400 ? line[..400] + "…" : line;
     }
 
+    // --------------------------------------------- проба outbound-типов ядра
+    /// <summary>
+    /// Кэш пробы outbound-типов: ключ — файл ядра (путь|размер|mtime), значение — подтверждённые
+    /// check'ом типы, порядок типов из <c>sing-box schema</c> и ключи их вариантов.
+    /// </summary>
+    private sealed class OutboundProbeCache
+    {
+        public string? Key { get; set; }
+        public List<string>? Types { get; set; }
+        public List<string>? Schema { get; set; }
+        public Dictionary<string, List<string>>? Fields { get; set; }
+    }
+
+    private readonly SemaphoreSlim _outboundProbeGate = new(1, 1);
+
+    /// <summary>
+    /// Живая проба: какие outbound-типы поддерживает установленное ядро, плюс разбор
+    /// <c>sing-box schema</c> (новые типы появляются в редакторе профиля без обновления приложения).
+    /// Результат кэшируется в RuntimeDir/protocache.json по отпечатку бинарника ядра.
+    /// Важно: вызывать только после DetectAsync (и после смены ядра), НЕ внутри его —
+    /// иначе распаковка встроенных ядер будет перетирать кэш временными probe-файлами.
+    /// </summary>
+    public async Task ProbeOutboundTypesAsync()
+    {
+        if (!Info.Exists)
+        {
+            ProtocolRegistry.Reset();
+            return;
+        }
+
+        await _outboundProbeGate.WaitAsync();
+        try
+        {
+            var path = Info.Path;
+            string key;
+            try
+            {
+                var fi = new FileInfo(path);
+                key = $"{path}|{fi.Length}|{fi.LastWriteTimeUtc.Ticks}";
+            }
+            catch
+            {
+                key = path;
+            }
+
+            var cachePath = Path.Combine(AppPaths.RuntimeDir, "protocache.json");
+            var cached = Json.Read<OutboundProbeCache>(cachePath);
+            if (cached is not null && string.Equals(cached.Key, key, StringComparison.Ordinal) &&
+                cached.Types is not null)
+            {
+                ProtocolRegistry.Update(cached.Types, cached.Schema, cached.Fields);
+                return;
+            }
+
+            // 1. Схема: порядок типов и разрешённые ключи вариантов (без неё — только Known-список)
+            List<string>? schemaOrder = null;
+            Dictionary<string, List<string>>? fields = null;
+            var schemaJson = await RunSchemaAsync();
+            if (schemaJson is not null)
+            {
+                try
+                {
+                    var parsed = ParseOutboundSchema(schemaJson);
+                    schemaOrder = parsed.Order;
+                    fields = parsed.Fields;
+                }
+                catch
+                {
+                    schemaOrder = null;
+                    fields = null;
+                }
+            }
+
+            // 2. Проба каждого кандидата: конфиг с одним outbound'ом; ядро без типа отвечает
+            //    «unknown outbound type / not included in this build / deprecated and removed»
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (schemaOrder is not null) candidates.UnionWith(schemaOrder);
+            candidates.UnionWith(ProtocolRegistry.Known);
+            candidates.Add(ProtocolIds.ShadowsocksR);
+            candidates.ExceptWith(ProtocolRegistry.Infra);
+            candidates.Remove(ProtocolIds.MtProto);
+            candidates.Remove(ProtocolIds.Tunnel);
+            candidates.Remove(ProtocolIds.Wireguard);
+            candidates.Remove(ProtocolIds.AmneziaWg);
+
+            var supported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var type in candidates)
+            {
+                var probeConfig =
+                    "{\"log\":{\"level\":\"fatal\"},\"outbounds\":[{\"type\":\"" + type + "\",\"tag\":\"probe\"}]}";
+                var probeResult = await RunCheckAsync(probeConfig, $"probe-type-{type}.json", 10000);
+                if (!probeResult.Ok && IsUnsupportedOutboundMessage(probeResult.Message)) continue;
+                supported.Add(type);
+            }
+
+            // 3. wireguard/amneziawg: в современных сборках это endpoint, а не outbound —
+            //    гейт по SupportsEndpoints (тот же ProbeConfig, что и для AmneziaWG)
+            bool wireguardSupported;
+            if (Info.SupportsEndpoints)
+            {
+                wireguardSupported = (await RunCheckAsync(ProbeConfig(null))).Ok;
+            }
+            else
+            {
+                var wgProbe = await RunCheckAsync(
+                    "{\"log\":{\"level\":\"fatal\"},\"outbounds\":[{\"type\":\"wireguard\",\"tag\":\"probe\"}]}",
+                    "probe-type-wireguard.json", 10000);
+                wireguardSupported = wgProbe.Ok || !IsUnsupportedOutboundMessage(wgProbe.Message);
+            }
+            if (wireguardSupported)
+            {
+                supported.Add(ProtocolIds.Wireguard);
+                supported.Add(ProtocolIds.AmneziaWg);
+            }
+
+            ProtocolRegistry.Update(supported, schemaOrder, fields);
+            try
+            {
+                Json.Write(cachePath, new OutboundProbeCache
+                {
+                    Key = key,
+                    Types = supported.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList(),
+                    Schema = schemaOrder,
+                    Fields = fields
+                });
+            }
+            catch
+            {
+                /* кэш не критичен: при следующем запуске проба повторится */
+            }
+        }
+        catch
+        {
+            /* не роняем UI из-за пробы: остаётся прежнее состояние реестра */
+        }
+        finally
+        {
+            _outboundProbeGate.Release();
+        }
+    }
+
+    private static bool IsUnsupportedOutboundMessage(string? message) =>
+        !string.IsNullOrEmpty(message) &&
+        (message.Contains("unknown outbound type", StringComparison.OrdinalIgnoreCase) ||
+         message.Contains("not included in this build", StringComparison.OrdinalIgnoreCase) ||
+         message.Contains("deprecated and removed", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Запуск <c>sing-box schema</c>: JSON со схемой опций; null — команда недоступна/сбой.</summary>
+    private async Task<string?> RunSchemaAsync(int timeoutMs = 15000)
+    {
+        if (!Info.Exists) return null;
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = Info.Path,
+                Arguments = "schema",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+            using var p = Process.Start(psi);
+            if (p is null) return null;
+            var stdoutTask = p.StandardOutput.ReadToEndAsync();
+            var stderrTask = p.StandardError.ReadToEndAsync();
+            using var cts = new CancellationTokenSource(timeoutMs);
+            try
+            {
+                await p.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                try { p.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                return null;
+            }
+
+            await Task.WhenAny(Task.WhenAll(stdoutTask, stderrTask), Task.Delay(2000));
+            if (p.ExitCode != 0) return null;
+            var stdout = await stdoutTask;
+            return string.IsNullOrWhiteSpace(stdout) ? null : stdout;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Разбор <c>sing-box schema</c>: <c>$defs.Outbound.oneOf/anyOf[]</c> — варианты с
+    /// дискриминатором <c>properties.type.const|enum</c>. Собирает порядок типов и ключи
+    /// свойств варианта (первый встреченный вариант типа побеждает; вариант учитывается
+    /// только если среди его свойств есть «tag» — признак outbound-варианта).
+    /// </summary>
+    private static (List<string>? Order, Dictionary<string, List<string>>? Fields) ParseOutboundSchema(string json)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        if (root.ValueKind != System.Text.Json.JsonValueKind.Object ||
+            !root.TryGetProperty("$defs", out var defs) ||
+            defs.ValueKind != System.Text.Json.JsonValueKind.Object ||
+            !defs.TryGetProperty("Outbound", out var outbound))
+            return (null, null);
+
+        var variants = default(System.Text.Json.JsonElement);
+        if (outbound.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            if (outbound.TryGetProperty("oneOf", out var oneOf) &&
+                oneOf.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                variants = oneOf;
+            }
+            else if (outbound.TryGetProperty("anyOf", out var anyOf) &&
+                     anyOf.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                variants = anyOf;
+            }
+        }
+        if (variants.ValueKind != System.Text.Json.JsonValueKind.Array) return (null, null);
+
+        var order = new List<string>();
+        var fields = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var variant in variants.EnumerateArray())
+        {
+            if (variant.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+            if (!variant.TryGetProperty("properties", out var props) ||
+                props.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+
+            var keys = new List<string>();
+            foreach (var prop in props.EnumerateObject()) keys.Add(prop.Name);
+            if (!keys.Contains("tag")) continue;
+
+            if (!props.TryGetProperty("type", out var typeProp)) continue;
+            var types = new List<string>();
+            if (typeProp.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                if (typeProp.TryGetProperty("const", out var c) &&
+                    c.ValueKind == System.Text.Json.JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(c.GetString()))
+                {
+                    types.Add(c.GetString()!);
+                }
+                else if (typeProp.TryGetProperty("enum", out var e) &&
+                         e.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var item in e.EnumerateArray())
+                        if (item.ValueKind == System.Text.Json.JsonValueKind.String &&
+                            !string.IsNullOrWhiteSpace(item.GetString()))
+                            types.Add(item.GetString()!);
+                }
+            }
+            else if (typeProp.ValueKind == System.Text.Json.JsonValueKind.String &&
+                     !string.IsNullOrWhiteSpace(typeProp.GetString()))
+            {
+                types.Add(typeProp.GetString()!);
+            }
+
+            foreach (var type in types)
+            {
+                if (order.Contains(type, StringComparer.OrdinalIgnoreCase)) continue; // первый вариант побеждает
+                order.Add(type);
+                fields[type] = keys;
+            }
+        }
+
+        return order.Count > 0 ? (order, fields) : (null, null);
+    }
+
     // ------------------------------------------------------------------ config
     public async Task<(bool Ok, string Message)> ValidateAsync(string configJson)
     {
@@ -599,6 +936,24 @@ public sealed partial class CoreService : IDisposable
         int[] retryDelaysMs = { 3000, 5000 };
         for (var attempt = 1; ; attempt++)
         {
+            // lx-форк: сначала пробуем lxd-apply — смена конфига без убийства процесса
+            // (проверка конфига в подпроцессе, затем Close→Start инстанса в том же процессе;
+            // при сбое старта — автооткат на last-good). Любой сбой lxd-пути падает обратно
+            // на обычный запуск ниже; если демон вообще не поднялся — дальше только он.
+            if (Info.SupportsLxd && !_lxdBroken)
+            {
+                try
+                {
+                    await StartViaLxdAsync(configJson, clashPort);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    AppendLog(L.F("S1032", FirstLine(ex.Message)));
+                    try { await StopLxdSessionAsync(); } catch { /* ignore */ }
+                }
+            }
+
             await StartAttemptAsync(configJson, clashPort);
             if (State == ConnectionState.Running) return;
             if (attempt > retryDelaysMs.Length) return;
@@ -701,6 +1056,468 @@ public sealed partial class CoreService : IDisposable
         {
             SetState(ConnectionState.Error);
         }
+    }
+
+    /// <summary>
+    /// Запуск/переключение через lxd-демон lx-форка: POST /admin/apply меняет конфиг без
+    /// перезапуска процесса ядра — демон проверяет конфиг в подпроцессе (ошибка → ничего не
+    /// тронуто), затем Close→Start инстанса в том же процессе; при сбое старта сам откатывается
+    /// на last-good. Демон живёт между сеансами, поэтому переключение профиля — это один
+    /// HTTP-запрос вместо kill + respawn с паузами 3/5 с и гонками wintun.
+    /// </summary>
+    private async Task StartViaLxdAsync(string configJson, int clashPort)
+    {
+        // Порядок с фоновой остановкой (StopProxyAsync гасит ядро в фоне): пока её StopAsync
+        // держит _stopGate, старт ждёт здесь — иначе apply ушёл бы раньше /admin/stop, и демон
+        // остановил бы только что поднятый инстанс (лог «switched» → сразу «stopped»).
+        await _stopGate.WaitAsync();
+        try
+        {
+            await StartViaLxdCoreAsync(configJson, clashPort);
+        }
+        finally
+        {
+            _stopGate.Release();
+        }
+    }
+
+    private async Task StartViaLxdCoreAsync(string configJson, int clashPort)
+    {
+        // Предыдущий сеанс мог идти обычным путём (run -c / nekobox) — он держит clash-порт.
+        // Гейт уже наш, поэтому StopAsync не зовём (рекурсивно ждал бы гейт) — гасим напрямую.
+        bool legacyRunning;
+        lock (_sync) legacyRunning = _process is not null || _rpc is not null;
+        if (legacyRunning)
+        {
+            try { await StopCoreAsync(); }
+            catch (Exception ex)
+            {
+                AppendLog(L.T("S0327") + FirstLine(ex.Message));
+                SetState(ConnectionState.Stopped);
+            }
+        }
+
+        SetState(ConnectionState.Starting);
+        AppPaths.EnsureCreated();
+
+        // Свежее имя адаптера на каждый старт — гонка с удалением старого у драйвера wintun.
+        configJson = RefreshTunAdapterName(configJson);
+
+        await EnsureLxdAsync();
+
+        // Остатки прошлого сеанса: пока инстанс в демоне жив, его адаптер снимет сам swap
+        // (Close), а фантомы Device Manager чистит запуск приложения — полная очистка нужна
+        // только когда демон простаивает или инстанс упал: старый видимый адаптер мог
+        // остаться после Kill. На живом инстансе чистка лишь замедляла бы переключение.
+        if (TunCleanup.ConfigHasTun(configJson) && !await LxdIsStartedAsync())
+        {
+            var cleanupError = TunCleanup.PrepareForTun();
+            if (cleanupError is not null)
+                AppendLog(L.T("S0316") + cleanupError);
+        }
+
+        // Логи инстанса: в lxd stdout перехватывает демон, а не мы — пишем их в core.log
+        // на уровне конфига и читаем файл в кольцо (иначе пропадают строки подключений).
+        var logOffset = CoreLogLength();
+        configJson = WithLxdLogOutput(configJson);
+
+        await File.WriteAllTextAsync(AppPaths.RuntimeConfig, configJson, new UTF8Encoding(false));
+        _clashPort = clashPort;
+
+        AppendLog(L.T("S1030"));
+        var applyError = await LxdApplyAsync(configJson);
+        if (applyError is not null) throw new InvalidOperationException(applyError);
+        lock (_sync) _lxdSession = true;
+        StartLxdLogTail(logOffset);
+
+        // Apply отвечает 200 только после успешного старта инстанса; ждём clash API и
+        // появления wintun-адаптера (сигнал готовности TUN — как в WaitForReadyAsync).
+        var wantTun = TunCleanup.ConfigHasTun(configJson);
+        var tunName = TunAdapterNameRegex().Match(configJson).Groups["name"].Value;
+        using var api = new ClashApiClient();
+        var apiUp = false;
+        var deadline = DateTime.UtcNow.AddSeconds(wantTun ? 15 : 6);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (!apiUp && await api.PingAsync(clashPort)) apiUp = true;
+            var tunReady = !wantTun || TunAdapterExists(tunName);
+            if (apiUp && tunReady)
+            {
+                await Task.Delay(wantTun ? 1000 : 300);
+                SetState(ConnectionState.Running);
+                AppendLog(L.T("S1031"));
+                return;
+            }
+            await Task.Delay(250);
+        }
+        throw new InvalidOperationException(L.T("S1033"));
+    }
+
+    /// <summary>
+    /// Держит lxd-демон: усыновляет живой (сирота после падения приложения — port.txt и
+    /// daemon.json переживают его) либо поднимает новый. Адрес демон читает только из
+    /// <c>&lt;state-dir&gt;/daemon.json</c> — файл пишем сами.
+    /// </summary>
+    private async Task EnsureLxdAsync()
+    {
+        if (_lxd is { HasExited: false } && _lxdPort > 0 && await LxdStatusOkAsync(_lxdPort)) return;
+
+        var stateDir = Path.Combine(AppPaths.RuntimeDir, "lxd");
+        try { Directory.CreateDirectory(stateDir); } catch { /* ignore */ }
+
+        var portFile = Path.Combine(stateDir, "port.txt");
+        var savedPort = 0;
+        try
+        {
+            if (File.Exists(portFile))
+                int.TryParse(File.ReadAllText(portFile).Trim(), out savedPort);
+        }
+        catch { /* ignore */ }
+
+        Exception? lastError = null;
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var port = attempt == 0 && savedPort > 0 ? savedPort : FreePort.Get();
+
+            // Живой демон в НАШЕМ state-dir — переиспользуем (следующий старт пойдёт через apply).
+            if (await LxdMatchesStateAsync(port, stateDir))
+            {
+                _lxdPort = port;
+                AppendLog(L.F("S1029", port));
+                return;
+            }
+
+            try
+            {
+                await SpawnLxdAsync(port, stateDir, portFile);
+                _lxdPort = port;
+                AppendLog(L.F("S1015", port));
+                return;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;   // демон сам убит внутри SpawnLxdAsync; порт чужой — не трогаем
+            }
+        }
+
+        _lxdBroken = true;
+        throw new InvalidOperationException(FirstLine(lastError?.Message ?? "lxd"));
+    }
+
+    /// <summary>Поднимает демон и ждёт, пока admin-порт начнёт отвечать.</summary>
+    private async Task SpawnLxdAsync(int port, string stateDir, string portFile)
+    {
+        var daemonJson = Path.Combine(stateDir, "daemon.json");
+        File.WriteAllText(daemonJson, JsonSerializer.Serialize(new { listen = $"127.0.0.1:{port}" }));
+        try { File.WriteAllText(portFile, port.ToString()); } catch { /* ignore */ }
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = Info.Path,
+            Arguments = $"lxd --state-dir \"{stateDir}\"",
+            WorkingDirectory = AppPaths.RuntimeDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8
+        };
+
+        var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+        process.OutputDataReceived += (_, e) => AppendLog(e.Data);
+        process.ErrorDataReceived += (_, e) => AppendLog(e.Data);
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        var deadline = DateTime.UtcNow.AddSeconds(6);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (process.HasExited)
+            {
+                var code = SafeExitCode(process);
+                process.Dispose();
+                throw new InvalidOperationException($"lxd exited with code {code}");
+            }
+            if (await LxdStatusOkAsync(port))
+            {
+                lock (_sync) _lxd = process;
+                return;
+            }
+            await Task.Delay(250);
+        }
+
+        try { process.Kill(entireProcessTree: true); } catch { /* ignore */ }
+        process.Dispose();
+        throw new InvalidOperationException("lxd: timeout waiting for admin port");
+    }
+
+    private static string LxdBase(int port) => $"http://127.0.0.1:{port}";
+
+    private async Task<bool> LxdStatusOkAsync(int port)
+    {
+        try
+        {
+            using var resp = await LxdProbeHttp.GetAsync($"{LxdBase(port)}/admin/status");
+            return resp.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Живёт ли на порту демон ИМЕННО в нашем state-dir (чужой lx-демон не усыновляем).</summary>
+    private async Task<bool> LxdMatchesStateAsync(int port, string stateDir)
+    {
+        try
+        {
+            using var resp = await LxdProbeHttp.GetAsync($"{LxdBase(port)}/admin/info");
+            if (!resp.IsSuccessStatusCode) return false;
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var reported = doc.RootElement.TryGetProperty("state_dir", out var value)
+                ? value.GetString() ?? ""
+                : "";
+            if (reported.Length == 0) return false;
+            static string Norm(string path) => Path.GetFullPath(path).TrimEnd('\\', '/');
+            return string.Equals(Norm(reported), Norm(stateDir), StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+    }
+
+    /// <returns>null — конфиг применён; иначе текст ошибки демона (422 — конфиг отвергнут, ядро не тронуто).</returns>
+    private async Task<string?> LxdApplyAsync(string configJson)
+    {
+        using var content = new StringContent(configJson, Encoding.UTF8, "application/json");
+        using var resp = await LxdHttp.PostAsync($"{LxdBase(_lxdPort)}/admin/apply", content);
+        if (resp.IsSuccessStatusCode) return null;
+        return FirstLxdError(await resp.Content.ReadAsStringAsync());
+    }
+
+    private static string FirstLxdError(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error", out var value))
+            {
+                var text = value.GetString();
+                if (!string.IsNullOrWhiteSpace(text)) return text!;
+            }
+        }
+        catch { /* не JSON — отдаём как есть */ }
+        return string.IsNullOrWhiteSpace(body) ? "unknown error" : body;
+    }
+
+    /// <summary>Инстанс в демоне сейчас запущен? (выбор объёма очистки адаптеров перед apply)</summary>
+    private async Task<bool> LxdIsStartedAsync()
+    {
+        if (_lxdPort <= 0) return false;
+        try
+        {
+            using var resp = await LxdProbeHttp.GetAsync($"{LxdBase(_lxdPort)}/admin/status");
+            if (!resp.IsSuccessStatusCode) return false;
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            return doc.RootElement.TryGetProperty("status", out var value) &&
+                   string.Equals(value.GetString(), "started", StringComparison.Ordinal);
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Остановить инстанс в демоне; сам демон остаётся жить — следующий старт идёт через apply.</summary>
+    private async Task StopLxdSessionAsync()
+    {
+        lock (_sync) _lxdSession = false;
+        StopLxdLogTail();
+        if (_lxdPort <= 0) return;
+        try
+        {
+            using var content = new StringContent("", Encoding.UTF8, "application/json");
+            using var resp = await LxdHttp.PostAsync($"{LxdBase(_lxdPort)}/admin/stop", content);
+        }
+        catch { /* демон мог умереть — останавливать нечего */ }
+    }
+
+    /// <summary>Текущая длина core.log: стартовый отсчёт хвоста, чтобы не читать старое содержимое.</summary>
+    private static long CoreLogLength()
+    {
+        try
+        {
+            var path = Path.Combine(AppPaths.LogsDir, "core.log");
+            return File.Exists(path) ? new FileInfo(path).Length : 0;
+        }
+        catch { return 0; }
+    }
+
+    /// <summary>
+    /// Для lxd: stdout инстанса перехватывает демон (мы его не видим) — включаем логам файл
+    /// на уровне конфига; <see cref="StartLxdLogTail"/> подхватит его в кольцо приложения.
+    /// </summary>
+    private static string WithLxdLogOutput(string configJson)
+    {
+        try
+        {
+            if (JsonNode.Parse(configJson) is not JsonObject root) return configJson;
+            if (root["log"] is not JsonObject log)
+            {
+                log = new JsonObject();
+                root["log"] = log;
+            }
+            log["output"] = Path.Combine(AppPaths.LogsDir, "core.log");
+            return root.ToJsonString();
+        }
+        catch { return configJson; }
+    }
+
+    /// <summary>
+    /// Читает новые строки core.log в кольцо приложения, пока живёт lxd-сеанс (формат и
+    /// попадание в app.log — те же, что у перехвата stdout в обычных режимах).
+    /// </summary>
+    private void StartLxdLogTail(long offset)
+    {
+        StopLxdLogTail();
+        var cts = new CancellationTokenSource();
+        _lxdLogTail = cts;
+        var path = Path.Combine(AppPaths.LogsDir, "core.log");
+        _ = Task.Run(async () =>
+        {
+            FileStream? stream = null;
+            var decoder = Encoding.UTF8.GetDecoder();
+            var bytes = new byte[8192];
+            var chars = new char[8192];
+            var pending = new StringBuilder();
+            try
+            {
+                // инстанс может создать файл не мгновенно
+                while (!File.Exists(path) && !cts.IsCancellationRequested)
+                    await Task.Delay(300, cts.Token);
+
+                stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete);
+                if (stream.Length < offset) { stream.Position = 0; decoder.Reset(); }   // файл пересоздан
+                else stream.Position = offset;
+
+                while (!cts.IsCancellationRequested)
+                {
+                    if (stream.Length < stream.Position)   // пересоздан под нами — начинаем заново
+                    {
+                        stream.Position = 0;
+                        decoder.Reset();
+                        pending.Clear();
+                    }
+                    if (stream.Length > stream.Position)
+                    {
+                        var read = await stream.ReadAsync(bytes.AsMemory(), cts.Token);
+                        if (read > 0)
+                        {
+                            var count = decoder.GetChars(bytes, 0, read, chars, 0);
+                            pending.Append(chars, 0, count);
+                            var text = pending.ToString();
+                            var cut = text.LastIndexOf('\n');
+                            if (cut >= 0)
+                            {
+                                pending.Clear();
+                                pending.Append(text, cut + 1, text.Length - cut - 1);
+                                foreach (var raw in text[..cut].Split('\n'))
+                                {
+                                    var line = raw.TrimEnd('\r');
+                                    if (line.Length > 0) AppendLog(line);
+                                }
+                            }
+                        }
+                    }
+                    await Task.Delay(300, cts.Token);
+                }
+            }
+            catch (OperationCanceledException) { /* сеанс закончился */ }
+            catch { /* файл могли закрыть/пересоздать — хвост перезапустится со следующим apply */ }
+            finally { stream?.Dispose(); }
+        });
+    }
+
+    private void StopLxdLogTail()
+    {
+        try
+        {
+            _lxdLogTail?.Cancel();
+            _lxdLogTail?.Dispose();
+        }
+        catch { /* ignore */ }
+        _lxdLogTail = null;
+    }
+
+    /// <summary>
+    /// Выход из приложения: остановить инстанс и убить lxd-демон, чтобы не остался сиротой.
+    /// Обычное отключение (StopAsync) демона НЕ трогает — ради этого всё и затевается.
+    /// </summary>
+    public async Task ShutdownLxdAsync()
+    {
+        int port;
+        Process? daemon;
+        lock (_sync)
+        {
+            port = _lxdPort;
+            daemon = _lxd;
+            _lxd = null;
+            _lxdPort = 0;
+            _lxdSession = false;
+        }
+        StopLxdLogTail();
+        if (port <= 0 && daemon is null) return;
+
+        if (port > 0)
+        {
+            // /admin/stop аккуратно закрывает инстанс — драйвер успевает удалить wintun-адаптер
+            try
+            {
+                using var content = new StringContent("", Encoding.UTF8, "application/json");
+                using var resp = await LxdHttp.PostAsync($"{LxdBase(port)}/admin/stop", content);
+            }
+            catch { /* ignore */ }
+        }
+
+        if (daemon is { HasExited: false })
+        {
+            try { daemon.Kill(entireProcessTree: true); } catch { /* ignore */ }
+            try { daemon.WaitForExit(2000); } catch { /* ignore */ }
+            return;
+        }
+
+        // Демон усыновлён (не наш потомок) — убиваем, только если это точно он в нашем state-dir
+        if (port > 0)
+        {
+            var stateDir = Path.Combine(AppPaths.RuntimeDir, "lxd");
+            if (await LxdMatchesStateAsync(port, stateDir))
+                await KillLxdByPortAsync(port);
+        }
+    }
+
+    /// <summary>Убить процесс, слушающий lxd-порт (вызывать только после подтверждения state-dir).</summary>
+    private static async Task KillLxdByPortAsync(int port)
+    {
+        if (port <= 0) return;
+        await Task.Run(() =>
+        {
+            try
+            {
+                var script =
+                    "$c = Get-NetTCPConnection -LocalPort " + port +
+                    " -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; " +
+                    "if ($null -ne $c) { Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue }";
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "powershell",
+                    Arguments = "-NoProfile -NonInteractive -Command \"" + script + "\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using var p = Process.Start(psi);
+                if (p is null) return;
+                if (!p.WaitForExit(5000))
+                {
+                    try { p.Kill(); } catch { /* ignore */ }
+                }
+            }
+            catch { /* ignore */ }
+        });
     }
 
     private static int SafeExitCode(Process p)
@@ -914,17 +1731,36 @@ public sealed partial class CoreService : IDisposable
 
     private async Task StopCoreAsync()
     {
+        StopLxdLogTail();
         Process? process;
         NekoCoreRpcClient? rpc;
+        bool lxdSession;
         lock (_sync)
         {
             process = _process;
             rpc = _rpc;
             _rpc = null;
+            lxdSession = _lxdSession;
+            _lxdSession = false;
         }
-        if (process is null && rpc is null) return;
+        if (process is null && rpc is null && !lxdSession) return;
 
         SetState(ConnectionState.Stopping);
+
+        // Сеанс через lxd: просим демон остановить инстанс (закрывает сокеты/туннели и
+        // удаляет wintun-адаптер). Сам демон остаётся жить — следующий старт пойдёт через
+        // apply без respawn процесса. Ошибка остановки не шумит: демон мог уже умереть,
+        // а S0328 «Ядро остановлено» всё равно уйдёт.
+        if (lxdSession)
+        {
+            try
+            {
+                using var content = new StringContent("", Encoding.UTF8, "application/json");
+                using var resp = await LxdHttp.PostAsync($"{LxdBase(_lxdPort)}/admin/stop", content);
+                if (resp.IsSuccessStatusCode) AppendLog(L.T("S1034"));
+            }
+            catch { /* ignore */ }
+        }
 
         // Сначала просим инстанс остановиться аккуратно (закрывает сокеты/туннели),
         // затем убиваем процесс-хост целиком — как и в обычном режиме.
@@ -1098,6 +1934,14 @@ public sealed partial class CoreService : IDisposable
         try
         {
             if (_process is { HasExited: false }) _process.Kill(entireProcessTree: true);
+        }
+        catch { /* ignore */ }
+        // Сирота-страховка (exit watchdog): обычный выход убивает демон через ShutdownLxdAsync,
+        // здесь — на случай если тот путь не прошёл.
+        StopLxdLogTail();
+        try
+        {
+            if (_lxd is { HasExited: false }) _lxd.Kill(entireProcessTree: true);
         }
         catch { /* ignore */ }
     }

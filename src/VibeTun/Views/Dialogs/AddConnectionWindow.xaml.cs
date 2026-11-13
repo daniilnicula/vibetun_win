@@ -509,16 +509,18 @@ public partial class AddConnectionWindow : DialogWindow
 
     private static List<ProtocolOption> ProtocolOptions()
     {
-        var ids = new[]
-        {
-            ProtocolIds.Vless, ProtocolIds.Vmess, ProtocolIds.Trojan, ProtocolIds.Shadowsocks,
-            ProtocolIds.Socks, ProtocolIds.Http, ProtocolIds.Hysteria2, ProtocolIds.Tuic,
-            ProtocolIds.Wireguard, ProtocolIds.AmneziaWg, ProtocolIds.MtProto
-        };
-        var options = ids.Select(id => new ProtocolOption(id, ProtocolIds.Display(id))).ToList();
-        options.Add(new ProtocolOption(ProtocolIds.Tunnel, L.T("S0156")));
-        return options;
+        // Все редактируемые протоколы из реестра, а не захардкоженный подмножество:
+        // раньше в списке не было hysteria/anytls/ssh, mixed и shadowsocksR.
+        return ProtocolRegistry.ProfileList(null)
+            .Select(id => new ProtocolOption(id, ProtocolOptionTitle(id)))
+            .ToList();
     }
+
+    /// <summary>Название протокола для карточек и выпадающих списков (tunnel — локализован).</summary>
+    internal static string ProtocolOptionTitle(string id) =>
+        string.Equals(id, ProtocolIds.Tunnel, StringComparison.OrdinalIgnoreCase)
+            ? L.T("S0156")
+            : ProtocolIds.Display(id);
 
     private void OnProtocolChanged(object sender, SelectionChangedEventArgs e)
     {

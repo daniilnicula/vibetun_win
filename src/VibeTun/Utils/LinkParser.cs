@@ -64,9 +64,11 @@ public static partial class LinkParser
                 }
                 else
                 {
-                    var profile = JsonConfigConverter.Convert(doc.RootElement, trimmed, out var err);
-                    if (profile is not null) profiles.Add(profile);
-                    else errors.Add(err ?? L.T("S0584"));
+                    // конфиг или массив: все прокси-профили сразу (JSON-подписки, мульти-outbound'ы)
+                    var converted = JsonConfigConverter.ConvertAll(doc.RootElement, out var errs);
+                    profiles.AddRange(converted);
+                    errors.AddRange(errs);
+                    if (converted.Count == 0 && errs.Count == 0) errors.Add(L.T("S0584"));
                 }
             }
             catch (JsonException ex)
@@ -111,6 +113,12 @@ public static partial class LinkParser
             }
 
             var profile = ParseSingle(line, out var error);
+            if (profile is null && SchemeRegex().IsMatch(line))
+            {
+                // Схема есть, но строгий парсер упал — универсальный парсер URI
+                // спасает профиль, чтобы строка подписки не терялась целиком
+                profile = ParseGeneric(line, out _);
+            }
             if (profile is not null) profiles.Add(profile);
             else errors.Add(error ?? L.F("S0587", Shorten(line)));
         }
@@ -142,7 +150,7 @@ public static partial class LinkParser
                 "awg" or "amneziawg" => ParseWireGuardUri(line, out error, amnezia: true),
                 "tg" => ParseTelegram(line, out error),
                 "vpn" => ParseVpnLink(line, out error),
-                _ => ParseUnknown(line, out error)
+                _ => ParseGeneric(line, out error)
             };
         }
         catch (Exception ex)
@@ -614,9 +622,12 @@ public static partial class LinkParser
     // -------------------------------------------------------------------- TUIC
     private static ProxyProfile ParseTuic(string line)
     {
-        var uri = new Uri(line);
-        var q = Text.ParseQuery(uri.Query);
-        var user = Text.UrlDecode(uri.UserInfo);
+        // терпимый разбор: сырые %-последовательности и экзотика в строке от панели
+        // не должны ронять импорт всего профиля
+        if (!TryParseProxyUri(line, out var userInfo, out var host, out var port, out var query, out var fragment))
+            throw new FormatException(L.T("S0595"));
+        var q = Text.ParseQuery(query);
+        var user = Text.UrlDecode(userInfo);
         var uuid = "";
         var pass = "";
         if (!string.IsNullOrEmpty(user))
@@ -628,8 +639,8 @@ public static partial class LinkParser
 
         var node = new ProxyNode
         {
-            Server = uri.Host,
-            Port = uri.Port > 0 ? uri.Port : 443,
+            Server = host,
+            Port = port,
             Uuid = uuid,
             Password = pass,
             Sni = Get(q, "sni"),
@@ -643,7 +654,7 @@ public static partial class LinkParser
 
         return new ProxyProfile
         {
-            Name = DecodeFragment(uri, $"{uri.Host}:{node.Port}"),
+            Name = NameFromFragment(fragment, host, port),
             Protocol = ProtocolIds.Tuic,
             Uri = line,
             Node = node
@@ -848,6 +859,140 @@ public static partial class LinkParser
     // ------------------------------------------------------------------ helpers
     private static string? Get(Dictionary<string, string> q, string key)
         => q.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) ? v : null;
+
+    /// <summary>
+    /// Разбор proxy-URI без жёстких требований System.Uri: сначала канонический Uri,
+    /// иначе ручное разбиение scheme://[user[:pass]@]host[:port][?query][#fragment] —
+    /// панель могла прислать сырые %, пробелы или подковы, на которых Uri падает.
+    /// </summary>
+    private static bool TryParseProxyUri(string line,
+        out string userInfo, out string host, out int port, out string query, out string fragment)
+    {
+        userInfo = "";
+        host = "";
+        port = 443;
+        query = "";
+        fragment = "";
+        var schemeIdx = line.IndexOf("://", StringComparison.Ordinal);
+        if (schemeIdx <= 0) return false;
+
+        if (Uri.TryCreate(line, UriKind.Absolute, out var uri) && !string.IsNullOrEmpty(uri.Host))
+        {
+            userInfo = uri.UserInfo;
+            host = uri.Host;
+            port = uri.Port > 0 ? uri.Port : 443;
+            query = uri.Query;
+            fragment = uri.Fragment;
+            return true;
+        }
+
+        var rest = line[(schemeIdx + 3)..];
+        var hash = rest.IndexOf('#');
+        if (hash >= 0)
+        {
+            fragment = rest[hash..];
+            rest = rest[..hash];
+        }
+        var question = rest.IndexOf('?');
+        if (question >= 0)
+        {
+            query = rest[(question + 1)..];
+            rest = rest[..question];
+        }
+        var at = rest.LastIndexOf('@');
+        if (at >= 0)
+        {
+            userInfo = rest[..at];
+            rest = rest[(at + 1)..];
+        }
+
+        if (rest.StartsWith('['))   // IPv6 в скобках
+        {
+            var close = rest.IndexOf(']');
+            if (close <= 0) return false;
+            host = rest[..(close + 1)];
+            var tail = rest[(close + 1)..];
+            if (tail.Length == 0) return true;
+            if (tail.StartsWith(':') && int.TryParse(tail[1..], out var v6)) port = v6;
+            else return false;
+            return true;
+        }
+
+        var colon = rest.LastIndexOf(':');
+        if (colon > 0 && int.TryParse(rest[(colon + 1)..], out var p))
+        {
+            host = rest[..colon];
+            port = p;
+        }
+        else
+        {
+            host = rest;   // без отделённого порта — например, сырые «host:abc» оставляем целиком
+        }
+        host = host.Trim();
+        return host.Length > 0;
+    }
+
+    /// <summary>Имя из #фрагмента; без него — host:port.</summary>
+    private static string NameFromFragment(string fragment, string host, int port)
+    {
+        var name = Text.UrlDecode(fragment.TrimStart('#'));
+        return string.IsNullOrWhiteSpace(name) ? $"{host}:{port}" : name;
+    }
+
+    /// <summary>
+    /// Динамический профиль для любой незнакомой схемы (новые протоколы панелей
+    /// импортируются без правок кода); без «://» — старый формат host:port[:user:pass].
+    /// </summary>
+    private static ProxyProfile? ParseGeneric(string line, out string? error)
+    {
+        error = null;
+        var scheme = SchemeRegex().Match(line).Value.TrimEnd(':', '/').ToLowerInvariant();
+        if (scheme.Length > 0 && TryParseProxyUri(line, out var userInfo, out var host, out var port,
+                out var query, out var fragment))
+        {
+            var q = Text.ParseQuery(query);
+            var node = new ProxyNode { Server = host, Port = port };
+
+            var user = Text.UrlDecode(userInfo);
+            if (!string.IsNullOrEmpty(user))
+            {
+                var parts = user.Split(':', 2);
+                if (Guid.TryParse(parts[0], out _)) node.Uuid = parts[0];
+                else node.Username = parts[0];
+                if (parts.Length > 1) node.Password = parts[1];
+            }
+            if (Get(q, "uuid") is { } uuid) node.Uuid = uuid;
+            if (Get(q, "username") is { } username) node.Username = username;
+            if (Get(q, "password") is { } password) node.Password = password;
+            if (Get(q, "method") is { } method) node.Method = method;
+            if (Get(q, "flow") is { } flow) node.Flow = flow;
+            if (Get(q, "congestion_control") is { } cc) node.CongestionControl = cc;
+            if (Get(q, "udp_relay_mode") is { } urm) node.UdpRelayMode = urm;
+            if (Get(q, "type") is { } net) node.Network = net;
+            else if (Get(q, "network") is { } net2) node.Network = net2;
+            if (Get(q, "sni") is { } sni) node.Sni = sni;
+            else if (Get(q, "peer") is { } peer) node.Sni = peer;
+            else if (Get(q, "servername") is { } serverName) node.Sni = serverName;
+            if (Get(q, "alpn") is { } alpn) node.Alpn = alpn;
+            if (Text.ToBool(Get(q, "insecure")) || Text.ToBool(Get(q, "allow_insecure"))) node.Insecure = true;
+
+            var security = Get(q, "security");
+            if (security is ("tls" or "reality") || node.Sni is not null || node.Insecure) node.Tls = true;
+            if (security == "reality") node.Reality = true;
+
+            foreach (var (k, v) in q) node.Extra[k] = v;
+
+            return new ProxyProfile
+            {
+                Name = NameFromFragment(fragment, host, port),
+                Protocol = scheme,
+                Uri = line,
+                Node = node
+            };
+        }
+
+        return ParseUnknown(line, out error);
+    }
 
     private static void ApplyExtra(ProxyNode node, Dictionary<string, string> q, params string[] known)
     {

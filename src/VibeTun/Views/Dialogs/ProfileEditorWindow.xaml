@@ -81,7 +81,7 @@
 
                 <!-- ============ учётные данные ============ -->
                 <StackPanel Margin="0,14,0,0"
-                            Visibility="{Binding Protocol, Converter={StaticResource InListVis}, ConverterParameter='vless,vmess,tuic,socks,http,ssh'}"
+                            Visibility="{Binding ShowUuidRow, Converter={StaticResource BoolToVis}}"
                             DataContext="{Binding}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -102,14 +102,14 @@
                 </StackPanel>
 
                 <StackPanel Margin="0,14,0,0"
-                            Visibility="{Binding Protocol, Converter={StaticResource InListVis}, ConverterParameter='trojan,shadowsocks,hysteria2,hysteria,anytls'}">
+                            Visibility="{Binding ShowPasswordRow, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="{loc:Tr S0042}" Style="{StaticResource TxtMuted}" />
                     <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0"
                              Text="{Binding Node.Password, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
 
                 <StackPanel Margin="0,14,0,0"
-                            Visibility="{Binding Protocol, Converter={StaticResource StrEqualsVis}, ConverterParameter=shadowsocks}">
+                            Visibility="{Binding ShowMethodRow, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="{loc:Tr S0043}" Style="{StaticResource TxtMuted}" />
                     <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0" Tag="aes-256-gcm, chacha20-ietf-poly1305, 2022-blake3-aes-256-gcm"
                              Text="{Binding Node.Method, UpdateSourceTrigger=PropertyChanged}" />
@@ -181,7 +181,7 @@
                     </StackPanel>
 
                     <StackPanel Margin="0,10,0,0"
-                                Visibility="{Binding Protocol, Converter={StaticResource InListVis}, ConverterParameter='vless,vmess'}">
+                                Visibility="{Binding ShowFlowRow, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Flow (vless)" Style="{StaticResource TxtMuted}" />
                         <TextBox Style="{StaticResource InputBox}" Margin="0,4,0,0" Tag="xtls-rprx-vision"
                                  Text="{Binding Node.Flow, UpdateSourceTrigger=PropertyChanged}" />

@@ -206,14 +206,8 @@
                         <TextBlock Text="{Binding CoreSupportText}" Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0" />
                         <TextBlock Text="{Binding BundledCoresText}" Style="{StaticResource TxtMuted}" TextWrapping="Wrap" Margin="0,6,0,0" />
 
-                        <Grid Margin="0,16,0,0">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <TextBlock Text="{loc:Tr S0231}" Style="{StaticResource Txt}" VerticalAlignment="Center" />
-                                <ContentControl Style="{StaticResource InfoHint}" ToolTip="{loc:Tr S0232}" />
-                            </StackPanel>
-                            <ToggleButton Style="{StaticResource Switch}" HorizontalAlignment="Right"
-                                          IsChecked="{Binding IsExtendedFlavor}" />
-                        </Grid>
+                        <!-- переключатель сборки ядра убран: остаётся один репозиторий (sing-box-lx),
+                             логика вариантов в настройках сохранена -->
 
                         <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                             <Button Content="{loc:Tr S0233}" Style="{StaticResource BtnGhost}" Command="{Binding ChooseCoreFileCommand}" />

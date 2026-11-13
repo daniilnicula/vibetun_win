@@ -39,9 +39,15 @@ public sealed class AppReleaseInfo
 public static class AppUpdateService
 {
     public const string Repo = ConstantsService.AppRepo;
-    private const string ApiReleasesUrl = $"https://api.github.com/repos/{ConstantsService.AppRepo}/releases?per_page=100";
-    private const string WebReleasesUrl = $"https://github.com/{ConstantsService.AppRepo}/releases";
-    private const string AtomReleasesUrl = $"https://github.com/{ConstantsService.AppRepo}/releases.atom";
+
+    // URL ленты релизов параметризованы репозиторием: вкладки «Обновление» грузят и приложение,
+    // и ядро (Leadaxe/sing-box-lx) из одного кода.
+    private static string ApiReleasesUrl(string repo, int page, int perPage) =>
+        $"https://api.github.com/repos/{repo}/releases?per_page={perPage}&page={page}";
+
+    private static string WebReleasesUrl(string repo) => $"https://github.com/{repo}/releases";
+
+    private static string AtomReleasesUrl(string repo) => $"https://github.com/{repo}/releases.atom";
 
     /// <summary>
     /// Предел размера скачиваемого релиза. VibeTun.exe весит около 70 МБ; файл на порядок больше —
@@ -69,11 +75,19 @@ public static class AppUpdateService
     }
 
     /// <summary>
-    /// Загрузить список релизов под Windows с https://github.com/daniilnicula/vibetun_win/releases
-    /// (от самого нового к старым).
+    /// Страница релизов репозитория (от нового к старым) с пагинацией GitHub:
+    /// первая страница — <paramref name="limit"/> 20, догрузки — по 10 (offset кратен limit).
     /// </summary>
-    public static async Task<List<AppReleaseInfo>> FetchWindowsReleasesAsync(CancellationToken ct = default)
+    /// <param name="repo">Репозиторий «владелец/имя»: приложение или ядро.</param>
+    /// <param name="offset">Сколько релизов уже загружено (0 — первая страница).</param>
+    /// <param name="limit">Сколько релизов запросить (первая загрузка — 20, догрузка — 10).</param>
+    /// <param name="forCore">Ядро: показывать только релизы с Windows-.zip-архивом.</param>
+    public static async Task<List<AppReleaseInfo>> FetchReleasesPageAsync(
+        string repo, int offset, int limit, bool forCore = false, CancellationToken ct = default)
     {
+        if (limit <= 0) limit = 20;
+        var page = offset / limit + 1;
+        var url = ApiReleasesUrl(repo, page, limit);
         Exception? lastError = null;
 
         // Пробуем через текущие системные настройки прокси и напрямую (если прокси недоступен или наоборот нужен обход)
@@ -82,18 +96,23 @@ public static class AppUpdateService
             try
             {
                 using var client = CreateClient(useProxy, TimeSpan.FromSeconds(20));
-                using var resp = await client.GetAsync(ApiReleasesUrl, ct);
+                using var resp = await client.GetAsync(url, ct);
                 if (resp.IsSuccessStatusCode)
                 {
                     var json = await resp.Content.ReadAsStringAsync(ct);
-                    var list = ParseApiReleases(json);
+                    var list = ParseApiReleases(json, repo, forCore);
                     if (list.Count > 0) return list;
                 }
                 else if (resp.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
                 {
-                    // Если лимит GitHub API исчерпан для IP (актуально на общем VPN), берём из веб-страницы + Atom-ленты
-                    var fallback = await FetchFallbackReleasesAsync(client, ct);
-                    if (fallback.Count > 0) return fallback;
+                    // Лимит GitHub API для IP (актуально на общем VPN): резерв из веб-страницы + Atom-ленты
+                    // работает только для первой страницы — пагинации в них нет.
+                    if (page == 1)
+                    {
+                        var fallback = await FetchFallbackReleasesAsync(client, repo, forCore, ct);
+                        if (fallback.Count > 0) return fallback;
+                    }
+                    return new List<AppReleaseInfo>();
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -110,7 +129,7 @@ public static class AppUpdateService
         return new List<AppReleaseInfo>();
     }
 
-    private static List<AppReleaseInfo> ParseApiReleases(string json)
+    private static List<AppReleaseInfo> ParseApiReleases(string json, string repo, bool forCore)
     {
         var result = new List<AppReleaseInfo>();
         using var doc = JsonDocument.Parse(json);
@@ -157,57 +176,100 @@ public static class AppUpdateService
 
             if (item.TryGetProperty("assets", out var assetsProp) && assetsProp.ValueKind == JsonValueKind.Array)
             {
-                foreach (var asset in assetsProp.EnumerateArray())
+                if (forCore)
                 {
-                    totalAssets++;
-                    var aName = asset.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "";
-                    var aUrl = asset.TryGetProperty("browser_download_url", out var au) ? au.GetString() ?? "" : "";
-                    var aSize = asset.TryGetProperty("size", out var asz) && asz.TryGetInt64(out var sz) ? sz : 0L;
-                    var aDigest = asset.TryGetProperty("digest", out var ad) && ad.ValueKind == JsonValueKind.String
-                        ? ad.GetString()
-                        : null;
-
-                    if (aName.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
+                    // Ядро: только Windows-.zip (sing-box-…-windows-amd64.zip и т.п.),
+                    // архитектуру выбирает CoreAssetPicker — как при установке ядра из файлов
+                    var coreZips = new List<(string Name, string Url, long Size, string? Digest)>();
+                    foreach (var asset in assetsProp.EnumerateArray())
                     {
-                        apkAssets++;
-                        continue;
+                        var aName = asset.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "";
+                        if (!aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
+                            !aName.Contains("windows", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        var aUrl = asset.TryGetProperty("browser_download_url", out var au) ? au.GetString() ?? "" : "";
+                        if (string.IsNullOrWhiteSpace(aUrl)) continue;
+
+                        coreZips.Add((aName, aUrl,
+                            asset.TryGetProperty("size", out var asz) && asz.TryGetInt64(out var sz) ? sz : 0L,
+                            asset.TryGetProperty("digest", out var ad) && ad.ValueKind == JsonValueKind.String
+                                ? ad.GetString()
+                                : null));
                     }
 
-                    var isExe = aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
-                    var isWinZip = aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
-                                   !ConstantsService.NonWindowsAssetKeywords.Any(k =>
-                                       aName.Contains(k, StringComparison.OrdinalIgnoreCase));
-
-                    if (!isExe && !isWinZip) continue;
-
-                    // Предпочитаем VibeTun.exe или любой .exe перед .zip
-                    var betterMatch = downloadUrl is null ||
-                                      (isExe && !assetName!.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) ||
-                                      aName.Equals(ConstantsService.PreferredAssetName, StringComparison.OrdinalIgnoreCase);
-                    if (betterMatch && !string.IsNullOrWhiteSpace(aUrl))
+                    if (coreZips.Count > 0)
                     {
-                        assetName = aName;
-                        downloadUrl = aUrl;
-                        assetSize = aSize;
-                        assetSha256 = ParseSha256Digest(aDigest);
+                        var picked = coreZips[CoreAssetPicker.Pick(
+                            coreZips.Select(z => z.Name).ToList(), CoreInstaller.GoArch())];
+                        assetName = picked.Name;
+                        downloadUrl = picked.Url;
+                        assetSize = picked.Size;
+                        assetSha256 = ParseSha256Digest(picked.Digest);
                     }
                 }
+                else
+                {
+                    foreach (var asset in assetsProp.EnumerateArray())
+                    {
+                        totalAssets++;
+                        var aName = asset.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "";
+                        var aUrl = asset.TryGetProperty("browser_download_url", out var au) ? au.GetString() ?? "" : "";
+                        var aSize = asset.TryGetProperty("size", out var asz) && asz.TryGetInt64(out var sz) ? sz : 0L;
+                        var aDigest = asset.TryGetProperty("digest", out var ad) && ad.ValueKind == JsonValueKind.String
+                            ? ad.GetString()
+                            : null;
 
-                hasOnlyAndroidAssets = totalAssets > 0 && apkAssets == totalAssets;
+                        if (aName.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
+                        {
+                            apkAssets++;
+                            continue;
+                        }
+
+                        var isExe = aName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+                        var isWinZip = aName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                                       !ConstantsService.NonWindowsAssetKeywords.Any(k =>
+                                           aName.Contains(k, StringComparison.OrdinalIgnoreCase));
+
+                        if (!isExe && !isWinZip) continue;
+
+                        // Предпочитаем VibeTun.exe или любой .exe перед .zip
+                        var betterMatch = downloadUrl is null ||
+                                          (isExe && !assetName!.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) ||
+                                          aName.Equals(ConstantsService.PreferredAssetName, StringComparison.OrdinalIgnoreCase);
+                        if (betterMatch && !string.IsNullOrWhiteSpace(aUrl))
+                        {
+                            assetName = aName;
+                            downloadUrl = aUrl;
+                            assetSize = aSize;
+                            assetSha256 = ParseSha256Digest(aDigest);
+                        }
+                    }
+
+                    hasOnlyAndroidAssets = totalAssets > 0 && apkAssets == totalAssets;
+                }
             }
 
-            var isAndroidBranch = commitish.Equals("Android", StringComparison.OrdinalIgnoreCase);
-            var isWindowsBranch = commitish.Equals("Windows", StringComparison.OrdinalIgnoreCase);
-
-            // Релиз считается Windows-релизом, если в нём есть Windows-ассет (.exe/.zip)
-            // или он выпущен из ветки Windows (и не является чисто Android-релизом)
-            if (downloadUrl is null)
+            if (forCore)
             {
-                if (isAndroidBranch || hasOnlyAndroidAssets) continue;
-                if (!isWindowsBranch && totalAssets > 0) continue;
+                // Ядро без Windows-архива не показываем (это не core-релиз)
+                if (downloadUrl is null) continue;
+            }
+            else
+            {
+                var isAndroidBranch = commitish.Equals("Android", StringComparison.OrdinalIgnoreCase);
+                var isWindowsBranch = commitish.Equals("Windows", StringComparison.OrdinalIgnoreCase);
 
-                assetName = ConstantsService.PreferredAssetName;
-                downloadUrl = $"https://github.com/{Repo}/releases/download/{Uri.EscapeDataString(tag)}/{ConstantsService.PreferredAssetName}";
+                // Релиз считается Windows-релизом, если в нём есть Windows-ассет (.exe/.zip)
+                // или он выпущен из ветки Windows (и не является чисто Android-релизом)
+                if (downloadUrl is null)
+                {
+                    if (isAndroidBranch || hasOnlyAndroidAssets) continue;
+                    if (!isWindowsBranch && totalAssets > 0) continue;
+
+                    assetName = ConstantsService.PreferredAssetName;
+                    downloadUrl = $"https://github.com/{repo}/releases/download/{Uri.EscapeDataString(tag)}/{ConstantsService.PreferredAssetName}";
+                }
             }
 
             result.Add(new AppReleaseInfo
@@ -231,18 +293,20 @@ public static class AppUpdateService
             .ToList();
     }
 
-    /// <summary>Резервный парсинг через страницу релизов и Atom-ленту, если GitHub API вернул лимит 403.</summary>
-    private static async Task<List<AppReleaseInfo>> FetchFallbackReleasesAsync(HttpClient client, CancellationToken ct)
+    /// <summary>Резервный парсинг через страницу релизов и Atom-ленту, если GitHub API вернул лимит 403 (первая страница).</summary>
+    private static async Task<List<AppReleaseInfo>> FetchFallbackReleasesAsync(
+        HttpClient client, string repo, bool forCore, CancellationToken ct)
     {
-        var html = await client.GetStringAsync(WebReleasesUrl, ct);
+        var html = await client.GetStringAsync(WebReleasesUrl(repo), ct);
         var releaseTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (Match m in Regex.Matches(html, @"/daniilnicula/vibetun_win/releases/tag/([^""'<>?#\s]+)"))
+        var tagPattern = "/" + Regex.Escape(repo) + "/releases/tag/([^\"'<>?#\\s]+)";
+        foreach (Match m in Regex.Matches(html, tagPattern))
         {
             var tag = Uri.UnescapeDataString(m.Groups[1].Value);
             if (!string.IsNullOrWhiteSpace(tag)) releaseTags.Add(tag);
         }
 
-        var atomXml = await client.GetStringAsync(AtomReleasesUrl, ct);
+        var atomXml = await client.GetStringAsync(AtomReleasesUrl(repo), ct);
         var xdoc = XDocument.Parse(atomXml);
         XNamespace ns = "http://www.w3.org/2005/Atom";
 
@@ -267,6 +331,11 @@ public static class AppUpdateService
             var contentHtml = entry.Element(ns + "content")?.Value ?? "";
             var plainBody = HtmlToPlainText(contentHtml);
 
+            // Ассет для резервного списка: приложение — VibeTun.exe, ядро — стандартный zip по архитектуре
+            var assetName = forCore
+                ? $"sing-box-{(tag.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? tag[1..] : tag)}-windows-{CoreInstaller.GoArch()}.zip"
+                : "VibeTun.exe";
+
             list.Add(new AppReleaseInfo
             {
                 TagName = tag,
@@ -274,8 +343,8 @@ public static class AppUpdateService
                 TargetCommitish = "Windows",
                 PublishedAt = publishedAt,
                 Body = plainBody,
-                AssetName = "VibeTun.exe",
-                DownloadUrl = $"https://github.com/{Repo}/releases/download/{Uri.EscapeDataString(tag)}/VibeTun.exe"
+                AssetName = assetName,
+                DownloadUrl = $"https://github.com/{repo}/releases/download/{Uri.EscapeDataString(tag)}/{assetName}"
             });
         }
 
@@ -321,23 +390,107 @@ public static class AppUpdateService
     }
 
     /// <summary>
-    /// Определяет, какой релиз из списка сейчас установлен у пользователя.
-    /// 1) По точному совпадению SHA-256 текущего VibeTun.exe с ассетом на GitHub;
-    /// 2) По сохранённому тегу <see cref="VibeTun.Models.AppSettings.InstalledReleaseTag"/> (если хэш exe совпадает);
-    /// 3) По метке релиза сборки <see cref="AppInfo.ReleaseTag"/>;
-    /// 4) Иначе — самый свежий релиз в списке.
+    /// Нормализовать версию/тег: первая строка, обрезка по пробелу и «(», срез ведущей «v».
+    /// Пример: «1.14.4-lx.33 (go1.24.1, windows/amd64…)» → «1.14.4-lx.33».
     /// </summary>
-    public static AppReleaseInfo? ResolveCurrentRelease(IReadOnlyList<AppReleaseInfo> releases)
+    public static string NormalizeVersion(string? value)
     {
-        if (releases.Count == 0) return null;
+        if (string.IsNullOrWhiteSpace(value)) return "";
+        var s = value.Trim();
+        var nl = s.IndexOf('\n');
+        if (nl >= 0) s = s[..nl];
+        var cut = s.IndexOfAny(new[] { ' ', '(' });
+        if (cut >= 0) s = s[..cut];
+        s = s.Trim();
+        if (s.Length > 1 && (s[0] == 'v' || s[0] == 'V') && char.IsDigit(s[1]))
+            s = s[1..];
+        return s;
+    }
 
+    private readonly record struct VersionToken(long? Num, string Text);
+
+    private static List<VersionToken> TokenizeVersion(string normalized)
+    {
+        var tokens = new List<VersionToken>();
+        var i = 0;
+        while (i < normalized.Length)
+        {
+            var c = normalized[i];
+            if (char.IsDigit(c))
+            {
+                var j = i;
+                while (j < normalized.Length && char.IsDigit(normalized[j])) j++;
+                if (long.TryParse(normalized[i..j], out var num))
+                    tokens.Add(new VersionToken(num, normalized[i..j]));
+                i = j;
+            }
+            else if (char.IsLetter(c))
+            {
+                var j = i;
+                while (j < normalized.Length && char.IsLetter(normalized[j])) j++;
+                tokens.Add(new VersionToken(null, normalized[i..j].ToLowerInvariant()));
+                i = j;
+            }
+            else
+            {
+                i++; // разделители . - _ и прочее не участвуют в сравнении
+            }
+        }
+        return tokens;
+    }
+
+    /// <summary>
+    /// Сравнение версий: >0 — a новее b, &lt;0 — a старее b, 0 — равны.
+    /// Нормализация (см. <see cref="NormalizeVersion"/>), попозиционное сравнение токенов:
+    /// числа — численно, «число &lt; буквы», при общем префиксе хвоста:
+    /// rc/alpha/beta/pre/dev — версия с таким хвостом старше (короче новее), иначе длиннее новее.
+    /// </summary>
+    public static int CompareVersions(string? a, string? b)
+    {
+        var ta = TokenizeVersion(NormalizeVersion(a));
+        var tb = TokenizeVersion(NormalizeVersion(b));
+        var common = Math.Min(ta.Count, tb.Count);
+
+        for (var i = 0; i < common; i++)
+        {
+            var (x, y) = (ta[i], tb[i]);
+            int c;
+            if (x.Num is not null && y.Num is not null)
+                c = x.Num.Value.CompareTo(y.Num.Value);
+            else if (x.Num is not null)
+                c = -1; // число < буквы
+            else if (y.Num is not null)
+                c = 1;
+            else
+                c = string.CompareOrdinal(x.Text, y.Text);
+            if (c != 0) return c;
+        }
+
+        if (ta.Count == tb.Count) return 0;
+
+        // Общий префикс исчерпан: сравниваем хвосты
+        var aLonger = ta.Count > tb.Count;
+        var firstTail = (aLonger ? ta : tb)[common];
+        var isPrereleaseTail = firstTail.Num is null &&
+                               firstTail.Text is "rc" or "alpha" or "beta" or "pre" or "dev";
+        if (isPrereleaseTail)
+            return aLonger ? -1 : 1; // пререлиз старше релиза
+        return aLonger ? 1 : -1;     // иначе более длинная версия новее
+    }
+
+    /// <summary>
+    /// Тег установленной версии приложения: SHA-256 текущего exe среди загруженных релизов
+    /// (с побочным эффектом — запоминает тег), иначе сохранённый тег при согласованном хэше,
+    /// иначе метка релиза сборки <see cref="AppInfo.ReleaseTag"/>. Без фолбэка на «последний релиз».
+    /// </summary>
+    public static string ResolveInstalledTag(IReadOnlyList<AppReleaseInfo> loaded)
+    {
         var currentSha = GetCurrentExeSha256();
         var settings = App.Settings.Current;
 
-        // 1. Точное совпадение бинарника по SHA-256 с релизом на GitHub
         if (!string.IsNullOrWhiteSpace(currentSha))
         {
-            var byHash = releases.FirstOrDefault(r =>
+            var byHash = loaded.FirstOrDefault(r =>
                 !string.IsNullOrWhiteSpace(r.AssetSha256) &&
                 string.Equals(r.AssetSha256, currentSha, StringComparison.OrdinalIgnoreCase));
             if (byHash is not null)
@@ -349,41 +502,20 @@ public static class AppUpdateService
                     settings.InstalledExeSha256 = currentSha;
                     App.Settings.SaveSoon();
                 }
-                return byHash;
+                return byHash.TagName;
             }
         }
 
-        // 2. Сохранённый тег после обновления через приложение
         if (!string.IsNullOrWhiteSpace(settings.InstalledReleaseTag))
         {
             var hashMatchesOrUnknown = string.IsNullOrWhiteSpace(settings.InstalledExeSha256) ||
                                        string.IsNullOrWhiteSpace(currentSha) ||
                                        string.Equals(settings.InstalledExeSha256, currentSha, StringComparison.OrdinalIgnoreCase);
             if (hashMatchesOrUnknown)
-            {
-                var bySavedTag = FindByTagOrName(releases, settings.InstalledReleaseTag);
-                if (bySavedTag is not null) return bySavedTag;
-            }
+                return settings.InstalledReleaseTag!;
         }
 
-        // 3. Тег релиза, зашитый в сборку (AppInfo.ReleaseTag)
-        var byAppInfo = FindByTagOrName(releases, AppInfo.ReleaseTag);
-        if (byAppInfo is not null) return byAppInfo;
-
-        // 4. По умолчанию — последний доступный релиз
-        return releases[0];
-    }
-
-    private static AppReleaseInfo? FindByTagOrName(IReadOnlyList<AppReleaseInfo> releases, string? tagOrName)
-    {
-        if (string.IsNullOrWhiteSpace(tagOrName)) return null;
-        var key = tagOrName.Trim();
-        var keyNoV = key.TrimStart('v', 'V');
-
-        return releases.FirstOrDefault(r =>
-            string.Equals(r.TagName.Trim(), key, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(r.Title, key, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(r.TagName.Trim().TrimStart('v', 'V'), keyNoV, StringComparison.OrdinalIgnoreCase));
+        return AppInfo.ReleaseTag;
     }
 
     /// <summary>Аккуратное форматирование Markdown-описания релиза с GitHub для чтения в карточке.</summary>

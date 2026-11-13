@@ -11,8 +11,10 @@ public static class JsonConfigConverter
 {
     private static readonly string[] NonProxyTypes =
         { "direct", "block", "dns", "selector", "urltest", "tun", "mixed", "tproxy", "redirect" };
-    private static readonly string[] SupportedXrayTypes =
-        { "vless", "vmess", "trojan", "shadowsocks", "socks", "http", "wireguard" };
+
+    /// <summary>Xray-протоколы, которые не являются прокси-профилями; всё остальное
+    /// (включая новые типы вроде tuic из обновлённых панелей) импортируется без правок кода.</summary>
+    private static readonly string[] XrayNonProxyTypes = { "freedom", "blackhole", "dns" };
 
     public static ProxyProfile? Convert(JsonElement root, string raw, out string? error)
     {
@@ -24,7 +26,7 @@ public static class JsonConfigConverter
             {
                 if (el.ValueKind != JsonValueKind.Object) return false;
                 if (Prop(el, "protocol") is { } xrayProtocol)
-                    return SupportedXrayTypes.Contains(xrayProtocol.ToLowerInvariant());
+                    return !XrayNonProxyTypes.Contains(xrayProtocol.ToLowerInvariant());
                 return Prop(el, "type") is { } singBoxType && !NonProxyTypes.Contains(singBoxType.ToLowerInvariant());
             });
 
@@ -53,6 +55,92 @@ public static class JsonConfigConverter
 
         error = L.T("S0578");
         return null;
+    }
+
+    // ------------------------------------------------------------------ JSON-подписки
+    /// <summary>
+    /// Все прокси-профили из JSON-подписки или конфига: одиночный outbound, конфиг
+    /// <c>{outbounds:[…]}</c> или массив конфигов (формат JSON-подписки 3x-ui — по одному
+    /// конфигу на клиентский профиль). Инфраструктурные outbound'ы (freedom/blackhole/dns,
+    /// direct/selector/…) пропускаются молча; имя профиля берётся из <c>remarks</c> конфига,
+    /// когда профиль из него ровно один.
+    /// </summary>
+    public static List<ProxyProfile> ConvertAll(JsonElement root, out List<string> errors)
+    {
+        var result = new List<ProxyProfile>();
+        errors = new List<string>();
+        if (root.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in root.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    errors.Add("A JSON subscription entry is not an object.");
+                    continue;
+                }
+                Collect(item, item.GetRawText(), result, errors);
+            }
+        }
+        else if (root.ValueKind == JsonValueKind.Object)
+        {
+            Collect(root, root.GetRawText(), result, errors);
+        }
+        else
+        {
+            errors.Add(L.T("S0578"));
+        }
+        return result;
+    }
+
+    private static void Collect(JsonElement node, string raw, List<ProxyProfile> result, List<string> errors)
+    {
+        if (node.ValueKind != JsonValueKind.Object) return;
+        var before = result.Count;
+        var isWrapper = false;
+
+        if (node.TryGetProperty("outbounds", out var outbounds) && outbounds.ValueKind == JsonValueKind.Array)
+        {
+            isWrapper = true;
+            foreach (var o in outbounds.EnumerateArray())
+            {
+                if (o.ValueKind != JsonValueKind.Object) continue;
+                var xrayProtocol = Prop(o, "protocol");
+                if (xrayProtocol is not null && XrayNonProxyTypes.Contains(xrayProtocol.ToLowerInvariant()))
+                    continue;
+                var singBoxType = Prop(o, "type");
+                if (xrayProtocol is null && singBoxType is not null &&
+                    NonProxyTypes.Contains(singBoxType.ToLowerInvariant()))
+                    continue;
+                Collect(o, o.GetRawText(), result, errors);
+            }
+        }
+
+        if (node.TryGetProperty("endpoints", out var endpoints) && endpoints.ValueKind == JsonValueKind.Array)
+        {
+            isWrapper = true;
+            foreach (var ep in endpoints.EnumerateArray())
+            {
+                if (ep.ValueKind != JsonValueKind.Object) continue;
+                var endpointProfile = FromSingBoxEndpoint(ep, ep.GetRawText(), out var endpointError);
+                if (endpointProfile is not null) result.Add(endpointProfile);
+                else if (!string.IsNullOrWhiteSpace(endpointError)) errors.Add(endpointError!);
+            }
+        }
+
+        if (!isWrapper)
+        {
+            var profile = Convert(node, raw, out var error);
+            if (profile is not null) result.Add(profile);
+            else if (!string.IsNullOrWhiteSpace(error)) errors.Add(error!);
+            return;
+        }
+
+        // единственному профилю конфига — имя из remarks (3x-ui подписывает им клиентские конфиги)
+        if (result.Count - before == 1 && Prop(node, "remarks") is { } remarks &&
+            !string.IsNullOrWhiteSpace(remarks))
+        {
+            result[result.Count - 1].Name = remarks;
+        }
     }
 
     // ------------------------------------------------------------------ sing-box
@@ -116,9 +204,37 @@ public static class JsonConfigConverter
             case "wireguard":
                 FillWireGuard(node, o);
                 break;
+            case "amnezia":
+            case "amneziawg":
+                // AmneziaWG-исходящий: uuid/пароль (если есть), адрес, пирсы и обфускация;
+                // раньше тип падал в default, сервер оставался пустым и профиль отбрасывался
+                proto = ProtocolIds.AmneziaWg;
+                node.Uuid = Prop(o, "uuid");
+                node.Password = Prop(o, "password");
+                FillWireGuard(node, o);
+                break;
             default:
-                error = L.F("S0579", type);
-                return null;
+                // динамически: новый outbound-тип (после обновления панели/ядра) — базовые поля
+                // и всё, что не вошло в известные case'ы; инфраструктурные типы конфига — не профиль
+                if (NonProxyTypes.Contains(type))
+                {
+                    error = L.F("S0579", type);
+                    return null;
+                }
+                node.Uuid = Prop(o, "uuid") ?? node.Uuid;
+                node.Username = Prop(o, "username") ?? node.Username;
+                node.Password = Prop(o, "password") ?? node.Password;
+                node.Method = Prop(o, "method") ?? node.Method;
+                foreach (var p in o.EnumerateObject())
+                {
+                    if (p.Value.ValueKind is not (JsonValueKind.String or JsonValueKind.Number or
+                        JsonValueKind.True or JsonValueKind.False))
+                        continue;
+                    node.Extra[p.Name] = p.Value.ValueKind == JsonValueKind.String
+                        ? p.Value.GetString() ?? ""
+                        : p.Value.GetRawText();
+                }
+                break;
         }
 
         FillTls(node, o);
@@ -131,7 +247,10 @@ public static class JsonConfigConverter
             RawJson = null,
             Node = node
         };
-        if (node.Server.Length == 0 && type != "wireguard")
+        // Сервер обязателен для любого типа: у wireguard/amnezia он приходит из
+        // пиров (FillWireGuard), а если и оттуда пусто — профиль был бы нерабочим
+        // (раньше для wireguard пустой сервер пропускался и создавался брак)
+        if (node.Server.Length == 0)
         {
             error = L.T("S0580");
             return null;
@@ -143,7 +262,9 @@ public static class JsonConfigConverter
     {
         error = null;
         var type = (Prop(o, "type") ?? "").ToLowerInvariant();
-        if (type != "wireguard")
+        // sing-box-lx: «wireguard» (в т.ч. с блоком amnezia) плюс явные типы amnezia/amneziawg —
+        // раньше любой тип кроме «wireguard» отбрасывался с ошибкой S0581
+        if (type is not ("wireguard" or "amnezia" or "amneziawg"))
         {
             error = L.F("S0581", type);
             return null;
@@ -155,7 +276,9 @@ public static class JsonConfigConverter
         var profile = new ProxyProfile
         {
             Name = Prop(o, "tag") ?? $"WG {node.Server}",
-            Protocol = node.HasAwgParams ? ProtocolIds.AmneziaWg : ProtocolIds.Wireguard,
+            Protocol = type is "amnezia" or "amneziawg" || node.HasAwgParams
+                ? ProtocolIds.AmneziaWg
+                : ProtocolIds.Wireguard,
             Node = node,
             RawJson = null
         };
@@ -198,20 +321,26 @@ public static class JsonConfigConverter
             }
         }
 
-        // AmneziaWG-параметры (расширенные сборки)
-        node.AwgJc = Num(o, "jc");
-        node.AwgJmin = Num(o, "jmin");
-        node.AwgJmax = Num(o, "jmax");
-        node.AwgS1 = Num(o, "s1");
-        node.AwgS2 = Num(o, "s2");
-        node.AwgS3 = Num(o, "s3");
-        node.AwgS4 = Num(o, "s4");
-        node.AwgH1 = Prop(o, "h1");
-        node.AwgH2 = Prop(o, "h2");
-        node.AwgH3 = Prop(o, "h3");
-        node.AwgH4 = Prop(o, "h4");
-        node.AwgI1 = Prop(o, "i1");
-        node.AwgI2 = Prop(o, "i2");
+        // AmneziaWG-параметры: плоско на объекте либо во вложенном блоке «amnezia»
+        // (так их пишет sing-box-lx) — читаем оба варианта, иначе обфускация терялась
+        JsonElement awg = o;
+        if (o.TryGetProperty("amnezia", out var az) && az.ValueKind == JsonValueKind.Object)
+            awg = az;
+        int? ANum(string key) => Num(o, key) ?? Num(awg, key);
+        string? AProp(string key) => Prop(o, key) ?? Prop(awg, key);
+        node.AwgJc = ANum("jc");
+        node.AwgJmin = ANum("jmin");
+        node.AwgJmax = ANum("jmax");
+        node.AwgS1 = ANum("s1");
+        node.AwgS2 = ANum("s2");
+        node.AwgS3 = ANum("s3");
+        node.AwgS4 = ANum("s4");
+        node.AwgH1 = AProp("h1");
+        node.AwgH2 = AProp("h2");
+        node.AwgH3 = AProp("h3");
+        node.AwgH4 = AProp("h4");
+        node.AwgI1 = AProp("i1");
+        node.AwgI2 = AProp("i2");
     }
 
     private static void FillTls(ProxyNode node, JsonElement o)
@@ -246,6 +375,12 @@ public static class JsonConfigConverter
     {
         error = null;
         var xproto = (Prop(o, "protocol") ?? "").ToLowerInvariant();
+        // инфраструктурные outbound'ы конфига (freedom/blackhole/dns) — не профиль
+        if (XrayNonProxyTypes.Contains(xproto))
+        {
+            error = L.F("S0582", xproto);
+            return null;
+        }
         var node = new ProxyNode();
         var proto = xproto switch
         {
@@ -256,7 +391,11 @@ public static class JsonConfigConverter
             "socks" => ProtocolIds.Socks,
             "http" => ProtocolIds.Http,
             "wireguard" => ProtocolIds.Wireguard,
-            _ => ""
+            "amneziawg" => ProtocolIds.AmneziaWg,
+            "amnezia" => ProtocolIds.AmneziaWg,
+            // динамически: протокол из новой панели (например tuic в 3x-ui) — имя берём как есть,
+            // разбор настроек ниже универсальный (vnext/users или плоская форма 3x-ui)
+            _ => xproto
         };
 
         if (proto.Length == 0)
@@ -301,7 +440,7 @@ public static class JsonConfigConverter
                 if (Prop(settings, "security") is { } security) node.Extra["security"] = security;
             }
 
-            if (proto == ProtocolIds.Wireguard)
+            if (proto == ProtocolIds.Wireguard || proto == ProtocolIds.AmneziaWg)
             {
                 node.WgPrivateKey = Prop(settings, "secretKey");
                 if (settings.TryGetProperty("peers", out var peers) && peers.ValueKind == JsonValueKind.Array)
@@ -321,6 +460,27 @@ public static class JsonConfigConverter
                     }
                 }
                 if (settings.TryGetProperty("address", out var addrs)) node.WgAddress = string.Join(", ", StringList(addrs));
+
+                // AmneziaWG-обфускация: плоским ключом в settings или вложенным блоком amnezia
+                var awg = settings;
+                if (settings.TryGetProperty("amnezia", out var az) && az.ValueKind == JsonValueKind.Object)
+                    awg = az;
+                node.AwgJc = Num(settings, "jc") ?? Num(awg, "jc");
+                node.AwgJmin = Num(settings, "jmin") ?? Num(awg, "jmin");
+                node.AwgJmax = Num(settings, "jmax") ?? Num(awg, "jmax");
+                node.AwgS1 = Num(settings, "s1") ?? Num(awg, "s1");
+                node.AwgS2 = Num(settings, "s2") ?? Num(awg, "s2");
+                node.AwgS3 = Num(settings, "s3") ?? Num(awg, "s3");
+                node.AwgS4 = Num(settings, "s4") ?? Num(awg, "s4");
+                node.AwgH1 = Prop(settings, "h1") ?? Prop(awg, "h1");
+                node.AwgH2 = Prop(settings, "h2") ?? Prop(awg, "h2");
+                node.AwgH3 = Prop(settings, "h3") ?? Prop(awg, "h3");
+                node.AwgH4 = Prop(settings, "h4") ?? Prop(awg, "h4");
+                node.AwgI1 = Prop(settings, "i1") ?? Prop(awg, "i1");
+                node.AwgI2 = Prop(settings, "i2") ?? Prop(awg, "i2");
+                // wireguard с ключами обфускации — это уже AmneziaWG
+                if (node.HasAwgParams || proto == ProtocolIds.AmneziaWg)
+                    proto = ProtocolIds.AmneziaWg;
             }
         }
 

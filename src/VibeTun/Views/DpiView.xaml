@@ -251,7 +251,8 @@
                                 <Path Width="11" Height="11" Stretch="Uniform" Data="M8,2.5 V13.5 M2.5,8 H13.5" VerticalAlignment="Center"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                       StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                <TextBlock Text="{loc:Tr dpi.add}" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{loc:Tr dpi.add}" Margin="7,0,0,0" VerticalAlignment="Center"
+                                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>

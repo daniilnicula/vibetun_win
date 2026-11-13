@@ -137,6 +137,23 @@ public partial class ProfilesView : UserControl
         // An inner profile is hosted by a top-level group ListBoxItem; restore its selection
         // after WPF's right-click selection handling so menu commands target the profile.
         if (Vm is not null) Vm.Selected = _contextProfile;
+
+        // Подменю «протоколы» заполняется из реестра при каждом открытии — новый/редкий
+        // протокол появляется сам, править XAML не нужно (см. ProfilesViewModel.CreateChoices).
+        if (Vm is not null && sender is ContextMenu menu &&
+            menu.Items.OfType<MenuItem>().FirstOrDefault(m => Equals(m.Tag, "CreateProto")) is { } protoMenu)
+        {
+            protoMenu.Items.Clear();
+            foreach (var choice in Vm.CreateChoices)
+            {
+                protoMenu.Items.Add(new MenuItem
+                {
+                    Header = choice.Title,
+                    Command = Vm.CreateManualCommand,
+                    CommandParameter = choice.Id
+                });
+            }
+        }
     }
 
     private void OnCollectionPreviewMouseDown(object sender, MouseButtonEventArgs e)

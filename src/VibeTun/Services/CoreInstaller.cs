@@ -7,20 +7,20 @@ using VibeTun.Utils;
 
 namespace VibeTun.Services;
 
-/// <summary>Скачивание ядра sing-box (официального или расширенной сборки) с GitHub.</summary>
+/// <summary>Скачивание ядра sing-box с GitHub (все варианты — из одного репозитория <see cref="ConstantsService.CoreRepo"/>).</summary>
 public static class CoreInstaller
 {
-    public const string UpstreamRepo = ConstantsService.SingBoxRepo;
-    public const string ExtendedRepo = ConstantsService.SingBoxExtendedRepo;
+    public const string UpstreamRepo = ConstantsService.CoreRepo;
+    public const string ExtendedRepo = ConstantsService.CoreRepo;
 
     /// <summary>
-    /// Форк с полной поддержкой AmneziaWG 2.0/3.x — включая random_trailers и disable_cookies,
-    /// без которых сервер AWG 3.1 отбрасывает ответы на хендшейк. Релизные сборки под Windows
-    /// собираются с тегом <c>with_awg</c> (Makefile.lx → LX_TAGS), а параметры обфускации у него
-    /// лежат плоско в эндпоинте <c>wireguard</c>, как в .conf. Рядом с sing-box.exe в архиве лежит
+    /// Репозиторий ядра: sing-box-lx — единственный источник установки. У него полная поддержка
+    /// AmneziaWG 2.0/3.x (random_trailers/disable_cookies), готовые сборки под Windows собираются
+    /// с тегом <c>with_awg</c> (Makefile.lx → LX_TAGS), а параметры обфускации лежат плоско
+    /// в эндпоинте <c>wireguard</c>, как в .conf. Рядом с sing-box.exe в архиве лежит
     /// libcronet.dll — его переносит CopySiblings.
     /// </summary>
-    public const string AwgRepo = ConstantsService.AwgRepo;
+    public const string AwgRepo = ConstantsService.CoreRepo;
 
     private static HttpClient Client()
     {
@@ -34,7 +34,9 @@ public static class CoreInstaller
         return client;
     }
 
-    public static string RepoFor(CoreFlavor flavor) => flavor == CoreFlavor.SingBoxExtended ? ExtendedRepo : UpstreamRepo;
+    // Все варианты ядра ставятся из одного репозитория; слот на диске (официальный/расширенный)
+    // по-прежнему выбирается по flavor — см. TargetFor.
+    public static string RepoFor(CoreFlavor flavor) => UpstreamRepo;
 
     /// <summary>Репозиторий, из которого берём архив: явно заданный или стандартный для варианта.</summary>
     private static string RepoName(CoreFlavor flavor, string? repo) =>
@@ -50,7 +52,7 @@ public static class CoreInstaller
     }
 
     /// <summary>Архитектура архива в терминах Go: amd64 / arm64 / 386.</summary>
-    private static string GoArch() => RuntimeInformation.OSArchitecture switch
+    public static string GoArch() => RuntimeInformation.OSArchitecture switch
     {
         Architecture.X64 => "amd64",
         Architecture.Arm64 => "arm64",
@@ -130,28 +132,13 @@ public static class CoreInstaller
     }
 
     /// <summary>
-    /// Скачивает ядро с поддержкой AmneziaWG. Сначала форк sing-box-lx — единственный с готовыми
-    /// Windows-сборками и AWG 3.x (random_trailers/disable_cookies); если в его релизе не нашлось
-    /// архива под нашу архитектуру или GitHub недоступен, берём расширенную сборку shtorm-7 —
-    /// она тянет AWG до 3.0, а параметры 3.1 придётся отключать на сервере.
-    /// Какой из двух репозиториев сработал, записывается вместе с ядром (<see cref="CoreSourceStore"/>)
-    /// и видно в «Настройках»: одновременно на диске лежит только одна расширенная сборка.
+    /// Скачивает ядро с поддержкой AmneziaWG: единственный репозиторий <see cref="AwgRepo"/>,
+    /// слот на диске — расширенный (<see cref="CoreFlavor.SingBoxExtended"/>). Репозиторий
+    /// записывается вместе с ядром (<see cref="CoreSourceStore"/>) и виден в «Настройках».
     /// </summary>
-    public static async Task<CoreInfo?> InstallAwgCoreAsync(CoreService core,
-        IProgress<string>? progress = null, CancellationToken ct = default)
-    {
-        try
-        {
-            var info = await InstallReleaseAsync(core, CoreFlavor.SingBoxExtended, progress, ct, AwgRepo, fallbackFor: null);
-            if (info is { Exists: true }) return info;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TaskCanceledException)
-        {
-            progress?.Report(L.F("S0289", AwgRepo, ex.Message, ExtendedRepo));
-        }
-
-        return await InstallReleaseAsync(core, CoreFlavor.SingBoxExtended, progress, ct, ExtendedRepo, fallbackFor: AwgRepo);
-    }
+    public static Task<CoreInfo?> InstallAwgCoreAsync(CoreService core,
+        IProgress<string>? progress = null, CancellationToken ct = default) =>
+        InstallReleaseAsync(core, CoreFlavor.SingBoxExtended, progress, ct, AwgRepo, fallbackFor: null);
 
     /// <summary>
     /// Распаковывает ядро, вшитое в приложение (ничего скачивать не нужно).
@@ -174,9 +161,10 @@ public static class CoreInstaller
 
     /// <param name="source">Откуда архив (репозиторий и релиз) — запоминается вместе с ядром.</param>
     /// <param name="sha256">Ожидаемый SHA-256 архива; сверяется до распаковки.</param>
+    /// <param name="percent">Прогресс скачивания в процентах (0–100).</param>
     public static async Task<CoreInfo?> InstallFromUrlAsync(CoreService core, string url,
         IProgress<string>? progress = null, CancellationToken ct = default, CoreFlavor? flavor = null,
-        CoreSourceInfo? source = null, string? sha256 = null)
+        CoreSourceInfo? source = null, string? sha256 = null, IProgress<double>? percent = null)
     {
         AppPaths.EnsureCreated();
         var tempZip = Path.Combine(Path.GetTempPath(), "vibetun-core-" + Guid.NewGuid().ToString("N")[..6] + ".zip");
@@ -184,7 +172,7 @@ public static class CoreInstaller
         try
         {
             using (var client = Client())
-                await DownloadAsync(client, url, tempZip, ct);
+                await DownloadAsync(client, url, tempZip, ct, percent);
 
             // хэш GitHub считает по самому архиву — сверяем его до распаковки
             AppUpdateService.VerifyAssetSha256(tempZip, sha256);
@@ -203,13 +191,15 @@ public static class CoreInstaller
     /// Скачивает архив ядра с пределом размера: архив весит десятки мегабайт, и ответ на порядок
     /// больше — не релиз, а подмена или сбой сервера. Качать его до конца (и забивать диск) незачем.
     /// </summary>
-    private static async Task DownloadAsync(HttpClient client, string url, string path, CancellationToken ct)
+    private static async Task DownloadAsync(HttpClient client, string url, string path, CancellationToken ct,
+        IProgress<double>? percent = null)
     {
         const long limit = ZipGuard.MaxTotalUncompressedBytes;
 
         using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
-        if (resp.Content.Headers.ContentLength is > limit)
+        var total = resp.Content.Headers.ContentLength ?? -1;
+        if (total > limit)
             throw new InvalidDataException(L.F("S1074", limit / (1024 * 1024)));
 
         await using var network = await resp.Content.ReadAsStreamAsync(ct);
@@ -217,6 +207,8 @@ public static class CoreInstaller
 
         var buffer = new byte[81920];
         long received = 0;
+        var lastReport = System.Diagnostics.Stopwatch.StartNew();
+        percent?.Report(0);
         int read;
         while ((read = await network.ReadAsync(buffer.AsMemory(0, buffer.Length), ct)) > 0)
         {
@@ -224,7 +216,15 @@ public static class CoreInstaller
             if (received > limit)
                 throw new InvalidDataException(L.F("S1074", limit / (1024 * 1024)));
             await file.WriteAsync(buffer.AsMemory(0, read), ct);
+
+            if (percent is not null && total > 0 && lastReport.ElapsedMilliseconds >= 35)
+            {
+                lastReport.Restart();
+                percent.Report(Math.Clamp(received * 100.0 / total, 0, 100));
+            }
         }
+
+        percent?.Report(100);
     }
 
     private static string AssetNameOf(string url)

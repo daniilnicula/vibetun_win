@@ -945,7 +945,7 @@
   },
   "S0267": {
     "ru": "Откатить",
-    "en": "Roll back"
+    "en": "Downgrade"
   },
   "S0268": {
     "ru": "Произошла непредвиденная ошибка:\n\n",
@@ -3357,7 +3357,7 @@
   },
   "S0898": {
     "ru": "Откат до",
-    "en": "Roll back to"
+    "en": "Downgrade to"
   },
   "S0899": {
     "ru": "Обновление до",
@@ -3393,7 +3393,7 @@
   },
   "S0907": {
     "ru": "Ошибка отката",
-    "en": "Rollback error"
+    "en": "Downgrade error"
   },
   "S0908": {
     "ru": "Ошибка обновления",
@@ -3785,7 +3785,7 @@
   },
   "Extra960": {
     "ru": "откат",
-    "en": "rollback"
+    "en": "downgrade"
   },
   "Extra961": {
     "ru": "обновление",
@@ -4919,6 +4919,14 @@
     "ru": "Вставьте содержимое из буфера обмена",
     "en": "Paste the contents from the clipboard"
   },
+  "S1014": {
+    "ru": "Формат ответа — JSON: в нём 3x-ui не отдаёт tuic и amnezia. Возьмите ссылку вида /sub/<id> — там полный состав.",
+    "en": "The response is JSON: 3x-ui does not include tuic or amnezia in it. Use a /sub/<id> link for the full set."
+  },
+  "S1015": {
+    "ru": "lxd: демон готов (порт {0})",
+    "en": "lxd: daemon ready (port {0})"
+  },
   "S1016": {
     "ru": "Выберите протокол для создания",
     "en": "Choose a protocol to create"
@@ -4970,6 +4978,30 @@
   "S1028": {
     "ru": "Размытие левой панели",
     "en": "Sidebar blur"
+  },
+  "S1029": {
+    "ru": "lxd: найден живой демон — переиспользуем (порт {0})",
+    "en": "lxd: live daemon found — reusing it (port {0})"
+  },
+  "S1030": {
+    "ru": "lxd: применяем конфиг…",
+    "en": "lxd: applying config…"
+  },
+  "S1031": {
+    "ru": "lxd: переключено без перезапуска процесса",
+    "en": "lxd: switched without a process restart"
+  },
+  "S1032": {
+    "ru": "lxd: не вышло ({0}) — откат на обычный запуск",
+    "en": "lxd: failed ({0}) — falling back to a regular start"
+  },
+  "S1033": {
+    "ru": "lxd: ядро не поднялось вовремя",
+    "en": "lxd: core did not come up in time"
+  },
+  "S1034": {
+    "ru": "lxd: ядро остановлено, демон в ожидании",
+    "en": "lxd: core stopped, daemon idle"
   },
   "S1053": {
     "ru": "Маскировка запросов",
@@ -5118,5 +5150,37 @@
   "S1090": {
     "ru": "Новая группа",
     "en": "New group"
+  },
+  "S1091": {
+    "ru": "Проверить обновления",
+    "en": "Check for updates"
+  },
+  "S1092": {
+    "ru": "Релизы sing-box-lx",
+    "en": "sing-box-lx releases"
+  },
+  "S1093": {
+    "ru": "Остановить прокси и обновить ядро?",
+    "en": "Stop the proxy and update the core?"
+  },
+  "S1094": {
+    "ru": "Ядро обновлено: {0}",
+    "en": "Core updated: {0}"
+  },
+  "S1095": {
+    "ru": "Остановите прокси перед обновлением ядра.",
+    "en": "Stop the proxy before updating the core."
+  },
+  "S1096": {
+    "ru": "Протокол не входит в базовый список приложения: поля настроены по схеме установленного ядра.",
+    "en": "The protocol is not in the app's built-in list: fields follow the installed core's schema."
+  },
+  "S1097": {
+    "ru": "Обновление ядра",
+    "en": "Core update"
+  },
+  "S1098": {
+    "ru": "Обновить",
+    "en": "Upgrade"
   }
 }
